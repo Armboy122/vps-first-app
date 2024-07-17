@@ -76,9 +76,6 @@ model User {
   permissions     Permission[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
-  createdBy       Int?
-  creator         User?     @relation("UserCreator", fields: [createdBy], references: [id])
-  createdUsers    User[]    @relation("UserCreator")
   createdRequests PowerOutageRequest[] @relation("RequestCreator")
   updatedStatuses PowerOutageRequest[] @relation("StatusUpdater")
 
