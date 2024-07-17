@@ -51,7 +51,7 @@ model Branch {
   workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
   fullName        String
   shortName       String
-  phoneNumber     String
+  phoneNumber     String?
   users           User[]
   powerOutageRequests PowerOutageRequest[]
   createdAt       DateTime  @default(now())
