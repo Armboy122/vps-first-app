@@ -27,7 +27,6 @@ export default function CreateUserForm() {
   const [selectedWorkCenter, setSelectedWorkCenter] = useState<number | "">("");
   const [selectedBranch, setSelectedBranch] = useState<number | "">("");
   const [formData, setFormData] = useState({
-    username: "",
     password: "",
     fullName: "",
     employeeId: "",
@@ -77,7 +76,6 @@ export default function CreateUserForm() {
           alert("User created successfully!");
           // Reset form
           setFormData({
-            username: "",
             password: "",
             fullName: "",
             employeeId: "",
@@ -104,24 +102,23 @@ export default function CreateUserForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label htmlFor="username" className="block mb-1">
-          Username
+        <label htmlFor="employeeId" className="block mb-1">
+          รหัสพนักงาน
         </label>
         <input
           type="text"
-          id="username"
-          value={formData.username}
+          id="employeeId"
+          value={formData.employeeId}
           onChange={(e) =>
-            setFormData({ ...formData, username: e.target.value })
+            setFormData({ ...formData, employeeId: e.target.value })
           }
           className="w-full p-2 border rounded"
           required
         />
       </div>
-
       <div>
         <label htmlFor="password" className="block mb-1">
-          Password
+          รหัสผ่าน
         </label>
         <input
           type="password"
@@ -151,21 +148,7 @@ export default function CreateUserForm() {
         />
       </div>
 
-      <div>
-        <label htmlFor="employeeId" className="block mb-1">
-          Employee ID
-        </label>
-        <input
-          type="text"
-          id="employeeId"
-          value={formData.employeeId}
-          onChange={(e) =>
-            setFormData({ ...formData, employeeId: e.target.value })
-          }
-          className="w-full p-2 border rounded"
-          required
-        />
-      </div>
+      
 
       <div>
         <label htmlFor="workCenter" className="block mb-1">

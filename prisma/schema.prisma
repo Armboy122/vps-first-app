@@ -4,6 +4,7 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 generator erd {
   provider = "prisma-erd-generator"
 }
@@ -15,67 +16,66 @@ datasource db {
 
 // โมเดล Transformer: เก็บข้อมูลเกี่ยวกับหม้อแปลงแต่ละตัว
 model Transformer {
-  id                Int       @id @default(autoincrement())
-  transformerNumber String    @unique // ตัวระบุเฉพาะสำหรับหม้อแปลง
-  gisDetails        String    // รายละเอียด GIS ของตำแหน่งหม้อแปลง
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  locationHistory   TransformerLocationHistory[]
+  id                  Int                          @id @default(autoincrement())
+  transformerNumber   String                       @unique // ตัวระบุเฉพาะสำหรับหม้อแปลง
+  gisDetails          String // รายละเอียด GIS ของตำแหน่งหม้อแปลง
+  createdAt           DateTime                     @default(now())
+  updatedAt           DateTime                     @updatedAt
+  locationHistory     TransformerLocationHistory[]
   powerOutageRequests PowerOutageRequest[]
 }
 
 // โมเดล TransformerLocationHistory: ติดตามประวัติการเปลี่ยนแปลงตำแหน่งของหม้อแปลง
 model TransformerLocationHistory {
-  id            Int       @id @default(autoincrement())
+  id            Int         @id @default(autoincrement())
   transformerId Int
   transformer   Transformer @relation(fields: [transformerId], references: [id])
-  oldGisDetails String    // รายละเอียด GIS เก่า
-  changedAt     DateTime  @default(now())
+  oldGisDetails String // รายละเอียด GIS เก่า
+  changedAt     DateTime    @default(now())
 }
 
 // โมเดล WorkCenter: แสดงถึงจุดรวมงานในองค์กร
 model WorkCenter {
-  id          Int       @id @default(autoincrement())
-  name        String    @unique
-  branches    Branch[]
-  users       User[]
+  id                  Int                  @id @default(autoincrement())
+  name                String               @unique
+  branches            Branch[]
+  users               User[]
   powerOutageRequests PowerOutageRequest[]
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 }
 
 // โมเดล Branch: แสดงถึงสาขาภายในจุดรวมงาน
 model Branch {
-  id              Int       @id @default(autoincrement())
-  workCenterId    Int
-  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
-  fullName        String
-  shortName       String
-  phoneNumber     String?
-  users           User[]
+  id                  Int                  @id @default(autoincrement())
+  workCenterId        Int
+  workCenter          WorkCenter           @relation(fields: [workCenterId], references: [id])
+  fullName            String
+  shortName           String
+  phoneNumber         String?
+  users               User[]
   powerOutageRequests PowerOutageRequest[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
 
   @@unique([workCenterId, shortName])
 }
 
 // โมเดล User: เก็บข้อมูลผู้ใช้และสิทธิ์การเข้าถึง
 model User {
-  id              Int       @id @default(autoincrement())
-  username        String    @unique
+  id              Int                  @id @default(autoincrement())
   password        String
   fullName        String
-  employeeId      String    @unique
+  employeeId      String               @unique
   workCenterId    Int
-  workCenter      WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter      WorkCenter           @relation(fields: [workCenterId], references: [id])
   branchId        Int
-  branch          Branch    @relation(fields: [branchId], references: [id])
-  role            Role      @default(USER)
-  status          UserStatus @default(ACTIVE)
+  branch          Branch               @relation(fields: [branchId], references: [id])
+  role            Role                 @default(USER)
+  status          UserStatus           @default(ACTIVE)
   permissions     Permission[]
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
   createdRequests PowerOutageRequest[] @relation("RequestCreator")
   updatedStatuses PowerOutageRequest[] @relation("StatusUpdater")
 
@@ -108,24 +108,25 @@ model Permission {
 
 // โมเดล PowerOutageRequest: จัดการคำขอดับไฟสำหรับหม้อแปลง
 model PowerOutageRequest {
-  id                Int       @id @default(autoincrement())
-  createdAt         DateTime  @default(now())
+  id                Int         @id @default(autoincrement())
+  createdAt         DateTime    @default(now())
   createdById       Int
-  createdBy         User      @relation("RequestCreator", fields: [createdById], references: [id])
+  createdBy         User        @relation("RequestCreator", fields: [createdById], references: [id])
   outageDate        DateTime
   startTime         DateTime
   endTime           DateTime
   workCenterId      Int
-  workCenter        WorkCenter @relation(fields: [workCenterId], references: [id])
+  workCenter        WorkCenter  @relation(fields: [workCenterId], references: [id])
   branchId          Int
-  branch            Branch    @relation(fields: [branchId], references: [id])
+  branch            Branch      @relation(fields: [branchId], references: [id])
   transformerNumber String
   transformer       Transformer @relation(fields: [transformerNumber], references: [transformerNumber])
   gisDetails        String
-  omsStatus         OMSStatus @default(NOT_ADDED)
+  area              String?
+  omsStatus         OMSStatus   @default(NOT_ADDED)
   statusUpdatedAt   DateTime?
   statusUpdatedById Int?
-  statusUpdatedBy   User?     @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
+  statusUpdatedBy   User?       @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
 
   @@index([workCenterId, branchId, transformerNumber])
 }

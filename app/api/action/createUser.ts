@@ -8,7 +8,6 @@ import { z } from 'zod'
 
 // สร้าง schema validation สำหรับข้อมูลที่รับเข้ามา
 const CreateUserSchema = z.object({
-  username: z.string().min(3).max(50),
   password: z.string().min(6),
   fullName: z.string().min(2).max(100),
   employeeId: z.string().regex(/^\d{6}$/, "Employee ID must be exactly 6 digits")
@@ -37,7 +36,6 @@ export async function createUser(input: CreateUserInput) {
     // Create user
     const user = await prisma.user.create({
       data: {
-        username: validatedData.username,
         password: hashedPassword,
         fullName: validatedData.fullName,
         employeeId: validatedData.employeeId,
