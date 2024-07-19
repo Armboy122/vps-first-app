@@ -1,34 +1,20 @@
-// app/actions/createUser.ts
-
 'use server'
 
-import  prisma  from '../../../lib/prisma'
+import { CreateUserInput, CreateUserSchema } from '@/lib/validations/user';
+import prisma from '../../../lib/prisma'
 import { hash } from 'bcryptjs'
-import { z } from 'zod'
 
-// สร้าง schema validation สำหรับข้อมูลที่รับเข้ามา
-const CreateUserSchema = z.object({
-  password: z.string().min(6),
-  fullName: z.string().min(2).max(100),
-  employeeId: z.string().regex(/^\d{6}$/, "Employee ID must be exactly 6 digits")
-  .refine(async (id) => {
-    // ตรวจสอบว่า id นี้มีอยู่แล้วหรือไม่
-    const existingUser = await prisma.user.findUnique({ where: { employeeId: id } });
-    return !existingUser;
-  }, "This Employee ID is already in use"),
-  workCenterId: z.number().int().positive(),
-  branchId: z.number().int().positive(),
-  role: z.enum(['SUPER_ADMIN', 'ADMIN', 'MANAGER', 'SUPERVISOR', 'USER']),
-  status: z.enum(['ACTIVE', 'INACTIVE', 'SUSPENDED']).default('ACTIVE'),
-  permissions: z.array(z.number().int().positive()).optional(),
-})
-
-type CreateUserInput = z.infer<typeof CreateUserSchema>
 
 export async function createUser(input: CreateUserInput) {
   try {
     // Validate input
     const validatedData = await CreateUserSchema.parseAsync(input);
+
+    // ตรวจสอบว่า employeeId นี้มีอยู่แล้วหรือไม่
+    const existingUser = await prisma.user.findUnique({ where: { employeeId: validatedData.employeeId } });
+    if (existingUser) {
+      return { success: false, error: 'This Employee ID is already in use' };
+    }
 
     // Hash password
     const hashedPassword = await hash(validatedData.password, 10)
@@ -56,11 +42,11 @@ export async function createUser(input: CreateUserInput) {
   }
 }
 
-export async function getWorkCenters(){
-  try{
+export async function getWorkCenters() {
+  try {
     const workCenters = await prisma.workCenter.findMany()
     return workCenters
-  }catch(error){
+  } catch (error) {
     console.error('มีปัญหาการดึงข้อมูลจุดรวมงาน:', error)
     throw new Error('Failed to fetch work centers')
   }

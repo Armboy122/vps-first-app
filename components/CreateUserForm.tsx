@@ -1,11 +1,15 @@
 "use client";
 
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createUser,
   getBranches,
-  getWorkCenters,
+  getWorkCenters
 } from "../app/api/action/createUser";
 import { useState, useEffect } from "react";
+import { z } from "zod";
+import { CreateUserSchema } from "@/lib/validations/user";
 
 type WorkCenter = {
   id: number;
@@ -18,24 +22,29 @@ type Branch = {
   workCenterId: number;
 };
 
-type UserRole = "USER" | "SUPER_ADMIN" | "ADMIN" | "MANAGER" | "SUPERVISOR";
-type UserStatus = "ACTIVE" | "INACTIVE" | "SUSPENDED";
+type FormData = z.infer<typeof CreateUserSchema>;
 
 export default function CreateUserForm() {
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
-  const [selectedWorkCenter, setSelectedWorkCenter] = useState<number | "">("");
-  const [selectedBranch, setSelectedBranch] = useState<number | "">("");
-  const [formData, setFormData] = useState({
-    password: "",
-    fullName: "",
-    employeeId: "",
-    role: "USER",
-    status: "ACTIVE",
-    permissions: [] as number[],
-  });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+    resolver: zodResolver(CreateUserSchema),
+    defaultValues: {
+      password: "",
+      fullName: "",
+      employeeId: "",
+      workCenterId: 0,
+      branchId: 0,
+      role: "USER",
+      status: "ACTIVE",
+      permissions: [],
+    },
+  });
+
+  const selectedWorkCenter = watch("workCenterId");
 
   useEffect(() => {
     setIsLoading(true);
@@ -55,44 +64,24 @@ export default function CreateUserForm() {
     } else {
       setBranches([]);
     }
-    setSelectedBranch("");
-  }, [selectedWorkCenter]);
+    setValue("branchId", 0);
+  }, [selectedWorkCenter, setValue]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (data: FormData) => {
     setError("");
-    if (selectedWorkCenter && selectedBranch) {
-      const userData = {
-        ...formData,
-        workCenterId: Number(selectedWorkCenter),
-        branchId: Number(selectedBranch),
-        role: formData.role as UserRole,
-        status: formData.status as UserStatus,
-      };
-      try {
-        setIsLoading(true);
-        const result = await createUser(userData);
-        if (result.success) {
-          alert("User created successfully!");
-          // Reset form
-          setFormData({
-            password: "",
-            fullName: "",
-            employeeId: "",
-            role: "USER" as UserRole,
-            status: "ACTIVE" as UserStatus,
-            permissions: [] as number[],
-          });
-          setSelectedWorkCenter("");
-          setSelectedBranch("");
-        } else {
-          setError(`Failed to create user: ${result.error}`);
-        }
-      } catch (err) {
-        setError("An error occurred while creating the user");
-      } finally {
-        setIsLoading(false);
+    try {
+      setIsLoading(true);
+      const result = await createUser(data);
+      if (result.success) {
+        alert("User created successfully!");
+        reset();
+      } else {
+        setError(`Failed to create user: ${result.error}`);
       }
+    } catch (err) {
+      setError("An error occurred while creating the user");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -100,145 +89,156 @@ export default function CreateUserForm() {
   if (error) return <div>Error: {error}</div>;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
       <div>
         <label htmlFor="employeeId" className="block mb-1">
           รหัสพนักงาน
         </label>
-        <input
-          type="text"
-          id="employeeId"
-          value={formData.employeeId}
-          onChange={(e) =>
-            setFormData({ ...formData, employeeId: e.target.value })
-          }
-          className="w-full p-2 border rounded"
-          required
+        <Controller
+          name="employeeId"
+          control={control}
+          render={({ field }) => (
+            <input
+              {...field}
+              type="text"
+              className="w-full p-2 border rounded"
+            />
+          )}
         />
+        {errors.employeeId && <span className="text-red-500">{errors.employeeId.message}</span>}
       </div>
+
       <div>
         <label htmlFor="password" className="block mb-1">
           รหัสผ่าน
         </label>
-        <input
-          type="password"
-          id="password"
-          value={formData.password}
-          onChange={(e) =>
-            setFormData({ ...formData, password: e.target.value })
-          }
-          className="w-full p-2 border rounded"
-          required
+        <Controller
+          name="password"
+          control={control}
+          render={({ field }) => (
+            <input
+              {...field}
+              type="password"
+              className="w-full p-2 border rounded"
+            />
+          )}
         />
+        {errors.password && <span className="text-red-500">{errors.password.message}</span>}
       </div>
 
       <div>
         <label htmlFor="fullName" className="block mb-1">
-          Full Name
+          ชื่อ-นามสกุล
         </label>
-        <input
-          type="text"
-          id="fullName"
-          value={formData.fullName}
-          onChange={(e) =>
-            setFormData({ ...formData, fullName: e.target.value })
-          }
-          className="w-full p-2 border rounded"
-          required
+        <Controller
+          name="fullName"
+          control={control}
+          render={({ field }) => (
+            <input
+              {...field}
+              type="text"
+              className="w-full p-2 border rounded"
+            />
+          )}
         />
-      </div>
-
-      
-
-      <div>
-        <label htmlFor="workCenter" className="block mb-1">
-          Work Center
-        </label>
-        <select
-          id="workCenter"
-          value={selectedWorkCenter}
-          onChange={(e) => setSelectedWorkCenter(Number(e.target.value))}
-          className="w-full p-2 border rounded"
-          required
-        >
-          <option value="">Select Work Center</option>
-          {workCenters.map((wc) => (
-            <option key={wc.id} value={wc.id}>
-              {wc.name}
-            </option>
-          ))}
-        </select>
+        {errors.fullName && <span className="text-red-500">{errors.fullName.message}</span>}
       </div>
 
       <div>
-        <label htmlFor="branch" className="block mb-1">
-          Branch
+        <label htmlFor="workCenterId" className="block mb-1">
+          ศูนย์งาน
         </label>
-        <select
-          id="branch"
-          value={selectedBranch}
-          onChange={(e) => setSelectedBranch(Number(e.target.value))}
-          className="w-full p-2 border rounded"
-          required
-          disabled={!selectedWorkCenter}
-        >
-          <option value="">Select Branch</option>
-          {branches.map((branch) => (
-            <option key={branch.id} value={branch.id}>
-              {branch.shortName}
-            </option>
-          ))}
-        </select>
+        <Controller
+          name="workCenterId"
+          control={control}
+          render={({ field }) => (
+            <select
+              {...field}
+              className="w-full p-2 border rounded"
+              onChange={(e) => field.onChange(Number(e.target.value))}
+            >
+              <option value="">เลือกศูนย์งาน</option>
+              {workCenters.map((wc) => (
+                <option key={wc.id} value={wc.id}>
+                  {wc.name}
+                </option>
+              ))}
+            </select>
+          )}
+        />
+        {errors.workCenterId && <span className="text-red-500">{errors.workCenterId.message}</span>}
+      </div>
+
+      <div>
+        <label htmlFor="branchId" className="block mb-1">
+          สาขา
+        </label>
+        <Controller
+          name="branchId"
+          control={control}
+          render={({ field }) => (
+            <select
+              {...field}
+              className="w-full p-2 border rounded"
+              disabled={!selectedWorkCenter}
+              onChange={(e) => field.onChange(Number(e.target.value))}
+            >
+              <option value="">เลือกสาขา</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.shortName}
+                </option>
+              ))}
+            </select>
+          )}
+        />
+        {errors.branchId && <span className="text-red-500">{errors.branchId.message}</span>}
       </div>
 
       <div>
         <label htmlFor="role" className="block mb-1">
-          Role
+          บทบาท
         </label>
-        <select
-          id="role"
-          value={formData.role}
-          onChange={(e) =>
-            setFormData({ ...formData, role: e.target.value as UserRole })
-          }
-          className="w-full p-2 border rounded"
-          required
-        >
-          <option value="USER">User</option>
-          <option value="SUPERVISOR">Supervisor</option>
-          <option value="MANAGER">Manager</option>
-          <option value="ADMIN">Admin</option>
-          <option value="SUPER_ADMIN">Super Admin</option>
-        </select>
+        <Controller
+          name="role"
+          control={control}
+          render={({ field }) => (
+            <select {...field} className="w-full p-2 border rounded">
+              <option value="USER">User</option>
+              <option value="SUPERVISOR">Supervisor</option>
+              <option value="MANAGER">Manager</option>
+              <option value="ADMIN">Admin</option>
+              <option value="SUPER_ADMIN">Super Admin</option>
+            </select>
+          )}
+        />
+        {errors.role && <span className="text-red-500">{errors.role.message}</span>}
       </div>
 
       <div>
         <label htmlFor="status" className="block mb-1">
-          Status
+          สถานะ
         </label>
-        <select
-          id="status"
-          value={formData.status}
-          onChange={(e) =>
-            setFormData({ ...formData, status: e.target.value as UserStatus })
-          }
-          className="w-full p-2 border rounded"
-          required
-        >
-          <option value="ACTIVE">Active</option>
-          <option value="INACTIVE">Inactive</option>
-          <option value="SUSPENDED">Suspended</option>
-        </select>
+        <Controller
+          name="status"
+          control={control}
+          render={({ field }) => (
+            <select {...field} className="w-full p-2 border rounded">
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="SUSPENDED">Suspended</option>
+            </select>
+          )}
+        />
+        {errors.status && <span className="text-red-500">{errors.status.message}</span>}
       </div>
-
-      {/* หมายเหตุ: ส่วนของ permissions ยังไม่ได้เพิ่ม คุณอาจต้องเพิ่มตามความเหมาะสมของแอพพลิเคชันของคุณ */}
 
       <button
         type="submit"
         className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
         disabled={isLoading}
       >
-        {isLoading ? "Creating..." : "Create User"}
+        {isLoading ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
       </button>
 
       {error && <div className="text-red-500">{error}</div>}
