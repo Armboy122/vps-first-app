@@ -3,6 +3,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
 import prisma from '@/lib/prisma'
 import { compare } from 'bcryptjs'
+import { Role } from "@prisma/client"
 
 const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
@@ -15,29 +16,33 @@ const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.employeeId || !credentials?.password) {
-          return null
+          throw new Error("Missing employeeId or password")
         }
 
         const user = await prisma.user.findUnique({
-          where: { employeeId: credentials.employeeId }
+          where: { employeeId: credentials.employeeId },
+          include: { workCenter : true , branch :true}
         })
 
         if (!user) {
-          return null
+          throw new Error("User not found")
         }
 
         const isPasswordValid = await compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
-          return null
+          throw new Error("Invalid password")
         }
 
         return {
           id: user.id.toString(),
           employeeId: user.employeeId,
           name: user.fullName,
-          email: user.employeeId + "@example.com", // หรือใช้ email จริงถ้ามี
-          role: user.role
+          role: user.role,
+          workCenterId: user.workCenterId,
+          branchId: user.branchId,
+          workCenterName: user.workCenter.name,
+          branchName: user.branch.shortName
         }
       }
     })
@@ -47,13 +52,22 @@ const authOptions: NextAuthOptions = {
       if (user) {
         token.role = user.role
         token.employeeId = user.employeeId
+        token.workCenterId = user.workCenterId
+        token.branchId = user.branchId
+        token.workCenterName = user.workCenterName
+        token.branchName = user.branchName
+
       }
       return token
     },
     async session({ session, token }) {
       if (session?.user) {
-        session.user.role = token.role as string
+        session.user.role = token.role as Role
         session.user.employeeId = token.employeeId as string
+        session.user.workCenterId = token.workCenterId as number
+        session.user.branchId = token.branchId as number
+        session.user.workCenterName = token.workCenterName as string
+        session.user.branchName = token.branchName as string
       }
       return session
     }
@@ -64,6 +78,7 @@ const authOptions: NextAuthOptions = {
   session: {
     strategy: "jwt",
   },
+  secret: process.env.NEXTAUTH_SECRET,
 }
 
 const handler = NextAuth(authOptions)
