@@ -48,18 +48,6 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   }
 }
 
-// ฟังก์ชันสำหรับดึงข้อมูล WorkCenter
-export async function getWorkCenters() {
-  return await prisma.workCenter.findMany();
-}
-
-// ฟังก์ชันสำหรับดึงข้อมูล Branch ตาม WorkCenter
-export async function getBranchesByWorkCenter(workCenterId: number) {
-  return await prisma.branch.findMany({
-    where: { workCenterId }
-  });
-}
-
 // ฟังก์ชันสำหรับค้นหา Transformer
 export async function searchTransformers(searchTerm: string) {
   console.log('Searching for:', searchTerm)
@@ -80,3 +68,4 @@ export async function searchTransformers(searchTerm: string) {
     throw error
   }
 }
+
