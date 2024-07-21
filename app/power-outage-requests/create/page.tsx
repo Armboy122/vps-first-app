@@ -1,6 +1,4 @@
-// app/power-outage-requests/create/page.tsx
-
-import { getWorkCenters } from '../../api/action/powerOutageRequest'
+import { getWorkCenters } from '@/app/api/action/getWorkCentersAndBranches'
 import PowerOutageRequestForm from '../../../components/PowerOutageRequestForm'
 
 export default async function CreatePowerOutageRequestPage() {

@@ -4,12 +4,11 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   createUser,
-  getBranches,
-  getWorkCenters
-} from "../app/api/action/createUser";
+} from "../app/api/action/User";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { CreateUserSchema } from "@/lib/validations/user";
+import { getWorkCenters, getBranches } from "@/app/api/action/getWorkCentersAndBranches";
 
 type WorkCenter = {
   id: number;

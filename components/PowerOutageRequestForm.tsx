@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PowerOutageRequestSchema, PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest';
-import { createPowerOutageRequest, searchTransformers, getBranchesByWorkCenter } from '../app/api/action/powerOutageRequest';
+import { createPowerOutageRequest, searchTransformers} from '../app/api/action/powerOutageRequest';
 import { useRouter } from 'next/navigation';
+import { getBranches } from '@/app/api/action/getWorkCentersAndBranches';
 
 interface WorkCenter {
   id: number;
@@ -14,7 +15,8 @@ interface WorkCenter {
 
 interface Branch {
   id: number;
-  fullName: string;
+  shortName: string;
+  workCenterId:number;
 }
 
 interface Transformer {
@@ -46,7 +48,7 @@ export default function PowerOutageRequestForm({ workCenters }: PowerOutageReque
   }, [watchWorkCenterId]);
 
   const loadBranches = async (workCenterId: number) => {
-    const branchData = await getBranchesByWorkCenter(workCenterId);
+    const branchData = await getBranches(workCenterId);
     setBranches(branchData);
   };
 
@@ -165,7 +167,7 @@ export default function PowerOutageRequestForm({ workCenters }: PowerOutageReque
           >
             <option value="">เลือกสาขา</option>
             {branches.map(branch => (
-              <option key={branch.id} value={branch.id}>{branch.fullName}</option>
+              <option key={branch.id} value={branch.id}>{branch.shortName}</option>
             ))}
           </select>
           {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}

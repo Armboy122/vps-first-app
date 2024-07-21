@@ -1,5 +1,5 @@
 'use client'
-import { getBranchesByWorkCenter } from '@/app/api/action/powerOutageRequest';
+import { getBranches } from '@/app/api/action/getWorkCentersAndBranches';
 import { getDataforPrintAnnouncement } from '@/app/api/action/printAnnoucement';
 import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validations/powerOutageRequest';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -41,17 +41,17 @@ const getAnnounceDate = () => {
 
 export default function PrintAnnouncement({workCenters}:{workCenters:WorkCenter[]}){
     const [isOpen,setIsOpen] = useState(false)
-    const [branches, setBranches] = useState<Branch[]>([]);
+    const [branches, setBranches] = useState<Pick<Branch,"id"|"shortName"|"workCenterId">[]>([]);
     const [url,setURL] = useState<string>()
 
-    const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<GetAnnoucementRequestInput>({
+    const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<GetAnnoucementRequestInput>({
         resolver: zodResolver(GetAnnoucementRequest)
     });
 
     const watchWorkCenterId = watch('workCenterId');
 
     const loadBranches = async (workCenterId: number) => {
-        const branchData = await getBranchesByWorkCenter(workCenterId);
+        const branchData = await getBranches(workCenterId);
         setBranches(branchData);
     };
 
@@ -153,7 +153,7 @@ export default function PrintAnnouncement({workCenters}:{workCenters:WorkCenter[
                                     className="w-full p-2 border rounded"
                                 >
                                     <option value="">เลือกสาขา</option>
-                                    {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.fullName}</option>)}
+                                    {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.shortName}</option>)}
                                 </select>
                                 {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}
                             </div>

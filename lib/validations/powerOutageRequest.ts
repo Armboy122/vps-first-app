@@ -44,18 +44,3 @@ export const GetAnnoucementRequest = z.object({
 })
 
 export type GetAnnoucementRequestInput = z.infer<typeof GetAnnoucementRequest>
-
-
-
-// workCenterId: z.string().refine((val)=> val != '',{
-//   message: "กรุณาเลือกการไฟฟ้าจุดรวมงาน",
-//   path: ["workCenterId"]
-// }),
-// branchId: z.string().refine((val)=> val != '',{
-//   message: "กรุณาเลือกการไฟฟ้า",
-//   path: ["branchId"]
-// }),
-// outageDate: z.string().refine((val)=> val != '',{
-//   message: "โปรดระบุวันที่ดับไฟ",
-//   path: ["outageDate"]
-// })
