@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma'
 import { compare } from 'bcryptjs'
 import { Role } from "@prisma/client"
 
-const authOptions: NextAuthOptions = {
+export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma),
   providers: [
     CredentialsProvider({

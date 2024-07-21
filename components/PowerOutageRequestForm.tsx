@@ -1,10 +1,11 @@
 // components/PowerOutageRequestForm.tsx
+
 "use client"
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PowerOutageRequestSchema, PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest';
-import { createPowerOutageRequest, searchTransformers} from '../app/api/action/powerOutageRequest';
+import { createPowerOutageRequest, searchTransformers } from '@/app/api/action/powerOutageRequest';
 import { useRouter } from 'next/navigation';
 import { getBranches } from '@/app/api/action/getWorkCentersAndBranches';
 
@@ -13,10 +14,10 @@ interface WorkCenter {
   name: string;
 }
 
-interface Branch {
+interface Branch { 
   id: number;
   shortName: string;
-  workCenterId:number;
+  workCenterId: number;
 }
 
 interface Transformer {
@@ -25,27 +26,44 @@ interface Transformer {
 }
 
 interface PowerOutageRequestFormProps {
-  workCenters: WorkCenter[];
+  workCenters?: WorkCenter[];
+  role: string;
+  workCenterId?: string;
+  branch?: string;
 }
 
-export default function PowerOutageRequestForm({ workCenters }: PowerOutageRequestFormProps) {
+export default function PowerOutageRequestForm({ workCenters, role, workCenterId, branch }: PowerOutageRequestFormProps) {
   const router = useRouter();
   const [branches, setBranches] = useState<Branch[]>([]);
   const [transformers, setTransformers] = useState<Transformer[]>([]);
   const [requests, setRequests] = useState<PowerOutageRequestInput[]>([]);
   const [submitStatus, setSubmitStatus] = useState<{ success: boolean; message: string } | null>(null);
 
+  console.log(role)
+
   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<PowerOutageRequestInput>({
-    resolver: zodResolver(PowerOutageRequestSchema)
+    resolver: zodResolver(PowerOutageRequestSchema),
+    defaultValues: {
+      workCenterId: workCenterId,
+      branchId: branch
+    }
   });
 
   const watchWorkCenterId = watch('workCenterId');
 
   useEffect(() => {
-    if (watchWorkCenterId) {
-      loadBranches(Number(watchWorkCenterId));
+  if (role !== 'ADMIN') {
+    if (workCenterId) {
+      setValue('workCenterId', workCenterId);
+      loadBranches(Number(workCenterId));
     }
-  }, [watchWorkCenterId]);
+    if (branch) {
+      setValue('branchId', branch);
+    }
+  } else if (watchWorkCenterId) {
+    loadBranches(Number(watchWorkCenterId));
+  }
+}, [role, workCenterId, branch, watchWorkCenterId, setValue]);
 
   const loadBranches = async (workCenterId: number) => {
     const branchData = await getBranches(workCenterId);
@@ -67,28 +85,42 @@ export default function PowerOutageRequestForm({ workCenters }: PowerOutageReque
     setTransformers([]);
   };
 
-  const onSubmit = async (data: PowerOutageRequestInput) => {
+  const onSubmit = useCallback(async (data: PowerOutageRequestInput) => {
+    const start = new Date(`${data.outageDate}T${data.startTime}`);
+    const end = new Date(`${data.outageDate}T${data.endTime}`);
+    
+    if (end <= start) {
+      setSubmitStatus({ success: false, message: 'เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น' });
+      return;
+    }
+  
     try {
       const result = await createPowerOutageRequest(data);
       if (result.success) {
         setSubmitStatus({ success: true, message: 'คำขอถูกบันทึกเรียบร้อยแล้ว' });
         reset();
-        setTimeout(() => {
-          router.back();
-        }, 1000);
+        router.push('/power-outage-requests');
       } else {
-        setSubmitStatus({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกคำขอ' });
+        setSubmitStatus({ success: false, message: result.error || 'เกิดข้อผิดพลาดในการบันทึกคำขอ' });
       }
     } catch (error) {
       setSubmitStatus({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกคำขอ' });
     }
-  };
+  }, [reset, router]);
 
-  const onAddToList = (data: PowerOutageRequestInput) => {
-    setRequests(prevRequests => [...prevRequests, data]);
+  const onAddToList = useCallback((data: PowerOutageRequestInput) => {
+    const start = new Date(`${data.outageDate}T${data.startTime}`);
+    const end = new Date(`${data.outageDate}T${data.endTime}`);
+    
+    if (end <= start) {
+      setSubmitStatus({ success: false, message: 'เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น' });
+      return;
+    }
+    
+    setRequests(prev => [...prev, data]);
     setSubmitStatus({ success: true, message: 'คำขอถูกเพิ่มเข้าสู่รายการแล้ว' });
     reset();
-  };
+  }, [reset]);
 
   const handleSubmitAll = async () => {
     try {
@@ -101,7 +133,6 @@ export default function PowerOutageRequestForm({ workCenters }: PowerOutageReque
       setTimeout(() => {
         router.back();
       }, 1000);
-      
     } catch (error) {
       setSubmitStatus({ success: false, message: 'เกิดข้อผิดพลาดในการบันทึกคำขอ' });
     }
@@ -143,35 +174,43 @@ export default function PowerOutageRequestForm({ workCenters }: PowerOutageReque
           {errors.endTime && <p className="text-red-500">{errors.endTime.message}</p>}
         </div>
 
-        <div>
-          <label htmlFor="workCenterId" className="block mb-2">ศูนย์งาน:</label>
-          <select
-            id="workCenterId"
-            {...register('workCenterId')}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">เลือกศูนย์งาน</option>
-            {workCenters.map(wc => (
-              <option key={wc.id} value={wc.id}>{wc.name}</option>
-            ))}
-          </select>
-          {errors.workCenterId && <p className="text-red-500">{errors.workCenterId.message}</p>}
-        </div>
+        {role === 'ADMIN' ? (
+          <div>
+            <label htmlFor="workCenterId" className="block mb-2">ศูนย์งาน:</label>
+            <select
+              id="workCenterId"
+              {...register('workCenterId')}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">เลือกศูนย์งาน</option>
+              {workCenters?.map(wc => (
+                <option key={wc.id} value={wc.id}>{wc.name}</option>
+              ))}
+            </select>
+            {errors.workCenterId && <p className="text-red-500">{errors.workCenterId.message}</p>}
+          </div>
+        ) : (
+          <input type="hidden" {...register('workCenterId')} />
+        )}
 
-        <div>
-          <label htmlFor="branchId" className="block mb-2">สาขา:</label>
-          <select
-            id="branchId"
-            {...register('branchId')}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">เลือกสาขา</option>
-            {branches.map(branch => (
-              <option key={branch.id} value={branch.id}>{branch.shortName}</option>
-            ))}
-          </select>
-          {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}
-        </div>
+        {role === 'ADMIN' ? (
+          <div>
+            <label htmlFor="branchId" className="block mb-2">สาขา:</label>
+            <select
+              id="branchId"
+              {...register('branchId')}
+              className="w-full p-2 border rounded"
+            >
+              <option value="">เลือกสาขา</option>
+              {branches.map(branch => (
+                <option key={branch.id} value={branch.id}>{branch.shortName}</option>
+              ))}
+            </select>
+            {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}
+          </div>
+        ) : (
+          <input type="hidden" {...register('branchId')} />
+        )}
 
         <div>
           <label htmlFor="transformerNumber" className="block mb-2">หมายเลขหม้อแปลง:</label>

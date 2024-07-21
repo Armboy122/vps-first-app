@@ -8,16 +8,9 @@ export const PowerOutageRequestSchema = z.object({
   endTime: z.string(),
   workCenterId: z.string(),
   branchId: z.string(),
-  transformerNumber: z.string(),
+  transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),
-  area: z.string().optional()
-}).refine((data) => {
-  const startDateTime = new Date(`${data.outageDate}T${data.startTime}`);
-  const endDateTime = new Date(`${data.outageDate}T${data.endTime}`);
-  return endDateTime > startDateTime;
-}, {
-  message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น",
-  path: ["endTime"], // This will show the error message on the endTime field
+  area: z.string().optional(),
 });
 
 export type PowerOutageRequestInput = z.infer<typeof PowerOutageRequestSchema>
