@@ -1,5 +1,5 @@
 'use client'
-import { getBranches } from '@/app/api/action/getWorkCentersAndBranches';
+import { getBranches, getWorkCenters } from '@/app/api/action/getWorkCentersAndBranches';
 import { getDataforPrintAnnouncement } from '@/app/api/action/printAnnoucement';
 import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validations/powerOutageRequest';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -39,7 +39,8 @@ const getAnnounceDate = () => {
 };
 
 
-export default function PrintAnnouncement({workCenters}:{workCenters:WorkCenter[]}){
+export default function PrintAnnouncement(){
+    const [workCenters,setWorkCenters] = useState<WorkCenter[]>([])
     const [isOpen,setIsOpen] = useState(false)
     const [branches, setBranches] = useState<Pick<Branch,"id"|"shortName"|"workCenterId">[]>([]);
     const [url,setURL] = useState<string>()
@@ -60,6 +61,14 @@ export default function PrintAnnouncement({workCenters}:{workCenters:WorkCenter[
           loadBranches(Number(watchWorkCenterId));
         }
     }, [watchWorkCenterId]);
+
+    useEffect(()=>{
+        const setWC = async()=>{
+            const res = await getWorkCenters()
+            setWorkCenters(res)
+        }
+        setWC()
+    },[])
     
 
     const onSubmit = async (data: GetAnnoucementRequestInput) =>{
