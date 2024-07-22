@@ -72,11 +72,17 @@ model User {
 
 // enum Role: กำหนดบทบาทที่เป็นไปได้ของผู้ใช้
 enum Role {
-  VIEWER
-  ADMIN
-  MANAGER
-  SUPERVISOR
-  USER
+  VIEWER //ฝปบ.ดูได้หมด
+  ADMIN //ทำได้ทุกอย่างและเป็นคนสร้าง USER 
+  MANAGER // ผจก.แต่ละที่ ดูได้แค่จุดรวมงาน แต่เพิ่มลบอะไรไม่ได้เลย 
+  SUPERVISOR //EO เปลี่ยนสถานะ OMSStatus
+  USER //พนักงานหม้อแปลง CRUD ได้ถ้ายังไม่เปลี่ยนสถานะว่าผจก.อนุมัติ
+}
+// enum Role: กำหนดบทบาทที่เป็นไปได้ของผู้ใช้
+enum Request {
+  CONFIRM 
+  CANCELLED
+  NOT
 }
 
 
@@ -97,6 +103,7 @@ model PowerOutageRequest {
   transformer       Transformer @relation(fields: [transformerNumber], references: [transformerNumber])
   gisDetails        String
   area              String?
+  statusRequest     Request     @default(NOT)
   omsStatus         OMSStatus   @default(NOT_ADDED)
   statusUpdatedAt   DateTime?
   statusUpdatedById Int?
