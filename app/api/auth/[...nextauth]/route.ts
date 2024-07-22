@@ -50,6 +50,7 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async jwt({ token, user }) {
       if (user) {
+        token.id = user.id  // เพิ่มบรรทัดนี้
         token.role = user.role
         token.employeeId = user.employeeId
         token.workCenterId = user.workCenterId
@@ -62,6 +63,7 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session?.user) {
+        session.user.id = token.id as string  // เพิ่มบรรทัดนี้
         session.user.role = token.role as Role
         session.user.employeeId = token.employeeId as string
         session.user.workCenterId = token.workCenterId as number

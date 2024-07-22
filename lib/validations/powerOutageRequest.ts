@@ -10,7 +10,7 @@ export const PowerOutageRequestSchema = z.object({
   branchId: z.string(),
   transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),
-  area: z.string().optional(),
+  area: z.string().nullable(),
 });
 
 export type PowerOutageRequestInput = z.infer<typeof PowerOutageRequestSchema>
