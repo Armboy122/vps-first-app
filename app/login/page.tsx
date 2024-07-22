@@ -24,7 +24,7 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid employee ID or password');
       } else {
-        router.push('/power-outage-requests'); // หรือหน้าที่คุณต้องการให้ redirect ไปหลังจาก login สำเร็จ
+        router.push('/'); // หรือหน้าที่คุณต้องการให้ redirect ไปหลังจาก login สำเร็จ
       }
     } catch (error) {
       setError('An error occurred. Please try again.');

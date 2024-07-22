@@ -1,11 +1,10 @@
-// app/components/PowerOutageRequestList.tsx
-'use client'
+"use client"
+import { useState, useEffect } from 'react';
+import { useSession } from "next-auth/react";
+import { PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest';
+import { getPowerOutageRequests, updatePowerOutageRequest, deletePowerOutageRequest } from '@/app/api/action/powerOutageRequest';
+import UpdatePowerOutageRequestModal from './UpdateRequesr';
 
-import { getPowerOutageRequests, updatePowerOutageRequest, deletePowerOutageRequest } from '@/app/api/action/powerOutageRequest'
-import { useState, useEffect } from 'react'
-import { useSession } from "next-auth/react"
-import PowerOutageRequestForm from './PowerOutageRequestForm'
-import { PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest'
 
 interface PowerOutageRequest {
   id: number;
@@ -28,20 +27,20 @@ interface PowerOutageRequest {
 }
 
 export default function PowerOutageRequestList() {
-  const [requests, setRequests] = useState<PowerOutageRequest[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [editingId, setEditingId] = useState<number | null>(null)
-  const { data: session } = useSession()
+  const [requests, setRequests] = useState<PowerOutageRequest[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [editingRequest, setEditingRequest] = useState<PowerOutageRequest | null>(null);
+  const { data: session } = useSession();
 
   useEffect(() => {
-    loadRequests()
-  }, [])
+    loadRequests();
+  }, []);
 
   async function loadRequests() {
     try {
-      setLoading(true)
-      const result = await getPowerOutageRequests()
+      setLoading(true);
+      const result = await getPowerOutageRequests();
       const formattedResult = result.map(item => ({
         ...item,
         createdAt: new Date(item.createdAt),
@@ -50,26 +49,27 @@ export default function PowerOutageRequestList() {
         endTime: new Date(item.endTime),
         statusUpdatedAt: item.statusUpdatedAt ? new Date(item.statusUpdatedAt) : null,
       }));
-      setRequests(formattedResult)
-      setError(null)
+      setRequests(formattedResult);
+      setError(null);
     } catch (err) {
-      setError('เกิดข้อผิดพลาดในการโหลดข้อมูล')
-      console.error('Error loading requests:', err)
+      setError('เกิดข้อผิดพลาดในการโหลดข้อมูล');
+      console.error('Error loading requests:', err);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
-  const handleEdit = (id: number) => {
-    setEditingId(id)
+  const handleEdit = (request: PowerOutageRequest) => {
+    setEditingRequest(request);
   }
 
-  const handleUpdate = async (id: number, data: PowerOutageRequestInput) => {
+  const handleUpdate = async (data: PowerOutageRequestInput) => {
+    if (!editingRequest) return;
     try {
-      const result = await updatePowerOutageRequest(id, data)
+      const result = await updatePowerOutageRequest(editingRequest.id, data);
       if (result.success && result.data) {
         setRequests(prevRequests => 
-          prevRequests.map(req => req.id === id ? {
+          prevRequests.map(req => req.id === editingRequest.id ? {
             ...req,
             ...result.data,
             createdAt: new Date(result.data.createdAt),
@@ -78,33 +78,33 @@ export default function PowerOutageRequestList() {
             endTime: new Date(result.data.endTime),
             statusUpdatedAt: result.data.statusUpdatedAt ? new Date(result.data.statusUpdatedAt) : null,
           } : req)
-        )
-        setEditingId(null)
+        );
+        setEditingRequest(null);
       } else {
-        // setError(result.message)
+        setError("ผิดพลาดจากการแก้ไข");
       }
     } catch (err) {
-      setError('An error occurred while updating the request')
-      console.error(err)
+      setError('An error occurred while updating the request');
+      console.error(err);
     }
   }
 
   const handleCancelEdit = () => {
-    setEditingId(null)
+    setEditingRequest(null);
   }
 
   const handleDelete = async (id: number) => {
     if (window.confirm('คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?')) {
       try {
-        const result = await deletePowerOutageRequest(id)
+        const result = await deletePowerOutageRequest(id);
         if (result.success) {
-          setRequests(prevRequests => prevRequests.filter(req => req.id !== id))
+          setRequests(prevRequests => prevRequests.filter(req => req.id !== id));
         } else {
-          setError(result.message)
+          setError(result.message);
         }
       } catch (err) {
-        setError('An error occurred while deleting the request')
-        console.error(err)
+        setError('An error occurred while deleting the request');
+        console.error(err);
       }
     }
   }
@@ -112,9 +112,8 @@ export default function PowerOutageRequestList() {
   if (loading) return <div>กำลังโหลดข้อมูล...</div>
   if (error) return <div className="text-red-500">{error}</div>
 
-  const isAdmin = session?.user?.role === 'ADMIN'
+  const isAdmin = session?.user?.role === 'ADMIN';
   
-
   return (
     <div>
       <h2 className="text-2xl font-bold mb-4">รายการคำขอดับไฟ</h2>
@@ -127,6 +126,7 @@ export default function PowerOutageRequestList() {
             {isAdmin && <th className="py-2 px-4 border-b">ศูนย์งาน</th>}
             {isAdmin && <th className="py-2 px-4 border-b">สาขา</th>}
             <th className="py-2 px-4 border-b">หมายเลขหม้อแปลง</th>
+            <th className="py-2 px-4 border-b">บริเวร</th>
             <th className="py-2 px-4 border-b">สถานะ OMS</th>
             <th className="py-2 px-4 border-b">ผู้สร้างคำขอ</th>
             <th className="py-2 px-4 border-b">การดำเนินการ</th>
@@ -134,60 +134,54 @@ export default function PowerOutageRequestList() {
         </thead>
         <tbody>
           {requests.map((request) => (
-            editingId === request.id ? (
-              <tr key={request.id}>
-                <td colSpan={9}>
-                  <PowerOutageRequestForm
-                    initialData={{
-                      ...request,
-                      outageDate: request.outageDate.toISOString().split('T')[0],
-                      startTime: request.startTime.toTimeString().slice(0, 5),
-                      endTime: request.endTime.toTimeString().slice(0, 5),
-                      workCenterId: String(request.workCenterId),
-                      branchId: String(request.branchId),
-                      area: request.area
-                    }}
-                    onSubmit={(data) => handleUpdate(request.id, data)}
-                    onCancel={handleCancelEdit}
-                    role={session?.user?.role || ''}
-                    workCenterId={String(request.workCenterId)}
-                    branch={String(request.branchId)}
-                  />
-                </td>
-              </tr>
-            ) : (
-              <tr key={request.id}>
-                <td className="py-2 px-4 border-b">{request.outageDate.toLocaleDateString('th-TH')}</td>
-                <td className="py-2 px-4 border-b">{request.startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
-                <td className="py-2 px-4 border-b">{request.endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
-                {isAdmin && <td className="py-2 px-4 border-b">{request.workCenter.name}</td>}
-                {isAdmin && <td className="py-2 px-4 border-b">{request.branch.shortName}</td>}
-                <td className="py-2 px-4 border-b">{request.transformerNumber}</td>
-                <td className="py-2 px-4 border-b">{request.omsStatus}</td>
-                <td className="py-2 px-4 border-b">{request.createdBy.fullName}</td>
-                <td className="py-2 px-4 border-b">
-                  {(isAdmin || session?.user?.id === request.createdById.toString()) && (
-                    <>
-                      <button 
-                        onClick={() => handleEdit(request.id)}
-                        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2"
-                      >
-                        แก้ไข
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(request.id)}
-                        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                      >
-                        ลบ
-                      </button>
-                    </>
-                  )}
-                </td>
-              </tr>
-            )
+            <tr key={request.id}>
+              <td className="py-2 px-4 border-b">{request.outageDate.toLocaleDateString('th-TH')}</td>
+              <td className="py-2 px-4 border-b">{request.startTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+              <td className="py-2 px-4 border-b">{request.endTime.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })}</td>
+              {isAdmin && <td className="py-2 px-4 border-b">{request.workCenter.name}</td>}
+              {isAdmin && <td className="py-2 px-4 border-b">{request.branch.shortName}</td>}
+              <td className="py-2 px-4 border-b">{request.transformerNumber}</td>
+              <td className="py-2 px-4 border-b">{request.area}</td>
+              <td className="py-2 px-4 border-b">{request.omsStatus}</td>
+              <td className="py-2 px-4 border-b">{request.createdBy.fullName}</td>
+              <td className="py-2 px-4 border-b">
+                {(isAdmin || session?.user?.id === request.createdById.toString()) && (
+                  <>
+                    <button 
+                      onClick={() => handleEdit(request)}
+                      className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2"
+                    >
+                      แก้ไข
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(request.id)}
+                      className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
+                    >
+                      ลบ
+                    </button>
+                  </>
+                )}
+              </td>
+            </tr>
           ))}
         </tbody>
       </table>
+      {editingRequest && (
+        <UpdatePowerOutageRequestModal
+          initialData={{
+            outageDate: editingRequest.outageDate.toISOString().split('T')[0],
+            startTime: editingRequest.startTime.toTimeString().slice(0, 5),
+            endTime: editingRequest.endTime.toTimeString().slice(0, 5),
+            workCenterId: String(editingRequest.workCenterId),
+            branchId: String(editingRequest.branchId),
+            transformerNumber: editingRequest.transformerNumber,
+            gisDetails: editingRequest.gisDetails,
+            area: editingRequest.area
+          }}
+          onSubmit={handleUpdate}
+          onCancel={handleCancelEdit}
+        />
+      )}
     </div>
-  )
+  );
 }

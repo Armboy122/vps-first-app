@@ -1,6 +1,6 @@
 "use server";
 
-import prisma from "@/lib/prisma"; // สมมติว่าคุณมี Prisma client setup แล้ว
+import prisma from "@/lib/prisma";
 import {
   PowerOutageRequestSchema,
   PowerOutageRequestInput,
@@ -11,13 +11,17 @@ import { authOptions } from "../auth/[...nextauth]/route";
 // ฟังก์ชันสำหรับ getCurrentUser 
 async function getCurrentUser() {
   const session = await getServerSession(authOptions);
-  const employeeId = session?.user.employeeId;
+  if (!session || !session.user) {
+    throw new Error("Unauthorized: No session found");
+  }
+
+  const employeeId = session.user.employeeId;
   const user = await prisma.user.findUnique({
     where: { employeeId: employeeId },
   });
 
   if (!user) {
-    throw new Error("Mock user not found");
+    throw new Error("User not found");
   }
 
   return user;
@@ -25,12 +29,6 @@ async function getCurrentUser() {
 
 export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   const currentUser = await getCurrentUser();
-
-  // console.log("usercurren",currentUser.id)
-
-  if (!currentUser) {
-    throw new Error("User not authenticated");
-  }
 
   try {
     const validatedData = PowerOutageRequestSchema.parse(data);
@@ -61,7 +59,6 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
 
 // ฟังก์ชันสำหรับค้นหา Transformer
 export async function searchTransformers(searchTerm: string) {
-  // console.log("Searching for:", searchTerm);
   try {
     const results = await prisma.transformer.findMany({
       where: {
@@ -72,7 +69,6 @@ export async function searchTransformers(searchTerm: string) {
       },
       take: 10,
     });
-    // console.log("Search results:", results);
     return results;
   } catch (error) {
     console.error("Error searching transformers:", error);
@@ -84,7 +80,7 @@ export async function getPowerOutageRequests() {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    throw new Error("Unauthorized");
+    throw new Error("Unauthorized: No session found");
   }
 
   const { role, workCenterId } = session.user;
@@ -95,27 +91,30 @@ export async function getPowerOutageRequests() {
     whereCondition = { workCenterId: Number(workCenterId) };
   }
 
-  const data = await prisma.powerOutageRequest.findMany({
-    where: whereCondition,
-    orderBy: { createdAt: "desc" },
-    include: {
-      createdBy: { select: { fullName: true } },
-      workCenter: { select: { name: true } },
-      branch: { select: { shortName: true } },
-    },
-  });
+  try {
+    const data = await prisma.powerOutageRequest.findMany({
+      where: whereCondition,
+      orderBy: { createdAt: "desc" },
+      include: {
+        createdBy: { select: { fullName: true } },
+        workCenter: { select: { name: true } },
+        branch: { select: { shortName: true } },
+      },
+    });
 
-  return data;
+    return data;
+  } catch (error) {
+    console.error("Failed to fetch power outage requests:", error);
+    throw new Error("Failed to fetch power outage requests");
+  }
 }
 
 export async function deletePowerOutageRequest(id: number) {
   const session = await getServerSession(authOptions);
 
   if (!session || !session.user) {
-    throw new Error("Unauthorized");
+    throw new Error("Unauthorized: No session found");
   }
-
-  // TODO: เพิ่มเงื่อนไขการลบตามสิทธิ์ของผู้ใช้ในอนาคต
 
   try {
     await prisma.powerOutageRequest.delete({
@@ -131,10 +130,6 @@ export async function deletePowerOutageRequest(id: number) {
 export async function updatePowerOutageRequest(id: number, data: PowerOutageRequestInput) {
   const currentUser = await getCurrentUser();
 
-  if (!currentUser) {
-    throw new Error("User not authenticated");
-  }
-
   try {
     const existingRequest = await prisma.powerOutageRequest.findUnique({
       where: { id },
@@ -149,18 +144,18 @@ export async function updatePowerOutageRequest(id: number, data: PowerOutageRequ
       throw new Error("You don't have permission to update this request");
     }
 
-    const validatedData = PowerOutageRequestSchema.parse(data);
+    const validatedData = PowerOutageRequestSchema.pick({
+      startTime: true,
+      endTime: true,
+      area: true,
+    }).parse(data);
 
     const result = await prisma.powerOutageRequest.update({
       where: { id },
       data: {
-        ...validatedData,
-        outageDate: new Date(validatedData.outageDate),
-        startTime: new Date(`${validatedData.outageDate}T${validatedData.startTime}`),
-        endTime: new Date(`${validatedData.outageDate}T${validatedData.endTime}`),
-        workCenterId: Number(validatedData.workCenterId),
-        branchId: Number(validatedData.branchId),
-        area: validatedData.area || null,
+        startTime: new Date(`${existingRequest.outageDate.toISOString().split('T')[0]}T${validatedData.startTime}`),
+        endTime: new Date(`${existingRequest.outageDate.toISOString().split('T')[0]}T${validatedData.endTime}`),
+        area: validatedData.area,
       },
       include: {
         createdBy: { select: { fullName: true } },

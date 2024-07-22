@@ -21,17 +21,7 @@ model Transformer {
   gisDetails          String // รายละเอียด GIS ของตำแหน่งหม้อแปลง
   createdAt           DateTime                     @default(now())
   updatedAt           DateTime                     @updatedAt
-  locationHistory     TransformerLocationHistory[]
   powerOutageRequests PowerOutageRequest[]
-}
-
-// โมเดล TransformerLocationHistory: ติดตามประวัติการเปลี่ยนแปลงตำแหน่งของหม้อแปลง
-model TransformerLocationHistory {
-  id            Int         @id @default(autoincrement())
-  transformerId Int
-  transformer   Transformer @relation(fields: [transformerId], references: [id])
-  oldGisDetails String // รายละเอียด GIS เก่า
-  changedAt     DateTime    @default(now())
 }
 
 // โมเดล WorkCenter: แสดงถึงจุดรวมงานในองค์กร
@@ -72,8 +62,6 @@ model User {
   branchId        Int
   branch          Branch               @relation(fields: [branchId], references: [id])
   role            Role                 @default(USER)
-  status          UserStatus           @default(ACTIVE)
-  permissions     Permission[]
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   createdRequests PowerOutageRequest[] @relation("RequestCreator")
@@ -84,27 +72,13 @@ model User {
 
 // enum Role: กำหนดบทบาทที่เป็นไปได้ของผู้ใช้
 enum Role {
-  SUPER_ADMIN
+  VIEWER
   ADMIN
   MANAGER
   SUPERVISOR
   USER
 }
 
-// enum UserStatus: กำหนดสถานะที่เป็นไปได้ของผู้ใช้
-enum UserStatus {
-  ACTIVE
-  INACTIVE
-  SUSPENDED
-}
-
-// โมเดล Permission: กำหนดสิทธิ์แบบละเอียดสำหรับผู้ใช้
-model Permission {
-  id          Int     @id @default(autoincrement())
-  name        String  @unique
-  description String?
-  users       User[]
-}
 
 // โมเดล PowerOutageRequest: จัดการคำขอดับไฟสำหรับหม้อแปลง
 model PowerOutageRequest {

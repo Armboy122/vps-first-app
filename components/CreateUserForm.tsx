@@ -2,13 +2,14 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  createUser,
-} from "../app/api/action/User";
+import { createUser } from "../app/api/action/User";
 import { useState, useEffect } from "react";
 import { z } from "zod";
 import { CreateUserSchema } from "@/lib/validations/user";
-import { getWorkCenters, getBranches } from "@/app/api/action/getWorkCentersAndBranches";
+import {
+  getWorkCenters,
+  getBranches,
+} from "@/app/api/action/getWorkCentersAndBranches";
 
 type WorkCenter = {
   id: number;
@@ -29,7 +30,14 @@ export default function CreateUserForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<FormData>({
+  const {
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<FormData>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
       password: "",
@@ -38,8 +46,6 @@ export default function CreateUserForm() {
       workCenterId: 0,
       branchId: 0,
       role: "USER",
-      status: "ACTIVE",
-      permissions: [],
     },
   });
 
@@ -104,7 +110,9 @@ export default function CreateUserForm() {
             />
           )}
         />
-        {errors.employeeId && <span className="text-red-500">{errors.employeeId.message}</span>}
+        {errors.employeeId && (
+          <span className="text-red-500">{errors.employeeId.message}</span>
+        )}
       </div>
 
       <div>
@@ -122,7 +130,9 @@ export default function CreateUserForm() {
             />
           )}
         />
-        {errors.password && <span className="text-red-500">{errors.password.message}</span>}
+        {errors.password && (
+          <span className="text-red-500">{errors.password.message}</span>
+        )}
       </div>
 
       <div>
@@ -140,12 +150,14 @@ export default function CreateUserForm() {
             />
           )}
         />
-        {errors.fullName && <span className="text-red-500">{errors.fullName.message}</span>}
+        {errors.fullName && (
+          <span className="text-red-500">{errors.fullName.message}</span>
+        )}
       </div>
 
       <div>
         <label htmlFor="workCenterId" className="block mb-1">
-          ศูนย์งาน
+          จุดรวมงาน
         </label>
         <Controller
           name="workCenterId"
@@ -165,7 +177,9 @@ export default function CreateUserForm() {
             </select>
           )}
         />
-        {errors.workCenterId && <span className="text-red-500">{errors.workCenterId.message}</span>}
+        {errors.workCenterId && (
+          <span className="text-red-500">{errors.workCenterId.message}</span>
+        )}
       </div>
 
       <div>
@@ -191,7 +205,9 @@ export default function CreateUserForm() {
             </select>
           )}
         />
-        {errors.branchId && <span className="text-red-500">{errors.branchId.message}</span>}
+        {errors.branchId && (
+          <span className="text-red-500">{errors.branchId.message}</span>
+        )}
       </div>
 
       <div>
@@ -211,25 +227,9 @@ export default function CreateUserForm() {
             </select>
           )}
         />
-        {errors.role && <span className="text-red-500">{errors.role.message}</span>}
-      </div>
-
-      <div>
-        <label htmlFor="status" className="block mb-1">
-          สถานะ
-        </label>
-        <Controller
-          name="status"
-          control={control}
-          render={({ field }) => (
-            <select {...field} className="w-full p-2 border rounded">
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-              <option value="SUSPENDED">Suspended</option>
-            </select>
-          )}
-        />
-        {errors.status && <span className="text-red-500">{errors.status.message}</span>}
+        {errors.role && (
+          <span className="text-red-500">{errors.role.message}</span>
+        )}
       </div>
 
       <button

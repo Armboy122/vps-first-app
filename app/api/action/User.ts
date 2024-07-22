@@ -27,11 +27,7 @@ export async function createUser(input: CreateUserInput) {
         employeeId: validatedData.employeeId,
         workCenter: { connect: { id: validatedData.workCenterId } },
         branch: { connect: { id: validatedData.branchId } },
-        role: validatedData.role,
-        status: validatedData.status,
-        permissions: validatedData.permissions ? {
-          connect: validatedData.permissions.map(id => ({ id }))
-        } : undefined,
+        role: validatedData.role
       },
     })
 

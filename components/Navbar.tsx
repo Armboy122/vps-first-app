@@ -9,8 +9,7 @@ const Navbar = () => {
 
   const navItems = [
     { label: 'Home', path: '/' },
-    { label: 'About', path: '/about' },
-    { label: 'Contact', path: '/contact' },
+    { label: 'ข้อมูลสถานะ', path: '/power-outage-requests' },
   ];
 
   return (
