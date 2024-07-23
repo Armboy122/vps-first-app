@@ -97,7 +97,7 @@ export async function getPowerOutageRequests() {
       orderBy: { createdAt: "desc" },
       include: {
         createdBy: { select: { fullName: true } },
-        workCenter: { select: { name: true } },
+        workCenter: { select: { name: true ,id:true } },
         branch: { select: { shortName: true } },
       },
     });

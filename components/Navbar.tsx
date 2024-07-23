@@ -10,6 +10,7 @@ const Navbar = () => {
   const navItems = [
     { label: 'Home', path: '/' },
     { label: 'ข้อมูลสถานะ', path: '/power-outage-requests' },
+    { label: 'Admin', path: '/admin/create-user' },
   ];
 
   return (

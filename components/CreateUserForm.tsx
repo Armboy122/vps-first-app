@@ -219,11 +219,11 @@ export default function CreateUserForm() {
           control={control}
           render={({ field }) => (
             <select {...field} className="w-full p-2 border rounded">
-              <option value="USER">User</option>
-              <option value="SUPERVISOR">Supervisor</option>
-              <option value="MANAGER">Manager</option>
+              <option value="USER">พนักงานหม้อแปลง</option>
+              <option value="SUPERVISOR">พนักงาน EO</option>
+              <option value="MANAGER">ผู้บริหารจุดรวมงาน</option>
               <option value="ADMIN">Admin</option>
-              <option value="SUPER_ADMIN">Super Admin</option>
+              <option value="VIEWER">กฟต.3</option>
             </select>
           )}
         />

@@ -39,7 +39,7 @@ export default function PowerOutageRequestForm({ workCenters, role, workCenterId
   const [requests, setRequests] = useState<PowerOutageRequestInput[]>([]);
   const [submitStatus, setSubmitStatus] = useState<{ success: boolean; message: string } | null>(null);
 
-  console.log(role)
+
 
   const { register, handleSubmit, formState: { errors }, setValue, reset, watch } = useForm<PowerOutageRequestInput>({
     resolver: zodResolver(PowerOutageRequestSchema),
