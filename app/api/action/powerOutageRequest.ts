@@ -7,8 +7,9 @@ import {
 } from "@/lib/validations/powerOutageRequest";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]/route";
+import { OMSStatus , Request } from '@prisma/client';
 
-// ฟังก์ชันสำหรับ getCurrentUser 
+// ฟังก์ชันสำหรับ getCurrentUser
 async function getCurrentUser() {
   const session = await getServerSession(authOptions);
   if (!session || !session.user) {
@@ -26,7 +27,7 @@ async function getCurrentUser() {
 
   return user;
 }
-
+//สร้างคำขอดับไฟ
 export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   const currentUser = await getCurrentUser();
 
@@ -57,7 +58,7 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   }
 }
 
-// ฟังก์ชันสำหรับค้นหา Transformer
+// ดรอปดาวน์หม้อแปลง
 export async function searchTransformers(searchTerm: string) {
   try {
     const results = await prisma.transformer.findMany({
@@ -77,27 +78,12 @@ export async function searchTransformers(searchTerm: string) {
 }
 
 export async function getPowerOutageRequests() {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    throw new Error("Unauthorized: No session found");
-  }
-
-  const { role, workCenterId } = session.user;
-
-  let whereCondition = {};
-
-  if (role !== "ADMIN") {
-    whereCondition = { workCenterId: Number(workCenterId) };
-  }
-
   try {
     const data = await prisma.powerOutageRequest.findMany({
-      where: whereCondition,
       orderBy: { createdAt: "desc" },
       include: {
         createdBy: { select: { fullName: true } },
-        workCenter: { select: { name: true ,id:true } },
+        workCenter: { select: { name: true, id: true } },
         branch: { select: { shortName: true } },
       },
     });
@@ -110,12 +96,6 @@ export async function getPowerOutageRequests() {
 }
 
 export async function deletePowerOutageRequest(id: number) {
-  const session = await getServerSession(authOptions);
-
-  if (!session || !session.user) {
-    throw new Error("Unauthorized: No session found");
-  }
-
   try {
     await prisma.powerOutageRequest.delete({
       where: { id },
@@ -127,56 +107,121 @@ export async function deletePowerOutageRequest(id: number) {
   }
 }
 
-export async function updatePowerOutageRequest(id: number, data: PowerOutageRequestInput) {
-  const currentUser = await getCurrentUser();
-
+export async function updatePowerOutageRequest(
+  id: number,
+  data: PowerOutageRequestInput
+) {
   try {
-    const existingRequest = await prisma.powerOutageRequest.findUnique({
-      where: { id },
-      include: { createdBy: true },
-    });
-
-    if (!existingRequest) {
-      throw new Error("Power outage request not found");
-    }
-
-    if (existingRequest.createdById !== currentUser.id && currentUser.role !== 'ADMIN') {
-      throw new Error("You don't have permission to update this request");
-    }
-
     const validatedData = PowerOutageRequestSchema.pick({
       startTime: true,
       endTime: true,
       area: true,
     }).parse(data);
 
-    const result = await prisma.powerOutageRequest.update({
+    // แปลงเวลาให้อยู่ในรูปแบบที่ถูกต้อง
+    const startTime = new Date(`1970-01-01T${validatedData.startTime}`);
+    const endTime = new Date(`1970-01-01T${validatedData.endTime}`);
+
+    if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
+      throw new Error("Invalid time format");
+    }
+
+    const updatedRequest = await prisma.powerOutageRequest.update({
       where: { id },
       data: {
-        startTime: new Date(`${existingRequest.outageDate.toISOString().split('T')[0]}T${validatedData.startTime}`),
-        endTime: new Date(`${existingRequest.outageDate.toISOString().split('T')[0]}T${validatedData.endTime}`),
+        startTime,
+        endTime,
         area: validatedData.area,
-      },
-      include: {
-        createdBy: { select: { fullName: true } },
-        workCenter: { select: { name: true } },
-        branch: { select: { shortName: true } },
       },
     });
 
-    return { 
-      success: true, 
-      data: {
-        ...result,
-        outageDate: result.outageDate.toISOString(),
-        startTime: result.startTime.toISOString(),
-        endTime: result.endTime.toISOString(),
-        createdAt: result.createdAt.toISOString(),
-        statusUpdatedAt: result.statusUpdatedAt ? result.statusUpdatedAt.toISOString() : null,
-      }
+    return {
+      success: true,
+      data: updatedRequest,
     };
   } catch (error) {
     console.error("Failed to update power outage request:", error);
-    return { success: false, error: "Failed to update power outage request" };
+
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      return {
+        success: false,
+        error:
+          "An unknown error occurred while updating the power outage request",
+      };
+    }
+  }
+}
+
+
+export async function updateOMS(id: number, omsStatus: OMSStatus) {
+  const currentUser = await getCurrentUser();
+  try {
+    const updatedRequest = await prisma.powerOutageRequest.update({
+      where: { id },
+      data: {
+        omsStatus,
+        omsUpdatedAt: new Date(),
+        omsUpdatedById: currentUser.id
+      },
+    });
+
+    console.log("Updated OMS status:", updatedRequest);
+
+    return {
+      success: true,
+      data: updatedRequest,
+    };
+  } catch (error) {
+    console.error("Failed to update OMS status:", error);
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      return {
+        success: false,
+        error: "An unknown error occurred while updating the OMS status",
+      };
+    }
+  }
+}
+export async function updateStatusRequest(id: number, statusRequest: Request) {
+
+  const currentUser = await getCurrentUser();
+  try {
+    const updatedRequest = await prisma.powerOutageRequest.update({
+      where: { id },
+      data: {
+        statusRequest,
+        statusUpdatedAt: new Date(),
+        statusUpdatedById: currentUser.id
+      },
+    });
+
+    console.log("Updated status request:", updatedRequest);
+
+    return {
+      success: true,
+      data: updatedRequest,
+    };
+  } catch (error) {
+    console.error("Failed to update status request:", error);
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message,
+      };
+    } else {
+      return {
+        success: false,
+        error: "An unknown error occurred while updating the status request",
+      };
+    }
   }
 }

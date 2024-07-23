@@ -66,6 +66,7 @@ model User {
   updatedAt       DateTime             @updatedAt
   createdRequests PowerOutageRequest[] @relation("RequestCreator")
   updatedStatuses PowerOutageRequest[] @relation("StatusUpdater")
+  updatedOMS      PowerOutageRequest[] @relation("OMSUpdater")
 
   @@index([workCenterId, branchId])
 }
@@ -108,6 +109,9 @@ model PowerOutageRequest {
   statusUpdatedAt   DateTime?
   statusUpdatedById Int?
   statusUpdatedBy   User?       @relation("StatusUpdater", fields: [statusUpdatedById], references: [id])
+  omsUpdatedAt      DateTime?
+  omsUpdatedById    Int?
+  omsUpdatedBy      User?       @relation("OMSUpdater", fields: [omsUpdatedById], references: [id])
 
   @@index([workCenterId, branchId, transformerNumber])
 }

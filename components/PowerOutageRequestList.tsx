@@ -6,6 +6,8 @@ import {
   getPowerOutageRequests,
   updatePowerOutageRequest,
   deletePowerOutageRequest,
+  updateOMS,
+  updateStatusRequest,
 } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequesr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -13,6 +15,8 @@ import { faEdit, faTrash } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import React from "react";
 import { useAuth } from "@/lib/useAuth";
+import { OMSStatus , Request} from "@prisma/client";
+
 
 interface PowerOutageRequest {
   id: number;
@@ -87,13 +91,11 @@ export default function PowerOutageRequestList() {
   const [requests, setRequests] = useState<PowerOutageRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editingRequest, setEditingRequest] =
-    useState<PowerOutageRequest | null>(null);
+  const [editingRequest, setEditingRequest] = useState<PowerOutageRequest | null>(null);;
 
 
   useEffect(() => {
     if (!authLoading) {
-      console.log("Auth loaded, loading requests...");
       loadRequests();
     }
   }, [authLoading]);
@@ -144,9 +146,24 @@ export default function PowerOutageRequestList() {
     setEditingRequest(request);
   };
 
-  const handleUpdate = () => {
-    // Implement the logic to update Status Request
-    console.log(`Updating Status Request for request}`);
+  const handleUpdate = async (data: PowerOutageRequestInput) => {
+    
+    if (!editingRequest) {
+      console.error('No request is currently being edited');
+      return;
+    }
+  
+    try {
+      const result = await updatePowerOutageRequest(editingRequest.id, data);
+      if (result.success) {
+        setEditingRequest(null);
+        await loadRequests();
+      } else {
+        console.error('เกิดข้อผิดพลาดในการอัปเดตคำขอดับไฟ:', result.error);
+      }
+    } catch (error) {
+      console.error('Error updating power outage request:', error);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -171,14 +188,32 @@ export default function PowerOutageRequestList() {
     }
   };
 
-  const handleEditOmsStatus = (id: number, newStatus: string) => {
-    // Implement the logic to update OMS status
-    console.log(`Updating OMS Status for request ${id} to ${newStatus}`);
+  const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
+    try {
+      const result = await updateOMS(id, newStatus);
+      if (result.success) {
+        console.log(`Successfully updated OMS Status for request ${id} to ${newStatus}`);
+        await loadRequests();
+      } else {
+        console.error(`Failed to update OMS Status: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`Error updating OMS Status: ${error}`);
+    }
   };
-
-  const handleEditStatusRequest = (id: number, newStatus: string) => {
-    // Implement the logic to update Status Request
-    console.log(`Updating Status Request for request ${id} to ${newStatus}`);
+  
+  const handleEditStatusRequest = async (id: number, newStatus: Request) => {
+    try {
+      const result = await updateStatusRequest(id, newStatus);
+      if (result.success) {
+        console.log(`Successfully updated Status Request for request ${id} to ${newStatus}`);
+        await loadRequests();
+      } else {
+        console.error(`Failed to update Status Request: ${result.error}`);
+      }
+    } catch (error) {
+      console.error(`Error updating Status Request: ${error}`);
+    }
   };
 
   const getRowBackgroundColor = (
@@ -198,7 +233,7 @@ export default function PowerOutageRequestList() {
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (diffDays < 3) return "bg-red-100";
+    if (diffDays <= 3) return "bg-red-100";
     if (diffDays < 7) return "bg-yellow-100";
     return "";
   };
@@ -277,7 +312,7 @@ export default function PowerOutageRequestList() {
                     <select
                       value={request.omsStatus}
                       onChange={(e) =>
-                        handleEditOmsStatus(request.id, e.target.value)
+                        handleEditOmsStatus(request.id, e.target.value as OMSStatus)
                       }
                       disabled={!isAdmin && !isSupervisor}
                       className="border border-gray-300 rounded px-2 py-1"
@@ -291,7 +326,7 @@ export default function PowerOutageRequestList() {
                     <select
                       value={request.statusRequest}
                       onChange={(e) =>
-                        handleEditStatusRequest(request.id, e.target.value)
+                        handleEditStatusRequest(request.id, e.target.value as Request)
                       }
                       disabled={
                         !(
@@ -341,3 +376,7 @@ export default function PowerOutageRequestList() {
     </>
   );
 }
+function getCurrentUserId() {
+  throw new Error("Function not implemented.");
+}
+
