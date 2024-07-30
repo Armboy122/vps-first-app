@@ -7,14 +7,14 @@ export default withAuth(
     const { pathname } = req.nextUrl;
     const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
 
-    // If the user is trying to access an admin page and is not an admin, redirect to home page
-    if (pathname.startsWith("/admin") && token?.role !== "ADMIN") {
-      return NextResponse.redirect(new URL("/", req.url));
-    }
-
-    // If the user is not logged in, redirect to the login page
+    // If the user is not logged in, redirect to the login page immediately
     if (!token) {
       return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // If the user is trying to access an admin page and is not an admin, redirect to home page
+    if (pathname.startsWith("/admin") && token.role !== "ADMIN") {
+      return NextResponse.redirect(new URL("/", req.url));
     }
 
     return NextResponse.next();
