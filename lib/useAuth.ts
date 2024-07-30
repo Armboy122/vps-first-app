@@ -10,6 +10,8 @@ interface AuthInfo {
   userWorkCenterId?: number;
   userWorkCenterName?: string;
   isLoading: boolean;
+  userbranch?:string;
+  userbranchID?:number;
 }
 
 export function useAuth(): AuthInfo {
@@ -34,6 +36,8 @@ export function useAuth(): AuthInfo {
       isSupervisor: session?.user?.role === "SUPERVISOR",
       userWorkCenterId: session?.user?.workCenterId,
       userWorkCenterName: session?.user?.workCenterName,
+      userbranch: session?.user?.branchName,
+      userbranchID: session?.user?.branchId,
       isLoading: false,
     });
   }, [session, status]);

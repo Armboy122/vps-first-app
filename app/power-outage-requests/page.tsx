@@ -5,6 +5,8 @@ import PrintAnnouncement from '@/components/PrintAnnouncement';
 import { FaBolt } from 'react-icons/fa'; // ต้องติดตั้ง react-icons ก่อน
 
 export default async function PowerOutageRequestPage() {
+
+  
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -16,7 +18,7 @@ export default async function PowerOutageRequestPage() {
             </h2>
           </div>
           <div className="p-6">
-            {/* <PrintAnnouncement /> */}
+            <PrintAnnouncement />
             <PowerOutageRequestList />
           </div>
         </div>
