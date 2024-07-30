@@ -1,7 +1,6 @@
 "use server"
 
 import PowerOutageRequestList from '@/components/PowerOutageRequestList';
-import PrintAnnouncement from '@/components/PrintAnnouncement';
 import { FaBolt } from 'react-icons/fa'; // ต้องติดตั้ง react-icons ก่อน
 
 export default async function PowerOutageRequestPage() {
@@ -18,7 +17,6 @@ export default async function PowerOutageRequestPage() {
             </h2>
           </div>
           <div className="p-6">
-            <PrintAnnouncement />
             <PowerOutageRequestList />
           </div>
         </div>

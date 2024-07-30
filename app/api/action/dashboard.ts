@@ -4,7 +4,8 @@ import { getServerSession } from "next-auth";
 
 import { NextApiRequest, NextApiResponse } from 'next';
 import { Session } from 'next-auth';
-import { authOptions } from "../auth/[...nextauth]/route";
+import { authOptions } from "@/authOption";
+
 
 interface ExtendedSession extends Session {
   user: {

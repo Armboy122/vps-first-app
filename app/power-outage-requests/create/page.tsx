@@ -1,7 +1,7 @@
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import PowerOutageRequestForm from "@/components/PowerOutageRequestForm";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/authOption";
 import { redirect } from "next/navigation";
 
 export default async function CreatePowerOutageRequestPage() {

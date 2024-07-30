@@ -6,8 +6,9 @@ import {
   PowerOutageRequestInput,
 } from "@/lib/validations/powerOutageRequest";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../auth/[...nextauth]/route";
+
 import { OMSStatus , Request } from '@prisma/client';
+import { authOptions } from "@/authOption";
 
 // ฟังก์ชันสำหรับ getCurrentUser
 async function getCurrentUser() {
