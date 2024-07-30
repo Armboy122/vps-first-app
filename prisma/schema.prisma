@@ -79,7 +79,7 @@ enum Role {
   SUPERVISOR //EO เปลี่ยนสถานะ OMSStatus
   USER //พนักงานหม้อแปลง CRUD ได้ถ้ายังไม่เปลี่ยนสถานะว่าผจก.อนุมัติ
 }
-// enum Role: กำหนดบทบาทที่เป็นไปได้ของผู้ใช้
+
 enum Request {
   CONFIRM 
   CANCELLED

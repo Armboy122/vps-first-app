@@ -1,9 +1,9 @@
-import Image from "next/image";
+import { DashboardClient } from "@/components/DashboardClient";
+import { DashboardData } from "@/components/DashboardData";
 
-export default function Home() {
-  return (
-    <main>
-      Home
-    </main>
-  );
+
+export default async function DashboardPage() {
+  const dashboardData = await DashboardData();
+
+  return <DashboardClient data={dashboardData} />;
 }

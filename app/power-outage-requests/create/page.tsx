@@ -19,14 +19,29 @@ export default async function CreatePowerOutageRequestPage() {
   }
 
   return (
-    <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">สร้างคำขอดับไฟใหม่</h1>
-      <PowerOutageRequestForm 
-        role={role}
-        workCenterId={String(workCenterId)}
-        branch={String(branchId)}
-        workCenters={role === 'ADMIN' ? workCenters : undefined}
-      />
+    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="bg-white shadow-lg rounded-lg overflow-hidden">
+          <div className="px-6 py-4 bg-blue-600">
+            <h1 className="text-2xl font-bold text-white">สร้างคำขอดับไฟใหม่</h1>
+          </div>
+          <div className="p-6">
+            <PowerOutageRequestForm 
+              role={role}
+              workCenterId={String(workCenterId)}
+              branch={String(branchId)}
+              workCenters={role === 'ADMIN' ? workCenters : undefined}
+            />
+          </div>
+        </div>
+        {role === 'ADMIN' && (
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-600">
+              คุณกำลังสร้างคำขอในฐานะผู้ดูแลระบบ
+            </p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

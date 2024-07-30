@@ -8,6 +8,7 @@ interface AuthInfo {
   isManager: boolean;
   isSupervisor: boolean;
   userWorkCenterId?: number;
+  userWorkCenterName?: string;
   isLoading: boolean;
 }
 
@@ -32,6 +33,7 @@ export function useAuth(): AuthInfo {
       isManager: session?.user?.role === "MANAGER",
       isSupervisor: session?.user?.role === "SUPERVISOR",
       userWorkCenterId: session?.user?.workCenterId,
+      userWorkCenterName: session?.user?.workCenterName,
       isLoading: false,
     });
   }, [session, status]);
