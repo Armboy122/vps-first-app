@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { getUsers, updateUserRole, updateUserName } from "../api/action/User";
 import { Role } from "@/lib/prisma";
 import { getWorkCenters } from "../api/action/getWorkCentersAndBranches";
@@ -21,11 +21,11 @@ interface WorkCenter {
 }
 
 const roleTranslations: { [key: string]: string } = {
-  "USER": "พนักงานหม้อแปลง",
-  "SUPERVISOR": "พนักงาน EO",
-  "MANAGER": "ผู้บริหารจุดรวมงาน",
-  "ADMIN": "Admin",
-  "VIEWER": "กฟต.3"
+  USER: "พนักงานหม้อแปลง",
+  SUPERVISOR: "พนักงาน EO",
+  MANAGER: "ผู้บริหารจุดรวมงาน",
+  ADMIN: "Admin",
+  VIEWER: "กฟต.3",
 };
 
 export default function UserPage() {
@@ -39,16 +39,7 @@ export default function UserPage() {
   const [workCenterFilter, setWorkCenterFilter] = useState("");
   const [editingName, setEditingName] = useState<{ [key: number]: string }>({});
 
-  useEffect(() => {
-    fetchUsers();
-    fetchWorkCenters();
-  }, []);
-
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, search, workCenterFilter]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const result = await getUsers(currentPage, 10, search, workCenterFilter);
@@ -63,23 +54,30 @@ export default function UserPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, search, workCenterFilter]);
 
-  const fetchWorkCenters = async () => {
+  const fetchWorkCenters = useCallback(async () => {
     try {
       const centers = await getWorkCenters();
       setWorkCenters(centers);
     } catch (err) {
       console.error("Failed to fetch work centers:", err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUsers();
+    fetchWorkCenters();
+  }, [fetchUsers, fetchWorkCenters]);
 
   const handleRoleChange = async (userId: number, newRole: Role) => {
     const result = await updateUserRole(userId, newRole);
     if (result.success) {
-      setUsers(users.map(user => 
-        user.id === userId ? { ...user, role: newRole } : user
-      ));
+      setUsers(
+        users.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      );
     } else {
       setError(result.error || "Failed to update role");
     }
@@ -91,19 +89,23 @@ export default function UserPage() {
 
     const result = await updateUserName(userId, newName);
     if (result.success) {
-      setEditingName(prev => ({ ...prev, [userId]: "" }));
+      setEditingName((prev) => ({ ...prev, [userId]: "" }));
       await fetchUsers(); // Reload data after name change
     } else {
       setError(result.error || "Failed to update name");
     }
   };
 
-  if (isLoading) return (
-    <div className="flex justify-center items-center h-screen">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
-    </div>
-  );
-  if (error) return <div className="text-red-500 text-center text-xl mt-10">{error}</div>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  if (error)
+    return (
+      <div className="text-red-500 text-center text-xl mt-10">{error}</div>
+    );
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
@@ -150,7 +152,12 @@ export default function UserPage() {
             </thead>
             <tbody>
               {users.map((user, index) => (
-                <tr key={user.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-gray-100`}>
+                <tr
+                  key={user.id}
+                  className={`${
+                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } hover:bg-gray-100`}
+                >
                   <td className="px-4 py-3">{user.employeeId}</td>
                   <td className="px-4 py-3">
                     {editingName[user.id] !== undefined ? (
@@ -192,7 +199,9 @@ export default function UserPage() {
                   <td className="px-4 py-3">
                     <select
                       value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
+                      onChange={(e) =>
+                        handleRoleChange(user.id, e.target.value as Role)
+                      }
                       className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     >
                       {Object.entries(roleTranslations).map(([role, label]) => (

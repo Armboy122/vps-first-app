@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import {
   getPowerOutageRequests,
@@ -83,14 +83,7 @@ export default function PowerOutageRequestList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
-
-  useEffect(() => {
-    if (!authLoading) {
-      loadRequests();
-    }
-  }, [authLoading, currentPage]);
-
-  async function loadRequests() {
+  const loadRequests = useCallback(async () => {
     try {
       setLoading(true);
       const result = await getPowerOutageRequests();
@@ -127,18 +120,23 @@ export default function PowerOutageRequestList() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [isAdmin, isViewer, isUser, isManager, isSupervisor, userWorkCenterId]);
+  useEffect(() => {
+    if (!authLoading) {
+      loadRequests();
+    }
+  }, [authLoading, loadRequests, currentPage]);
 
   const handleEdit = (request: PowerOutageRequest) => {
     setEditingRequest(request);
   };
-
+  
   const handleUpdate = async (data: PowerOutageRequestInput) => {
     if (!editingRequest) {
       console.error("No request is currently being edited");
       return;
     }
-
+  
     try {
       const result = await updatePowerOutageRequest(editingRequest.id, data);
       if (result.success) {
@@ -151,11 +149,11 @@ export default function PowerOutageRequestList() {
       console.error("Error updating power outage request:", error);
     }
   };
-
+  
   const handleCancelEdit = () => {
     setEditingRequest(null);
   };
-
+  
   const handleDelete = async (id: number) => {
     if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?")) {
       try {
@@ -168,12 +166,12 @@ export default function PowerOutageRequestList() {
           setError(result.message);
         }
       } catch (err) {
-        setError("An error occurred while deleting the request");
+        setError("เกิดข้อผิดพลาดในการลบคำขอ");
         console.error(err);
       }
     }
   };
-
+  
   const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
     try {
       const result = await updateOMS(id, newStatus);
@@ -189,7 +187,7 @@ export default function PowerOutageRequestList() {
       console.error(`Error updating OMS Status: ${error}`);
     }
   };
-
+  
   const handleEditStatusRequest = async (id: number, newStatus: Request) => {
     try {
       const result = await updateStatusRequest(id, newStatus);
@@ -217,17 +215,17 @@ export default function PowerOutageRequestList() {
       statusRequest === "CANCELLED"
     )
       return "";
-
+  
     const today = new Date();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
-
+  
     if (diffDays <= 3) return "bg-red-100";
     if (diffDays < 7) return "bg-yellow-100";
     return "";
   };
-
+  
   const filteredRequests = requests.filter(
     (request) =>
       request.transformerNumber
@@ -238,14 +236,14 @@ export default function PowerOutageRequestList() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
-
+  
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredRequests.slice(
     indexOfFirstItem,
     indexOfLastItem
   );
-
+  
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (authLoading)
@@ -257,7 +255,6 @@ export default function PowerOutageRequestList() {
 
   return (
     <div className="container mx-auto p-6">
-
       <div className="flex justify-between items-center mb-6">
         {(isUser || isAdmin) && (
           <Link
@@ -275,10 +272,13 @@ export default function PowerOutageRequestList() {
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
-          <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-3 text-gray-400" />
+          <FontAwesomeIcon
+            icon={faSearch}
+            className="absolute left-3 top-3 text-gray-400"
+          />
         </div>
       </div>
-  
+
       <div className="overflow-x-auto shadow-lg rounded-lg">
         <table className="min-w-full bg-white">
           <thead className="bg-gray-200">
@@ -315,8 +315,15 @@ export default function PowerOutageRequestList() {
                     {request.outageDate.toLocaleDateString("th-TH")}
                   </td>
                   <td className="py-3 px-4">
-                    {request.startTime.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })} -
-                    {request.endTime.toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" })}
+                    {request.startTime.toLocaleTimeString("th-TH", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}{" "}
+                    -
+                    {request.endTime.toLocaleTimeString("th-TH", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </td>
                   {(isAdmin || isViewer) && (
                     <>
@@ -329,7 +336,12 @@ export default function PowerOutageRequestList() {
                   <td className="py-3 px-4">
                     <select
                       value={request.omsStatus}
-                      onChange={(e) => handleEditOmsStatus(request.id, e.target.value as OMSStatus)}
+                      onChange={(e) =>
+                        handleEditOmsStatus(
+                          request.id,
+                          e.target.value as OMSStatus
+                        )
+                      }
                       disabled={!isAdmin && !isSupervisor}
                       className="border border-gray-300 rounded px-2 py-1 w-full"
                     >
@@ -341,8 +353,18 @@ export default function PowerOutageRequestList() {
                   <td className="py-3 px-4">
                     <select
                       value={request.statusRequest}
-                      onChange={(e) => handleEditStatusRequest(request.id, e.target.value as Request)}
-                      disabled={!(isAdmin || (isUser && request.workCenter.id === userWorkCenterId))}
+                      onChange={(e) =>
+                        handleEditStatusRequest(
+                          request.id,
+                          e.target.value as Request
+                        )
+                      }
+                      disabled={
+                        !(
+                          isAdmin ||
+                          (isUser && request.workCenter.id === userWorkCenterId)
+                        )
+                      }
                       className="border border-gray-300 rounded px-2 py-1 w-full"
                     >
                       <option value="CONFIRM">อนุมัติดับไฟ</option>
@@ -366,21 +388,24 @@ export default function PowerOutageRequestList() {
           </tbody>
         </table>
       </div>
-  
+
       <div className="mt-6 flex justify-center">
-        {Array.from({ length: Math.ceil(filteredRequests.length / itemsPerPage) }, (_, i) => (
-          <button
-            key={i}
-            onClick={() => paginate(i + 1)}
-            className={`mx-1 px-3 py-1 rounded ${
-              currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-200'
-            }`}
-          >
-            {i + 1}
-          </button>
-        ))}
+        {Array.from(
+          { length: Math.ceil(filteredRequests.length / itemsPerPage) },
+          (_, i) => (
+            <button
+              key={i}
+              onClick={() => paginate(i + 1)}
+              className={`mx-1 px-3 py-1 rounded ${
+                currentPage === i + 1 ? "bg-blue-500 text-white" : "bg-gray-200"
+              }`}
+            >
+              {i + 1}
+            </button>
+          )
+        )}
       </div>
-  
+
       {editingRequest && (
         <UpdatePowerOutageRequestModal
           initialData={{
