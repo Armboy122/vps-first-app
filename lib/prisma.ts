@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient, Role, Request, OMSStatus } from '@prisma/client'
 
 declare global {
   var prisma: PrismaClient | undefined
@@ -15,4 +15,5 @@ if (process.env.NODE_ENV === 'production') {
   prisma = global.prisma
 }
 
+export { Role, Request, OMSStatus }
 export default prisma

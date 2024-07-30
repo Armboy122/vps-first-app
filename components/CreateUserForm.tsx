@@ -90,157 +90,87 @@ export default function CreateUserForm() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
+  if (isLoading) return <div className="text-center py-4">กำลังโหลด...</div>;
+  if (error) return <div className="text-red-500 text-center py-4">ข้อผิดพลาด: {error}</div>;
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-      <div>
-        <label htmlFor="employeeId" className="block mb-1">
-          รหัสพนักงาน
-        </label>
-        <Controller
-          name="employeeId"
-          control={control}
-          render={({ field }) => (
-            <input
-              {...field}
-              type="text"
-              className="w-full p-2 border rounded"
-            />
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {['employeeId', 'password', 'fullName'].map((fieldName) => (
+        <div key={fieldName}>
+          <label htmlFor={fieldName} className="block text-sm font-medium text-gray-700 mb-1">
+            {fieldName === 'employeeId' ? 'รหัสพนักงาน' : fieldName === 'password' ? 'รหัสผ่าน' : 'ชื่อ-นามสกุล'}
+          </label>
+          <Controller
+            name={fieldName as keyof FormData}
+            control={control}
+            render={({ field }) => (
+              <input
+                {...field}
+                type={fieldName === 'password' ? 'password' : 'text'}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              />
+            )}
+          />
+          {errors[fieldName as keyof FormData] && (
+            <p className="mt-1 text-sm text-red-600">{errors[fieldName as keyof FormData]?.message}</p>
           )}
-        />
-        {errors.employeeId && (
-          <span className="text-red-500">{errors.employeeId.message}</span>
-        )}
+        </div>
+      ))}
+
+      {['workCenterId', 'branchId', 'role'].map((fieldName) => (
+        <div key={fieldName}>
+          <label htmlFor={fieldName} className="block text-sm font-medium text-gray-700 mb-1">
+            {fieldName === 'workCenterId' ? 'จุดรวมงาน' : fieldName === 'branchId' ? 'สาขา' : 'บทบาท'}
+          </label>
+          <Controller
+            name={fieldName as keyof FormData}
+            control={control}
+            render={({ field }) => (
+              <select
+                {...field}
+                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                disabled={fieldName === 'branchId' && !selectedWorkCenter}
+                onChange={(e) => {
+                  const value = fieldName === 'role' ? e.target.value : Number(e.target.value);
+                  field.onChange(value);
+                }}
+              >
+                <option value="">เลือก{fieldName === 'workCenterId' ? 'จุดรวมงาน' : fieldName === 'branchId' ? 'สาขา' : 'บทบาท'}</option>
+                {fieldName === 'workCenterId' && workCenters.map((wc) => (
+                  <option key={wc.id} value={wc.id}>{wc.name}</option>
+                ))}
+                {fieldName === 'branchId' && branches.map((branch) => (
+                  <option key={branch.id} value={branch.id}>{branch.shortName}</option>
+                ))}
+                {fieldName === 'role' && [
+                  {value: "USER", label: "พนักงานหม้อแปลง"},
+                  {value: "SUPERVISOR", label: "พนักงาน EO"},
+                  {value: "MANAGER", label: "ผู้บริหารจุดรวมงาน"},
+                  {value: "ADMIN", label: "Admin"},
+                  {value: "VIEWER", label: "กฟต.3"}
+                ].map((role) => (
+                  <option key={role.value} value={role.value}>{role.label}</option>
+                ))}
+              </select>
+            )}
+          />
+          {errors[fieldName as keyof FormData] && (
+            <p className="mt-1 text-sm text-red-600">{errors[fieldName as keyof FormData]?.message}</p>
+          )}
+        </div>
+      ))}
+
+      <div className="flex items-center justify-between">
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+          disabled={isLoading}
+        >
+          {isLoading ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
+        </button>
       </div>
 
-      <div>
-        <label htmlFor="password" className="block mb-1">
-          รหัสผ่าน
-        </label>
-        <Controller
-          name="password"
-          control={control}
-          render={({ field }) => (
-            <input
-              {...field}
-              type="password"
-              className="w-full p-2 border rounded"
-            />
-          )}
-        />
-        {errors.password && (
-          <span className="text-red-500">{errors.password.message}</span>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="fullName" className="block mb-1">
-          ชื่อ-นามสกุล
-        </label>
-        <Controller
-          name="fullName"
-          control={control}
-          render={({ field }) => (
-            <input
-              {...field}
-              type="text"
-              className="w-full p-2 border rounded"
-            />
-          )}
-        />
-        {errors.fullName && (
-          <span className="text-red-500">{errors.fullName.message}</span>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="workCenterId" className="block mb-1">
-          จุดรวมงาน
-        </label>
-        <Controller
-          name="workCenterId"
-          control={control}
-          render={({ field }) => (
-            <select
-              {...field}
-              className="w-full p-2 border rounded"
-              onChange={(e) => field.onChange(Number(e.target.value))}
-            >
-              <option value="">เลือกศูนย์งาน</option>
-              {workCenters.map((wc) => (
-                <option key={wc.id} value={wc.id}>
-                  {wc.name}
-                </option>
-              ))}
-            </select>
-          )}
-        />
-        {errors.workCenterId && (
-          <span className="text-red-500">{errors.workCenterId.message}</span>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="branchId" className="block mb-1">
-          สาขา
-        </label>
-        <Controller
-          name="branchId"
-          control={control}
-          render={({ field }) => (
-            <select
-              {...field}
-              className="w-full p-2 border rounded"
-              disabled={!selectedWorkCenter}
-              onChange={(e) => field.onChange(Number(e.target.value))}
-            >
-              <option value="">เลือกสาขา</option>
-              {branches.map((branch) => (
-                <option key={branch.id} value={branch.id}>
-                  {branch.shortName}
-                </option>
-              ))}
-            </select>
-          )}
-        />
-        {errors.branchId && (
-          <span className="text-red-500">{errors.branchId.message}</span>
-        )}
-      </div>
-
-      <div>
-        <label htmlFor="role" className="block mb-1">
-          บทบาท
-        </label>
-        <Controller
-          name="role"
-          control={control}
-          render={({ field }) => (
-            <select {...field} className="w-full p-2 border rounded">
-              <option value="USER">พนักงานหม้อแปลง</option>
-              <option value="SUPERVISOR">พนักงาน EO</option>
-              <option value="MANAGER">ผู้บริหารจุดรวมงาน</option>
-              <option value="ADMIN">Admin</option>
-              <option value="VIEWER">กฟต.3</option>
-            </select>
-          )}
-        />
-        {errors.role && (
-          <span className="text-red-500">{errors.role.message}</span>
-        )}
-      </div>
-
-      <button
-        type="submit"
-        className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-        disabled={isLoading}
-      >
-        {isLoading ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
-      </button>
-
-      {error && <div className="text-red-500">{error}</div>}
+      {error && <div className="mt-4 text-red-500 text-center">{error}</div>}
     </form>
   );
 }

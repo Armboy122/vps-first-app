@@ -10,7 +10,7 @@ export default async function PowerOutageRequestPage() {
 
   return (
     <div className="container mx-auto p-4">
-      <PrintAnnouncement />
+      {/* <PrintAnnouncement /> */}
       <h1 className="text-2xl font-bold mb-4">แผนงานดับไฟ</h1>
      
 

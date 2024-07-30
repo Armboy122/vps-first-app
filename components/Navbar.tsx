@@ -8,10 +8,10 @@ const Navbar = () => {
   const { data: session } = useSession();
 
   const navItems = [
-    { label: 'Home', path: '/' },
-    { label: 'ข้อมูลสถานะ', path: '/power-outage-requests' },
-    { label: 'Admin', path: '/admin/create-user' },
+    { label: 'หน้าแรก', path: '/power-outage-requests' },
+    ...(session?.user.role === 'ADMIN' ? [{ label: 'Admin', path: '/admin' }] : [])
   ];
+
 
   return (
     <nav className="bg-gray-800 text-white p-4">
