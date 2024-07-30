@@ -22,8 +22,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -33,7 +31,7 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Prisma, Request, OMSStatus } from '@prisma/client';
+import { Prisma, OMSStatus } from '@prisma/client';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -79,7 +77,8 @@ interface SummaryData {
       _all: number;
     };
   })[];
-  urgentRequests: number;
+  threeRequests: number;
+  sevenRequests: number;
   dailyTrend: (Prisma.PickEnumerable<Prisma.PowerOutageRequestGroupByOutputType, ["outageDate"]> & {
     _count: {
       _all: number;
@@ -92,15 +91,6 @@ interface OMSStatusData {
   _count: { _all: number };
 }
 
-interface LatestRequest {
-  id: number;
-  createdAt: Date;
-  createdBy: { fullName: string };
-  workCenter: { name: string };
-  branch: { shortName: string };
-  statusRequest: Request;
-}
-
 interface WorkCenterRequest {
   workCenterId: number;
   _count: { _all: number };
@@ -110,15 +100,12 @@ interface DashboardClientProps {
   data: {
     summary: SummaryData;
     omsStatus: OMSStatusData[];
-    latestRequests: LatestRequest[];
     requestsByWorkCenter: WorkCenterRequest[];
-    averageApprovalTime: number;
-    pendingApprovals: number;
   };
 }
 
 export function DashboardClient({ data }: DashboardClientProps) {
-  const { summary, omsStatus, latestRequests, requestsByWorkCenter, averageApprovalTime, pendingApprovals } = data;
+  const { summary, omsStatus, requestsByWorkCenter } = data;
 
   return (
     <main className="p-4 md:p-10 mx-auto max-w-7xl">
@@ -128,24 +115,16 @@ export function DashboardClient({ data }: DashboardClientProps) {
           <Text>{summary.totalRequests}</Text>
         </Card>
         <Card>
-          <Title>คำขอเร่งด่วน</Title>
-          <Text>{summary.urgentRequests}</Text>
+          <Title>คำขอเร่งด่วนภายใน 3 วัน</Title>
+          <Text>{summary.threeRequests}</Text>
         </Card>
         <Card>
-          <Title>เวลาอนุมัติเฉลี่ย</Title>
-          <Text>{averageApprovalTime.toFixed(2)} ชั่วโมง</Text>
-        </Card>
-        <Card>
-          <Title>รออนุมัตินาน</Title>
-          <Text>{pendingApprovals}</Text>
+          <Title>คำขอเร่งด่วนภายใน 7 วัน</Title>
+          <Text>{summary.sevenRequests}</Text>
         </Card>
       </Grid>
 
       <TabGroup className="mt-6">
-        <TabList>
-          <Tab>Overview</Tab>
-          <Tab>Details</Tab>
-        </TabList>
         <TabPanels>
           <TabPanel>
             <Grid numItemsMd={2} className="mt-6 gap-6">
@@ -164,22 +143,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 title="สถานะ OMS"
               />
               <Card>
-                <Title>แนวโน้มคำขอรายวัน</Title>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={summary.dailyTrend.map(item => ({
-                    outageDate: item.outageDate.toISOString().split('T')[0],
-                    count: item._count._all
-                  }))}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="outageDate" />
-                    <YAxis />
-                    <Tooltip />
-                    <Legend />
-                    <Line type="monotone" dataKey="count" stroke="#8884d8" name="จำนวนคำขอ" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </Card>
-              <Card>
                 <Title>คำขอตามศูนย์งาน</Title>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={requestsByWorkCenter}>
@@ -193,33 +156,6 @@ export function DashboardClient({ data }: DashboardClientProps) {
                 </ResponsiveContainer>
               </Card>
             </Grid>
-          </TabPanel>
-          <TabPanel>
-            <Card>
-              <Title>คำขอล่าสุด</Title>
-              <Table className="mt-6">
-                <TableHead>
-                  <TableRow>
-                    <TableHeaderCell>วันที่</TableHeaderCell>
-                    <TableHeaderCell>ผู้สร้าง</TableHeaderCell>
-                    <TableHeaderCell>ศูนย์งาน</TableHeaderCell>
-                    <TableHeaderCell>สาขา</TableHeaderCell>
-                    <TableHeaderCell>สถานะ</TableHeaderCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {latestRequests.map((request) => (
-                    <TableRow key={request.id}>
-                      <TableCell>{new Date(request.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell>{request.createdBy.fullName}</TableCell>
-                      <TableCell>{request.workCenter.name}</TableCell>
-                      <TableCell>{request.branch.shortName}</TableCell>
-                      <TableCell>{request.statusRequest}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Card>
           </TabPanel>
         </TabPanels>
       </TabGroup>
