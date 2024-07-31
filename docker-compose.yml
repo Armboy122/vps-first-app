@@ -1,9 +1,46 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:latest
+    container_name: db
+    environment:
+      POSTGRES_USER: sa
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: transformer
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgresql_pgdata:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - mynetwork
+
   nextjs-app:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
+    env_file:
+      - .env
+    networks:
+      - mynetwork
+    depends_on:
+      - db
+    entrypoint: >
+      sh -c "
+      until nc -z db 5432; do
+        echo 'Waiting for the database...';
+        sleep 1;
+      done;
+      npx prisma migrate deploy --schema=./prisma/schema.prisma;
+      yarn start;
+      "
+
+volumes:
+  postgresql_pgdata:
+
+networks:
+  mynetwork:
+    driver: bridge

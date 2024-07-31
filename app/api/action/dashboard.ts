@@ -1,8 +1,6 @@
 import prisma from "@/lib/prisma";
-import { Prisma, Request, OMSStatus } from '@prisma/client';
 import { getServerSession } from "next-auth";
 
-import { NextApiRequest, NextApiResponse } from 'next';
 import { Session } from 'next-auth';
 import { authOptions } from "@/authOption";
 
