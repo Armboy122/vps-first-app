@@ -4,7 +4,6 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import Navbar from "@/components/Navbar";
-import { AuthWrapper } from "@/components/AuthWrapper";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -22,15 +21,15 @@ export default function RootLayout({
     <html lang="th">
       <body className={`${inter.className} flex flex-col min-h-screen`}>
         <Providers>
-          <AuthWrapper>
-            <Navbar />
-            <main className="flex-grow pt-16"> {/* เพิ่ม pt-16 เพื่อให้เนื้อหาไม่ถูกซ่อนใต้ Navbar */}
-              {children}
-            </main>
-            <footer className="bg-gray-800 text-white text-center py-4">
-              <p>&copy; 2024 ระบบจัดการคำขอดับไฟ. All rights reserved.</p>
-            </footer>
-          </AuthWrapper>
+          <Navbar />
+          <main className="flex-grow pt-16">
+            {" "}
+            {/* เพิ่ม pt-16 เพื่อให้เนื้อหาไม่ถูกซ่อนใต้ Navbar */}
+            {children}
+          </main>
+          <footer className="bg-gray-800 text-white text-center py-4">
+            <p>&copy; 2024 ระบบจัดการคำขอดับไฟ. All rights reserved.</p>
+          </footer>
         </Providers>
       </body>
     </html>

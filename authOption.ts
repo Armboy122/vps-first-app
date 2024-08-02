@@ -9,12 +9,12 @@ export const authOptions: NextAuthOptions = {
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        employeeId: { label: 'Employee ID', type: 'text' },
-        password: { label: 'Password', type: 'password' }
+        employeeId: { label: 'รหัสพนักงาน', type: 'text' },
+        password: { label: 'รหัสผ่าน', type: 'password' }
       },
       async authorize(credentials) {
         if (!credentials?.employeeId || !credentials?.password) {
-          throw new Error('Missing employeeId or password')
+          throw new Error('กรุณากรอกรหัสพนักงานและรหัสผ่าน')
         }
 
         const user = await prisma.user.findUnique({
@@ -23,13 +23,13 @@ export const authOptions: NextAuthOptions = {
         })
 
         if (!user) {
-          throw new Error('User not found')
+          throw new Error('ไม่พบผู้ใช้งาน')
         }
 
         const isPasswordValid = await bcrypt.compare(credentials.password, user.password)
 
         if (!isPasswordValid) {
-          throw new Error('Invalid password')
+          throw new Error('รหัสผ่านไม่ถูกต้อง')
         }
 
         return {
@@ -69,10 +69,12 @@ export const authOptions: NextAuthOptions = {
         session.user.branchName = token.branchName as string
       }
       return session
-    }
+    },
   },
   pages: {
     signIn: '/login',
+    signOut: '/logout',
+    error: '/auth/error',
   },
   session: {
     strategy: 'jwt',
