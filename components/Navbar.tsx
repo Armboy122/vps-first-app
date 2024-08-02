@@ -1,8 +1,9 @@
-"use client"
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useSession, signIn, signOut } from 'next-auth/react';
-import { useState } from 'react';
+"use client";
+import Link from "next/link";
+import Image from 'next/image';
+import { usePathname } from "next/navigation";
+import { useSession, signIn, signOut } from "next-auth/react";
+import { useState } from "react";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -10,9 +11,11 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const navItems = [
-    { label: 'หน้าแรก', path: '/power-outage-requests' },
-    { label: 'DashBord', path: '/' },
-    ...(session?.user.role === 'ADMIN' ? [{ label: 'Admin', path: '/admin' }] : [])
+    { label: "หน้าแรก", path: "/power-outage-requests" },
+    { label: "DashBord", path: "/" },
+    ...(session?.user.role === "ADMIN"
+      ? [{ label: "Admin", path: "/admin" }]
+      : []),
   ];
 
   return (
@@ -21,18 +24,26 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Link href="/" className="text-xl font-bold">Logo</Link>
+              <Link href="/" className="flex items-center">
+                <Image
+                  src="/logo.png"
+                  alt="Logo"
+                  width={70}
+                  height={50}
+                  className="mr-2"
+                />
+              </Link>
             </div>
             <div className="hidden md:block">
               <div className="ml-10 flex items-baseline space-x-4">
                 {navItems.map((item) => (
-                  <Link 
+                  <Link
                     key={item.path}
                     href={item.path}
                     className={`px-3 py-2 rounded-md text-sm font-medium ${
-                      pathname === item.path 
-                        ? 'bg-gray-900 text-white' 
-                        : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                      pathname === item.path
+                        ? "bg-gray-900 text-white"
+                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
                     }`}
                   >
                     {item.label}
@@ -45,8 +56,10 @@ const Navbar = () => {
             <div className="ml-4 flex items-center md:ml-6">
               {session ? (
                 <div className="flex items-center">
-                  <span className="text-sm mr-4">สวัสดี, {session.user?.name}!</span>
-                  <button 
+                  <span className="text-sm mr-4">
+                    สวัสดี, {session.user?.name}!
+                  </span>
+                  <button
                     onClick={() => signOut()}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium"
                   >
@@ -54,7 +67,7 @@ const Navbar = () => {
                   </button>
                 </div>
               ) : (
-                <button 
+                <button
                   onClick={() => signIn()}
                   className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium"
                 >
@@ -70,12 +83,36 @@ const Navbar = () => {
             >
               <span className="sr-only">Open main menu</span>
               {!isMenuOpen ? (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
+                <svg
+                  className="block h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M4 6h16M4 12h16M4 18h16"
+                  />
                 </svg>
               ) : (
-                <svg className="block h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="block h-6 w-6"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               )}
             </button>
@@ -91,9 +128,9 @@ const Navbar = () => {
                 key={item.path}
                 href={item.path}
                 className={`block px-3 py-2 rounded-md text-base font-medium ${
-                  pathname === item.path 
-                    ? 'bg-gray-900 text-white' 
-                    : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  pathname === item.path
+                    ? "bg-gray-900 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
