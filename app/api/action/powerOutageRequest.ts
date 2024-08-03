@@ -35,16 +35,17 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   try {
     const validatedData = PowerOutageRequestSchema.parse(data);
 
+    // แปลงเวลาเป็น timezone ของไทย
+    const outageDate = new Date(validatedData.outageDate);
+    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
+    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
+
     const result = await prisma.powerOutageRequest.create({
       data: {
         ...validatedData,
-        outageDate: new Date(validatedData.outageDate),
-        startTime: new Date(
-          `${validatedData.outageDate}T${validatedData.startTime}`
-        ),
-        endTime: new Date(
-          `${validatedData.outageDate}T${validatedData.endTime}`
-        ),
+        outageDate,
+        startTime,
+        endTime,
         workCenterId: Number(validatedData.workCenterId),
         branchId: Number(validatedData.branchId),
         createdById: currentUser.id,
@@ -114,14 +115,15 @@ export async function updatePowerOutageRequest(
 ) {
   try {
     const validatedData = PowerOutageRequestSchema.pick({
+      outageDate: true,
       startTime: true,
       endTime: true,
       area: true,
     }).parse(data);
 
-    // แปลงเวลาให้อยู่ในรูปแบบที่ถูกต้อง
-    const startTime = new Date(`1970-01-01T${validatedData.startTime}`);
-    const endTime = new Date(`1970-01-01T${validatedData.endTime}`);
+    // แปลงเวลาเป็น timezone ของไทย
+    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
+    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
 
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       throw new Error("Invalid time format");
@@ -151,8 +153,7 @@ export async function updatePowerOutageRequest(
     } else {
       return {
         success: false,
-        error:
-          "An unknown error occurred while updating the power outage request",
+        error: "An unknown error occurred while updating the power outage request",
       };
     }
   }
