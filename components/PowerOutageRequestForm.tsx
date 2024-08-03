@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, useCallback } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   PowerOutageRequestSchema,
@@ -12,6 +12,9 @@ import {
 } from "@/app/api/action/powerOutageRequest";
 import { useRouter } from "next/navigation";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
+import { LocalizationProvider, MobileTimePicker } from "@mui/x-date-pickers";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 interface WorkCenter {
   id: number;
@@ -50,10 +53,12 @@ export default function PowerOutageRequestForm({
     success: boolean;
     message: string;
   } | null>(null);
+  const [timeError, setTimeError] = useState<string | null>(null);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     reset,
@@ -102,18 +107,29 @@ export default function PowerOutageRequestForm({
     setTransformers([]);
   };
 
+  const validateDateAndTime = (data: PowerOutageRequestInput): boolean => {
+    const today = dayjs().startOf('day');
+    const outageDate = dayjs(data.outageDate);
+    const startTime = dayjs(`${data.outageDate} ${data.startTime}`);
+    const endTime = dayjs(`${data.outageDate} ${data.endTime}`);
+  
+    if (outageDate.isBefore(today)) {
+      setTimeError("วันที่ดับไฟต้องไม่เป็นวันในอดีต");
+      return false;
+    }
+  
+    if (endTime.isSame(startTime) || endTime.isBefore(startTime)) {
+      setTimeError("เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น");
+      return false;
+    }
+  
+    setTimeError(null);
+    return true;
+  };
+
   const onSubmit = useCallback(
     async (data: PowerOutageRequestInput) => {
-      const start = new Date(`${data.outageDate}T${data.startTime}`);
-      const end = new Date(`${data.outageDate}T${data.endTime}`);
-
-      if (end <= start) {
-        setSubmitStatus({
-          success: false,
-          message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น",
-        });
-        return;
-      }
+      if (!validateDateAndTime(data)) return;
 
       try {
         const result = await createPowerOutageRequest(data);
@@ -142,16 +158,7 @@ export default function PowerOutageRequestForm({
 
   const onAddToList = useCallback(
     (data: PowerOutageRequestInput) => {
-      const start = new Date(`${data.outageDate}T${data.startTime}`);
-      const end = new Date(`${data.outageDate}T${data.endTime}`);
-
-      if (end <= start) {
-        setSubmitStatus({
-          success: false,
-          message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น",
-        });
-        return;
-      }
+      if (!validateDateAndTime(data)) return;
 
       setRequests((prev) => [...prev, data]);
       setSubmitStatus({
@@ -184,26 +191,25 @@ export default function PowerOutageRequestForm({
       });
     }
   };
-
   return (
-    <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label
               htmlFor="outageDate"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              วันที่ดับไฟ:
+              วันที่ดับไฟ
             </label>
             <input
               type="date"
               id="outageDate"
               {...register("outageDate")}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {errors.outageDate && (
-              <p className="text-red-500 text-xs italic">
+              <p className="mt-1 text-sm text-red-600">
                 {errors.outageDate.message}
               </p>
             )}
@@ -212,41 +218,67 @@ export default function PowerOutageRequestForm({
           <div>
             <label
               htmlFor="startTime"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              เวลาเริ่มต้น:
+              เวลาเริ่มต้น
             </label>
-            <input
-              type="time"
-              id="startTime"
-              {...register("startTime")}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            <Controller
+              name="startTime"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <MobileTimePicker
+                  value={value ? dayjs(value, "HH:mm") : null}
+                  onChange={(newValue: dayjs.Dayjs | null) => {
+                    onChange(newValue ? newValue.format("HH:mm") : "");
+                  }}
+                  ampm={false}
+                  format="HH:mm"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: "outlined",
+                      error: !!errors.startTime,
+                      helperText: errors.startTime?.message,
+                      className:
+                        "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500",
+                    },
+                  }}
+                />
+              )}
             />
-            {errors.startTime && (
-              <p className="text-red-500 text-xs italic">
-                {errors.startTime.message}
-              </p>
-            )}
           </div>
 
           <div>
             <label
               htmlFor="endTime"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              เวลาสิ้นสุด:
+              เวลาสิ้นสุด
             </label>
-            <input
-              type="time"
-              id="endTime"
-              {...register("endTime")}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            <Controller
+              name="endTime"
+              control={control}
+              render={({ field: { onChange, value } }) => (
+                <MobileTimePicker
+                  value={value ? dayjs(value, "HH:mm") : null}
+                  onChange={(newValue: dayjs.Dayjs | null) => {
+                    onChange(newValue ? newValue.format("HH:mm") : "");
+                  }}
+                  ampm={false}
+                  format="HH:mm"
+                  slotProps={{
+                    textField: {
+                      fullWidth: true,
+                      variant: "outlined",
+                      error: !!errors.endTime,
+                      helperText: errors.endTime?.message,
+                      className:
+                        "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500",
+                    },
+                  }}
+                />
+              )}
             />
-            {errors.endTime && (
-              <p className="text-red-500 text-xs italic">
-                {errors.endTime.message}
-              </p>
-            )}
           </div>
 
           {role === "ADMIN" && (
@@ -254,14 +286,14 @@ export default function PowerOutageRequestForm({
               <div>
                 <label
                   htmlFor="workCenterId"
-                  className="block text-gray-700 text-sm font-bold mb-2"
+                  className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  ศูนย์งาน:
+                  ศูนย์งาน
                 </label>
                 <select
                   id="workCenterId"
                   {...register("workCenterId")}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">เลือกศูนย์งาน</option>
                   {workCenters?.map((wc) => (
@@ -271,7 +303,7 @@ export default function PowerOutageRequestForm({
                   ))}
                 </select>
                 {errors.workCenterId && (
-                  <p className="text-red-500 text-xs italic">
+                  <p className="mt-1 text-sm text-red-600">
                     {errors.workCenterId.message}
                   </p>
                 )}
@@ -280,14 +312,14 @@ export default function PowerOutageRequestForm({
               <div>
                 <label
                   htmlFor="branchId"
-                  className="block text-gray-700 text-sm font-bold mb-2"
+                  className="block text-sm font-medium text-gray-700 mb-2"
                 >
-                  สาขา:
+                  สาขา
                 </label>
                 <select
                   id="branchId"
                   {...register("branchId")}
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
                   <option value="">เลือกสาขา</option>
                   {branches.map((branch) => (
@@ -297,7 +329,7 @@ export default function PowerOutageRequestForm({
                   ))}
                 </select>
                 {errors.branchId && (
-                  <p className="text-red-500 text-xs italic">
+                  <p className="mt-1 text-sm text-red-600">
                     {errors.branchId.message}
                   </p>
                 )}
@@ -305,12 +337,12 @@ export default function PowerOutageRequestForm({
             </>
           )}
 
-          <div className="relative">
+          <div>
             <label
               htmlFor="transformerNumber"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              หมายเลขหม้อแปลง:
+              หมายเลขหม้อแปลง
             </label>
             <input
               type="text"
@@ -318,19 +350,19 @@ export default function PowerOutageRequestForm({
               {...register("transformerNumber", {
                 onChange: (e) => handleTransformerSearch(e.target.value),
               })}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {errors.transformerNumber && (
-              <p className="text-red-500 text-xs italic">
+              <p className="mt-1 text-sm text-red-600">
                 {errors.transformerNumber.message}
               </p>
             )}
             {transformers.length > 0 && (
-              <ul className="absolute z-10 w-full bg-white border border-gray-300 mt-1 rounded-md shadow-lg">
+              <ul className="mt-2 border border-gray-200 rounded-md shadow-sm">
                 {transformers.map((t) => (
                   <li
                     key={t.transformerNumber}
-                    className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                    className="px-4 py-2 hover:bg-gray-50 cursor-pointer"
                     onClick={() => handleTransformerSelect(t)}
                   >
                     {t.transformerNumber} - {t.gisDetails}
@@ -343,65 +375,64 @@ export default function PowerOutageRequestForm({
           <div>
             <label
               htmlFor="gisDetails"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              รายละเอียด GIS:
+              รายละเอียด GIS
             </label>
             <input
               type="text"
               id="gisDetails"
               {...register("gisDetails")}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline bg-gray-100"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
               readOnly
             />
-            {errors.gisDetails && (
-              <p className="text-red-500 text-xs italic">
-                {errors.gisDetails.message}
-              </p>
-            )}
           </div>
 
           <div>
             <label
               htmlFor="area"
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              พื้นที่:
+              พื้นที่
             </label>
             <input
               type="text"
               id="area"
               {...register("area")}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
             />
             {errors.area && (
-              <p className="text-red-500 text-xs italic">
-                {errors.area.message}
-              </p>
+              <p className="mt-1 text-sm text-red-600">{errors.area.message}</p>
             )}
           </div>
         </div>
 
-        <div className="flex justify-between mt-6">
-          <button
-            type="submit"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          >
-            บันทึกคำขอนี้
-          </button>
+        {timeError && (
+          <div className="p-4 bg-red-100 text-red-700 rounded-md">
+            {timeError}
+          </div>
+        )}
+
+        <div className="flex justify-end space-x-4 mt-6">
           <button
             type="button"
             onClick={handleSubmit(onAddToList)}
-            className="bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
           >
             เพิ่มเข้ารายการ
+          </button>
+          <button
+            type="submit"
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+          >
+            บันทึกคำขอนี้
           </button>
         </div>
       </form>
 
       {submitStatus && (
         <div
-          className={`mt-4 p-4 rounded ${
+          className={`p-4 ${
             submitStatus.success
               ? "bg-green-100 text-green-700"
               : "bg-red-100 text-red-700"
@@ -412,11 +443,13 @@ export default function PowerOutageRequestForm({
       )}
 
       {requests.length > 0 && (
-        <div className="mt-8 bg-gray-100 p-4 rounded-lg">
-          <h2 className="text-lg font-bold mb-4">รายการคำขอที่รอการบันทึก</h2>
+        <div className="mt-8 p-6 bg-gray-50 border-t border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-800 mb-4">
+            รายการคำขอที่รอการบันทึก
+          </h3>
           <ul className="space-y-2">
             {requests.map((request, index) => (
-              <li key={index} className="bg-white p-3 rounded shadow">
+              <li key={index} className="bg-white p-3 rounded-md shadow-sm">
                 หม้อแปลง: {request.transformerNumber}, วันที่:{" "}
                 {request.outageDate}
               </li>
@@ -424,12 +457,12 @@ export default function PowerOutageRequestForm({
           </ul>
           <button
             onClick={handleSubmitAll}
-            className="mt-4 bg-green-500 hover:bg-green-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
+            className="mt-4 px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
           >
             บันทึกคำขอทั้งหมด
           </button>
         </div>
       )}
-    </div>
+    </LocalizationProvider>
   );
 }

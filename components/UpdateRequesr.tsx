@@ -1,69 +1,118 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { PowerOutageRequestSchema, PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest';
+import { 
+  Dialog, 
+  DialogTitle, 
+  DialogContent, 
+  DialogActions, 
+  TextField, 
+  Button,
+  Stack
+} from '@mui/material';
+import { MobileTimePicker } from '@mui/x-date-pickers/MobileTimePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs, { Dayjs } from 'dayjs';
 
 interface UpdatePowerOutageRequestModalProps {
   initialData: PowerOutageRequestInput;
   onSubmit: (data: PowerOutageRequestInput) => void;
   onCancel: () => void;
+  open: boolean;
 }
 
-const UpdatePowerOutageRequestModal: React.FC<UpdatePowerOutageRequestModalProps> = ({ initialData, onSubmit, onCancel }) => {
-  const { register, handleSubmit, formState: { errors } } = useForm<PowerOutageRequestInput>({
+const UpdatePowerOutageRequestModal: React.FC<UpdatePowerOutageRequestModalProps> = ({ initialData, onSubmit, onCancel, open }) => {
+  const { control, handleSubmit, formState: { errors } } = useForm<PowerOutageRequestInput>({
     resolver: zodResolver(PowerOutageRequestSchema),
     defaultValues: initialData,
   });
 
+  const onFormSubmit = (data: PowerOutageRequestInput) => {
+    onSubmit(data);
+  };
+
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-      <div className="bg-white p-6 rounded shadow-lg">
-        <h2 className="text-xl font-bold mb-4">อัพเดตคำขอดับไฟ</h2>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
-            <label htmlFor="startTime" className="block mb-2">เวลาเริ่มต้น:</label>
-            <input
-              type="time"
-              id="startTime"
-              {...register('startTime')}
-              className="w-full p-2 border rounded"
-            />
-            {errors.startTime && <p className="text-red-500">{errors.startTime.message}</p>}
-          </div>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
+        <DialogTitle>อัพเดตคำขอดับไฟ</DialogTitle>
+        <form onSubmit={handleSubmit(onFormSubmit)}>
+          <DialogContent>
+            <Stack spacing={3}>
+              <Controller
+                name="startTime"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <MobileTimePicker
+                    label="เวลาเริ่มต้น"
+                    value={dayjs(value, 'HH:mm')}
+                    onChange={(newValue: Dayjs | null) => {
+                      onChange(newValue ? newValue.format('HH:mm') : '');
+                    }}
+                    ampm={false}
+                    format="HH:mm"
+                    slotProps={{
+                      textField: {
+                        variant: "outlined",
+                        fullWidth: true,
+                        error: !!errors.startTime,
+                        helperText: errors.startTime?.message,
+                      },
+                    }}
+                  />
+                )}
+              />
 
-          <div>
-            <label htmlFor="endTime" className="block mb-2">เวลาสิ้นสุด:</label>
-            <input
-              type="time"
-              id="endTime"
-              {...register('endTime')}
-              className="w-full p-2 border rounded"
-            />
-            {errors.endTime && <p className="text-red-500">{errors.endTime.message}</p>}
-          </div>
+              <Controller
+                name="endTime"
+                control={control}
+                render={({ field: { onChange, value } }) => (
+                  <MobileTimePicker
+                    label="เวลาสิ้นสุด"
+                    value={dayjs(value, 'HH:mm')}
+                    onChange={(newValue: Dayjs | null) => {
+                      onChange(newValue ? newValue.format('HH:mm') : '');
+                    }}
+                    ampm={false}
+                    format="HH:mm"
+                    slotProps={{
+                      textField: {
+                        variant: "outlined",
+                        fullWidth: true,
+                        error: !!errors.endTime,
+                        helperText: errors.endTime?.message,
+                      },
+                    }}
+                  />
+                )}
+              />
 
-          <div>
-            <label htmlFor="gisDetails" className="block mb-2">พื้นที่:</label>
-            <input
-              type="text"
-              id="area"
-              {...register('area')}
-              className="w-full p-2 border rounded"
-            />
-            {errors.area && <p className="text-red-500">{errors.area.message}</p>}
-          </div>
-
-          <div className="flex space-x-2">
-            <button type="submit" className="bg-blue-500 text-white p-2 rounded">
+              <Controller
+                name="area"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    label="พื้นที่"
+                    variant="outlined"
+                    fullWidth
+                    error={!!errors.area}
+                    helperText={errors.area?.message}
+                  />
+                )}
+              />
+            </Stack>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={onCancel}>ยกเลิก</Button>
+            <Button type="submit" variant="contained" color="primary">
               อัพเดต
-            </button>
-            <button type="button" onClick={onCancel} className="bg-gray-500 text-white p-2 rounded">
-              ยกเลิก
-            </button>
-          </div>
+            </Button>
+          </DialogActions>
         </form>
-      </div>
-    </div>
+      </Dialog>
+    </LocalizationProvider>
   );
 }
 

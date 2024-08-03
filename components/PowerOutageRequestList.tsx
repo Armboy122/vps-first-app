@@ -130,13 +130,13 @@ export default function PowerOutageRequestList() {
   const handleEdit = (request: PowerOutageRequest) => {
     setEditingRequest(request);
   };
-  
+
   const handleUpdate = async (data: PowerOutageRequestInput) => {
     if (!editingRequest) {
       console.error("No request is currently being edited");
       return;
     }
-  
+
     try {
       const result = await updatePowerOutageRequest(editingRequest.id, data);
       if (result.success) {
@@ -149,11 +149,11 @@ export default function PowerOutageRequestList() {
       console.error("Error updating power outage request:", error);
     }
   };
-  
+
   const handleCancelEdit = () => {
     setEditingRequest(null);
   };
-  
+
   const handleDelete = async (id: number) => {
     if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?")) {
       try {
@@ -171,7 +171,7 @@ export default function PowerOutageRequestList() {
       }
     }
   };
-  
+
   const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
     try {
       const result = await updateOMS(id, newStatus);
@@ -187,7 +187,7 @@ export default function PowerOutageRequestList() {
       console.error(`Error updating OMS Status: ${error}`);
     }
   };
-  
+
   const handleEditStatusRequest = async (id: number, newStatus: Request) => {
     try {
       const result = await updateStatusRequest(id, newStatus);
@@ -215,17 +215,17 @@ export default function PowerOutageRequestList() {
       statusRequest === "CANCELLED"
     )
       return "";
-  
+
     const today = new Date();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
-  
+
     if (diffDays <= 3) return "bg-red-100";
     if (diffDays < 7) return "bg-yellow-100";
     return "";
   };
-  
+
   const filteredRequests = requests.filter(
     (request) =>
       request.transformerNumber
@@ -236,14 +236,14 @@ export default function PowerOutageRequestList() {
         .toLowerCase()
         .includes(searchTerm.toLowerCase())
   );
-  
+
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredRequests.slice(
     indexOfFirstItem,
     indexOfLastItem
   );
-  
+
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (authLoading)
@@ -420,6 +420,7 @@ export default function PowerOutageRequestList() {
           }}
           onSubmit={handleUpdate}
           onCancel={handleCancelEdit}
+          open={!!editingRequest} // เพิ่มบรรทัดนี้
         />
       )}
     </div>
