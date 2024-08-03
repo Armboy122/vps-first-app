@@ -37,8 +37,8 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
 
     // แปลงเวลาเป็น timezone ของไทย
     const outageDate = new Date(validatedData.outageDate);
-    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}`);
-    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}`);
+    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
+    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
 
     const result = await prisma.powerOutageRequest.create({
       data: {
@@ -122,8 +122,8 @@ export async function updatePowerOutageRequest(
     }).parse(data);
 
     // แปลงเวลาเป็น timezone ของไทย
-    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}`);
-    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}`);
+    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
+    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
 
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       throw new Error("Invalid time format");
