@@ -1,8 +1,12 @@
 "use server";
 
+import { hash, compare } from "bcryptjs";
+import prisma from "../../../lib/prisma";
+import { getServerSession } from "next-auth/next";
+
 import { CreateUserInput, CreateUserSchema } from "@/lib/validations/user";
-import prisma, { Role } from "../../../lib/prisma";
-import { hash } from "bcryptjs";
+import { Role } from "@prisma/client";
+import { authOptions } from "@/authOption";
 
 export async function createUser(input: CreateUserInput) {
   try {
@@ -41,6 +45,7 @@ export async function createUser(input: CreateUserInput) {
     };
   }
 }
+
 export async function getUsers(page = 1, pageSize = 10, search = '', workCenterId = '') {
   const skip = (page - 1) * pageSize;
   try {
@@ -115,5 +120,151 @@ export async function updateUserName(userId: number, newName: string) {
   } catch (error) {
     console.error("Failed to update user name:", error);
     return { success: false, error: "Failed to update user name" };
+  }
+}
+
+export async function changePassword(currentPassword: string, newPassword: string) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const userId = parseInt(session.user.id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { password: true }
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    const isPasswordValid = await compare(currentPassword, user.password);
+    if (!isPasswordValid) {
+      return { success: false, error: "Current password is incorrect" };
+    }
+
+    const hashedNewPassword = await hash(newPassword, 10);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedNewPassword }
+    });
+
+    return { success: true, message: "Password changed successfully" };
+  } catch (error) {
+    console.error("Failed to change password:", error);
+    return { success: false, error: "Failed to change password" };
+  }
+}
+
+export async function updateUserProfile(
+  data: {
+    fullName?: string;
+    employeeId?: string;
+    workCenterId?: number;
+    branchId?: number;
+  }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const userId = parseInt(session.user.id);
+
+    // ตรวจสอบว่า employeeId ใหม่ไม่ซ้ำกับผู้ใช้อื่น (ถ้ามีการเปลี่ยน)
+    if (data.employeeId && data.employeeId !== session.user.employeeId) {
+      const existingUser = await prisma.user.findFirst({
+        where: { 
+          employeeId: data.employeeId,
+          id: { not: userId }
+        }
+      });
+      if (existingUser) {
+        return { success: false, error: "This Employee ID is already in use" };
+      }
+    }
+
+    // อัปเดตข้อมูลผู้ใช้
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        fullName: data.fullName,
+        employeeId: data.employeeId,
+        workCenterId: data.workCenterId,
+        branchId: data.branchId,
+      },
+      select: {
+        id: true,
+        fullName: true,
+        employeeId: true,
+        workCenter: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        branch: {
+          select: {
+            id: true,
+            fullName: true,
+            shortName: true
+          }
+        },
+        role: true
+      }
+    });
+
+    return { success: true, user: updatedUser };
+  } catch (error) {
+    console.error("Failed to update user profile:", error);
+    return { success: false, error: "Failed to update user profile" };
+  }
+}
+
+export async function getCurrentUser() {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || !session.user) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    const userId = parseInt(session.user.id);
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        employeeId: true,
+        role: true,
+        workCenter: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        branch: {
+          select: {
+            id: true,
+            fullName: true,
+            shortName: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return { success: false, error: "User not found" };
+    }
+
+    return { success: true, user };
+  } catch (error) {
+    console.error("Failed to get current user:", error);
+    return { success: false, error: "Failed to get current user" };
   }
 }

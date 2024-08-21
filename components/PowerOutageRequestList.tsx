@@ -10,7 +10,12 @@ import {
 } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequesr";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEdit, faTrash, faSearch } from "@fortawesome/free-solid-svg-icons";
+import {
+  faEdit,
+  faTrash,
+  faSearch,
+  faPlus,
+} from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
@@ -83,6 +88,27 @@ export default function PowerOutageRequestList() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
+  const [selectedRequests, setSelectedRequests] = useState<number[]>([]);
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
+
+  const filterByDate = (requests: PowerOutageRequest[]) => {
+    return requests.filter((request) => {
+      const requestDate = new Date(request.outageDate);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+
+      if (start && end) {
+        return requestDate >= start && requestDate <= end;
+      } else if (start) {
+        return requestDate >= start;
+      } else if (end) {
+        return requestDate <= end;
+      }
+      return true;
+    });
+  };
+
   const loadRequests = useCallback(async () => {
     try {
       setLoading(true);
@@ -172,6 +198,32 @@ export default function PowerOutageRequestList() {
     }
   };
 
+  // New function for handling multiple selection
+  const handleSelectRequest = (id: number) => {
+    setSelectedRequests((prev) =>
+      prev.includes(id) ? prev.filter((reqId) => reqId !== id) : [...prev, id]
+    );
+  };
+
+  const handleBulkStatusChange = async (newStatus: Request) => {
+    if (
+      window.confirm(
+        `คุณแน่ใจหรือไม่ที่จะเปลี่ยนสถานะของรายการที่เลือกเป็น ${newStatus}?`
+      )
+    ) {
+      try {
+        for (const id of selectedRequests) {
+          await updateStatusRequest(id, newStatus);
+        }
+        await loadRequests();
+        setSelectedRequests([]);
+      } catch (error) {
+        console.error("Error updating multiple requests:", error);
+        setError("เกิดข้อผิดพลาดในการอัปเดตสถานะหลายรายการ");
+      }
+    }
+  };
+
   const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
     try {
       const result = await updateOMS(id, newStatus);
@@ -209,24 +261,28 @@ export default function PowerOutageRequestList() {
     omsStatus: string,
     statusRequest: string
   ) => {
-    if (
-      omsStatus !== "NOT_ADDED" ||
-      statusRequest === "NOT" ||
-      statusRequest === "CANCELLED"
-    )
-      return "";
-
     const today = new Date();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
-
-    if (diffDays <= 3) return "bg-red-100";
-    if (diffDays < 7) return "bg-yellow-100";
+  
+    // เงื่อนไขใหม่: สีแดงเมื่อสถานะอนุมัติเป็น "รอดำเนินการ" และเหลือเวลาน้อยกว่า 15 วัน
+    if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
+      return "bg-red-500";
+    }
+  
+    // เงื่อนไขเดิม: สำหรับสถานะอนุมัติแล้ว แต่ OMS ยังไม่ดำเนินการ
+    if (omsStatus === "NOT_ADDED" && statusRequest !== "NOT" && statusRequest !== "CANCELLED") {
+      if (diffDays <= 3 && diffDays > 0) return "bg-red-500";
+      if (diffDays <= 7 && diffDays > 0) return "bg-yellow-500";
+      if (diffDays <= 15 && diffDays > 0) return "bg-green-500";
+    }
+  
+    // ไม่แสดงสีในกรณีอื่นๆ
     return "";
   };
 
-  const filteredRequests = requests.filter(
+  const filteredRequests = filterByDate(requests).filter(
     (request) =>
       request.transformerNumber
         .toLowerCase()
@@ -244,6 +300,14 @@ export default function PowerOutageRequestList() {
     indexOfLastItem
   );
 
+  const LoadingSpinner = () => (
+    <div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
+    </div>
+  );
+
+  // ใช้ LoadingSpinner ในส่วน loading
+
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (authLoading)
@@ -253,53 +317,131 @@ export default function PowerOutageRequestList() {
   if (error)
     return <div className="text-red-500 text-center py-10">{error}</div>;
 
+  if (authLoading || loading) return <LoadingSpinner />;
+
   return (
     <div className="container mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
-        {(isUser || isAdmin) && (
-          <Link
-            href="/power-outage-requests/create"
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-300"
-          >
-            สร้างคำขอดับไฟใหม่
-          </Link>
-        )}
-        <div className="relative">
-          <input
-            type="text"
-            placeholder="ค้นหา..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <FontAwesomeIcon
-            icon={faSearch}
-            className="absolute left-3 top-3 text-gray-400"
-          />
+      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+          <div>
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="ค้นหา..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+              />
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              />
+            </div>
+          </div>
+          <div>
+            <label
+              htmlFor="startDate"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              วันที่เริ่มต้น
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="endDate"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              วันที่สิ้นสุด
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+            />
+          </div>
         </div>
+      </div>
+
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center space-x-4">
+          {(isUser || isAdmin) && (
+            <Link
+              href="/power-outage-requests/create"
+              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
+            >
+              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              สร้างคำขอดับไฟใหม่
+            </Link>
+          )}
+          <select
+            onChange={(e) => handleBulkStatusChange(e.target.value as Request)}
+            disabled={selectedRequests.length === 0}
+            className="bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">เปลี่ยนสถานะที่เลือก</option>
+            <option value="CONFIRM">อนุมัติดับไฟ</option>
+            <option value="CANCELLED">ยกเลิก</option>
+            <option value="NOT">รออนุมัติ</option>
+          </select>
+        </div>
+        <span className="text-sm text-gray-600">
+          {selectedRequests.length} รายการที่เลือก
+        </span>
       </div>
 
       <div className="overflow-x-auto shadow-lg rounded-lg">
         <table className="min-w-full bg-white">
-          <thead className="bg-gray-200">
+          <thead className="bg-gray-100">
             <tr>
-              <th className="py-3 px-4 text-left">วันที่ดับไฟ</th>
-              <th className="py-3 px-4 text-left">เวลา</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                เลือก
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                วันที่ดับไฟ
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                เวลา
+              </th>
               {(isAdmin || isViewer) && (
                 <>
-                  <th className="py-3 px-4 text-left">ศูนย์งาน</th>
-                  <th className="py-3 px-4 text-left">สาขา</th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    ศูนย์งาน
+                  </th>
+                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    สาขา
+                  </th>
                 </>
               )}
-              <th className="py-3 px-4 text-left">หมายเลขหม้อแปลง</th>
-              <th className="py-3 px-4 text-left">บริเวณ</th>
-              <th className="py-3 px-4 text-left">สถานะ OMS</th>
-              <th className="py-3 px-4 text-left">สถานะอนุมัติ</th>
-              <th className="py-3 px-4 text-left">ผู้สร้างคำขอ</th>
-              <th className="py-3 px-4 text-left">การดำเนินการ</th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                หมายเลขหม้อแปลง
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                บริเวณ
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                สถานะ OMS
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                สถานะอนุมัติ
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                ผู้สร้างคำขอ
+              </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                การดำเนินการ
+              </th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-gray-200">
             {currentItems.map((request) => {
               const bgColor = getRowBackgroundColor(
                 request.outageDate,
@@ -309,8 +451,22 @@ export default function PowerOutageRequestList() {
               return (
                 <tr
                   key={request.id}
-                  className={`hover:bg-gray-100 transition-colors ${bgColor}`}
+                  className={`hover:bg-gray-50 transition-colors ${bgColor}`}
                 >
+                  <td className="py-3 px-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedRequests.includes(request.id)}
+                      onChange={() => handleSelectRequest(request.id)}
+                      disabled={
+                        !(
+                          isAdmin ||
+                          (isUser && request.workCenter.id === userWorkCenterId)
+                        )
+                      }
+                      className="form-checkbox h-5 w-5 text-blue-600"
+                    />
+                  </td>
                   <td className="py-3 px-4">
                     {request.outageDate.toLocaleDateString("th-TH")}
                   </td>
@@ -390,20 +546,29 @@ export default function PowerOutageRequestList() {
       </div>
 
       <div className="mt-6 flex justify-center">
-        {Array.from(
-          { length: Math.ceil(filteredRequests.length / itemsPerPage) },
-          (_, i) => (
-            <button
-              key={i}
-              onClick={() => paginate(i + 1)}
-              className={`mx-1 px-3 py-1 rounded ${
-                currentPage === i + 1 ? "bg-blue-500 text-white" : "bg-gray-200"
-              }`}
-            >
-              {i + 1}
-            </button>
-          )
-        )}
+        <nav
+          className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+          aria-label="Pagination"
+        >
+          {Array.from(
+            { length: Math.ceil(filteredRequests.length / itemsPerPage) },
+            (_, i) => (
+              <button
+                key={i}
+                onClick={() => paginate(i + 1)}
+                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
+                  ${
+                    currentPage === i + 1
+                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
+                  }
+                `}
+              >
+                {i + 1}
+              </button>
+            )
+          )}
+        </nav>
       </div>
 
       {editingRequest && (
@@ -420,7 +585,7 @@ export default function PowerOutageRequestList() {
           }}
           onSubmit={handleUpdate}
           onCancel={handleCancelEdit}
-          open={!!editingRequest} // เพิ่มบรรทัดนี้
+          open={!!editingRequest}
         />
       )}
     </div>

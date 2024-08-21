@@ -377,7 +377,7 @@ export default function PowerOutageRequestForm({
               htmlFor="gisDetails"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              รายละเอียด GIS
+              สถานที่ติดตั้ง (GIS)
             </label>
             <input
               type="text"
@@ -393,7 +393,7 @@ export default function PowerOutageRequestForm({
               htmlFor="area"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              พื้นที่
+              พื้นที่ไฟดับ
             </label>
             <input
               type="text"

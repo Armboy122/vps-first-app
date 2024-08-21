@@ -13,6 +13,7 @@ const Navbar = () => {
   const navItems = [
     { label: "หน้าแรก", path: "/power-outage-requests" },
     { label: "DashBord", path: "/" },
+    { label: "Profile", path: "/user" },
     ...(session?.user.role === "ADMIN"
       ? [{ label: "Admin", path: "/admin" }]
       : []),
@@ -24,7 +25,7 @@ const Navbar = () => {
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <Link href="/" className="flex items-center">
+              <Link href="/power-outage-requests" className="flex items-center">
                 <Image
                   src="/logo.png"
                   alt="Logo"
