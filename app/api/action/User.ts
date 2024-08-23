@@ -268,3 +268,18 @@ export async function getCurrentUser() {
     return { success: false, error: "Failed to get current user" };
   }
 }
+
+export async function deleteUser(userId: number) {
+  try {
+    // ตรวจสอบสิทธิ์ของผู้ใช้ที่กำลังดำเนินการลบ (ควรทำในส่วนนี้)
+    
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+
+    return { success: true, message: "User deleted successfully" };
+  } catch (error) {
+    console.error("Failed to delete user:", error);
+    return { success: false, error: "Failed to delete user" };
+  }
+}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getUsers, updateUserRole } from "../api/action/User";
+import { deleteUser, getUsers, updateUserRole } from "../api/action/User";
 import { getWorkCenters } from "../api/action/getWorkCentersAndBranches";
 import Link from "next/link";
 import { Role } from "@prisma/client";
@@ -27,7 +27,7 @@ const roleTranslations: { [key in Role]: string } = {
   ADMIN: "Admin",
   MANAGER: "ผู้บริหารจุดรวมงาน",
   SUPERVISOR: "พนักงาน EO",
-  USER: "พนักงานหม้อแปลง"
+  USER: "พนักงานหม้อแปลง",
 };
 
 export default function UserPage() {
@@ -45,7 +45,12 @@ export default function UserPage() {
   const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
-      const result = await getUsers(currentPage, usersPerPage, search, workCenterFilter);
+      const result = await getUsers(
+        currentPage,
+        usersPerPage,
+        search,
+        workCenterFilter
+      );
       if (result.users) {
         setAllUsers(result.users);
         setFilteredUsers(result.users);
@@ -77,8 +82,16 @@ export default function UserPage() {
   const handleRoleChange = async (userId: number, newRole: Role) => {
     const result = await updateUserRole(userId, newRole);
     if (result.success) {
-      setAllUsers(users => users.map(user => user.id === userId ? { ...user, role: newRole } : user));
-      setFilteredUsers(users => users.map(user => user.id === userId ? { ...user, role: newRole } : user));
+      setAllUsers((users) =>
+        users.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      );
+      setFilteredUsers((users) =>
+        users.map((user) =>
+          user.id === userId ? { ...user, role: newRole } : user
+        )
+      );
     } else {
       setError(result.error || "ไม่สามารถอัพเดทบทบาทได้");
     }
@@ -94,17 +107,37 @@ export default function UserPage() {
     setCurrentPage(1);
   };
 
-  if (isLoading) return <div className="flex justify-center items-center h-screen">
-    <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
-  </div>;
+  const handleDeleteUser = async (userId: number) => {
+    if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบผู้ใช้นี้?")) {
+      const result = await deleteUser(userId);
+      if (result.success) {
+        setAllUsers((users) => users.filter((user) => user.id !== userId));
+        setFilteredUsers((users) => users.filter((user) => user.id !== userId));
+      } else {
+        setError(result.error || "ไม่สามารถลบผู้ใช้ได้");
+      }
+    }
+  };
 
-  if (error) return <div className="text-red-500 text-center text-xl mt-10">{error}</div>;
+  if (isLoading)
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-gray-900"></div>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="text-red-500 text-center text-xl mt-10">{error}</div>
+    );
 
   return (
     <div className="container mx-auto p-4 min-h-screen">
       <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-        <h1 className="text-3xl font-bold mb-6 text-gray-800">รายชื่อพนักงาน</h1>
-        
+        <h1 className="text-3xl font-bold mb-6 text-gray-800">
+          รายชื่อพนักงาน
+        </h1>
+
         <div className="flex mb-4 space-x-4">
           <input
             type="text"
@@ -119,7 +152,9 @@ export default function UserPage() {
           >
             <option value="">ทุกจุดรวมงาน</option>
             {workCenters.map((center) => (
-              <option key={center.id} value={center.id.toString()}>{center.name}</option>
+              <option key={center.id} value={center.id.toString()}>
+                {center.name}
+              </option>
             ))}
           </select>
           <Link href="/admin/create-user">
@@ -142,7 +177,12 @@ export default function UserPage() {
             </thead>
             <tbody>
               {filteredUsers.map((user, index) => (
-                <tr key={user.id} className={`${index % 2 === 0 ? "bg-white" : "bg-gray-50"} hover:bg-gray-100`}>
+                <tr
+                  key={user.id}
+                  className={`${
+                    index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                  } hover:bg-gray-100`}
+                >
                   <td className="px-4 py-3">{user.employeeId}</td>
                   <td className="px-4 py-3">{user.fullName}</td>
                   <td className="px-4 py-3">{user.workCenter.name}</td>
@@ -150,13 +190,25 @@ export default function UserPage() {
                   <td className="px-4 py-3">
                     <select
                       value={user.role}
-                      onChange={(e) => handleRoleChange(user.id, e.target.value as Role)}
+                      onChange={(e) =>
+                        handleRoleChange(user.id, e.target.value as Role)
+                      }
                       className="shadow appearance-none border rounded w-full py-1 px-2 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
                     >
                       {Object.entries(roleTranslations).map(([role, label]) => (
-                        <option key={role} value={role}>{label}</option>
+                        <option key={role} value={role}>
+                          {label}
+                        </option>
                       ))}
                     </select>
+                  </td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => handleDeleteUser(user.id)}
+                      className="bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-2 rounded focus:outline-none focus:shadow-outline"
+                    >
+                      ลบ
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -169,7 +221,11 @@ export default function UserPage() {
             <button
               key={page}
               onClick={() => setCurrentPage(page)}
-              className={`mx-1 px-3 py-1 border ${currentPage === page ? "bg-blue-500 text-white" : "hover:bg-gray-200"}`}
+              className={`mx-1 px-3 py-1 border ${
+                currentPage === page
+                  ? "bg-blue-500 text-white"
+                  : "hover:bg-gray-200"
+              }`}
             >
               {page}
             </button>
