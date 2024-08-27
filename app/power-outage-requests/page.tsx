@@ -16,7 +16,7 @@ export default async function PowerOutageRequestPage() {
               <FaBolt className="mr-3" />
               รายการคำขอดับไฟ
             </h2>
-            <PrintAnnouncement/>
+
           </div>
           <div className="p-6">
             <PowerOutageRequestList />

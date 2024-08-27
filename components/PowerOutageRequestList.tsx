@@ -15,10 +15,12 @@ import {
   faTrash,
   faSearch,
   faPlus,
+  faPrint,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
+import PrintAnnouncement from "./print";
 
 interface PowerOutageRequest {
   id: number;
@@ -265,19 +267,23 @@ export default function PowerOutageRequestList() {
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
-  
+
     // เงื่อนไขใหม่: สีแดงเมื่อสถานะอนุมัติเป็น "รอดำเนินการ" และเหลือเวลาน้อยกว่า 15 วัน
     if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
       return "bg-red-500";
     }
-  
+
     // เงื่อนไขเดิม: สำหรับสถานะอนุมัติแล้ว แต่ OMS ยังไม่ดำเนินการ
-    if (omsStatus === "NOT_ADDED" && statusRequest !== "NOT" && statusRequest !== "CANCELLED") {
+    if (
+      omsStatus === "NOT_ADDED" &&
+      statusRequest !== "NOT" &&
+      statusRequest !== "CANCELLED"
+    ) {
       if (diffDays <= 3 && diffDays > 0) return "bg-red-500";
       if (diffDays <= 7 && diffDays > 0) return "bg-yellow-500";
       if (diffDays <= 15 && diffDays > 0) return "bg-green-500";
     }
-  
+
     // ไม่แสดงสีในกรณีอื่นๆ
     return "";
   };
@@ -319,6 +325,139 @@ export default function PowerOutageRequestList() {
 
   if (authLoading || loading) return <LoadingSpinner />;
 
+  const printSelectedRequests = () => {
+    if (selectedRequests.length === 0) {
+      alert("กรุณาเลือกรายการที่ต้องการพิมพ์");
+      return;
+    }
+  
+    // จัดกลุ่มข้อมูลตามวันที่
+    const groupedRequests = selectedRequests.reduce((acc, id) => {
+      const request = requests.find((r) => r.id === id);
+      if (!request) return acc;
+      
+      const dateKey = request.outageDate.toISOString().split('T')[0]; // ใช้ ISO string เพื่อการเรียงลำดับ
+      if (!acc[dateKey]) {
+        acc[dateKey] = [];
+      }
+      acc[dateKey].push(request);
+      return acc;
+    }, {} as Record<string, typeof requests>);
+  
+    // เรียงลำดับวันที่จากเก่าไปใหม่
+    const sortedDates = Object.keys(groupedRequests).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  
+    // สร้าง HTML สำหรับข้อมูลที่เลือก
+    const printContent = `
+      <html>
+        <head>
+          <title>รายงานคำขอดับไฟ</title>
+          <style>
+            @font-face {
+              font-family: 'THSarabunNew';
+              src: url('/fonts/THSarabunNew.ttf') format('truetype');
+            }
+            body { 
+              font-family: 'THSarabunNew', sans-serif;
+              position: relative;
+              padding: 20px;
+            }
+            .watermark {
+              position: fixed;
+              top: 50%;
+              left: 50%;
+              transform: translate(-50%, -50%) rotate(-30deg);
+              font-size: 50px;
+              color: rgba(163, 187, 225, 0.3); /* สีเทาอ่อน แตกต่างจากหัวตาราง */
+              z-index: -1;
+            }
+            .header {
+              text-align: center;
+              padding: 20px 0;
+              border-bottom: 2px solid #000;
+              margin-bottom: 20px;
+            }
+            table { 
+              border-collapse: collapse; 
+              width: 100%; 
+              margin-bottom: 20px; 
+            }
+            th, td { 
+              border: 1px solid black; 
+              padding: 8px; 
+              text-align: left; 
+            }
+            h2 { 
+              margin-top: 20px; 
+            }
+            @media print {
+              .watermark {
+                -webkit-print-color-adjust: exact;
+                color-adjust: exact;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="watermark">ออกจากระบบคำขออนุมัติดับไฟ</div>
+          <div class="header">
+            <h1>รายงานคำขอดับไฟ</h1>
+          </div>
+          ${sortedDates
+            .map((date) => `
+              <h2>วันที่ ${new Date(date).toLocaleDateString("th-TH")}</h2>
+              <table>
+                <thead>
+                  <tr>
+                    <th>เวลา</th>
+                    <th>หมายเลขหม้อแปลง</th>
+                    <th>บริเวณ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${groupedRequests[date]
+                    .map((request) => `
+                      <tr>
+                        <td>${request.startTime.toLocaleTimeString("th-TH", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })} - 
+                            ${request.endTime.toLocaleTimeString("th-TH", {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}</td>
+                        <td>${request.transformerNumber}</td>
+                        <td>${request.area}</td>
+                      </tr>
+                    `)
+                    .join("")}
+                </tbody>
+              </table>
+            `)
+            .join("")}
+        </body>
+      </html>
+    `;
+  
+    // เปิดหน้าต่างใหม่และพิมพ์
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(printContent);
+      printWindow.document.close();
+      
+      // รอให้เนื้อหาโหลดเสร็จก่อนพิมพ์
+      printWindow.onload = () => {
+        printWindow.print();
+        // ปิดหน้าต่างหลังจากพิมพ์เสร็จ (อาจไม่ทำงานในบางเบราว์เซอร์)
+        printWindow.onafterprint = () => {
+          printWindow.close();
+        };
+      };
+    } else {
+      alert("ไม่สามารถเปิดหน้าต่างการพิมพ์ได้ โปรดตรวจสอบการตั้งค่า pop-up blocker ของเบราว์เซอร์");
+    }
+  };
+
   return (
     <div className="container mx-auto p-6">
       <div className="bg-white p-6 rounded-lg shadow-md mb-6">
@@ -338,6 +477,7 @@ export default function PowerOutageRequestList() {
               />
             </div>
           </div>
+
           <div>
             <label
               htmlFor="startDate"
@@ -396,6 +536,15 @@ export default function PowerOutageRequestList() {
         <span className="text-sm text-gray-600">
           {selectedRequests.length} รายการที่เลือก
         </span>
+        <PrintAnnouncement/>
+        <button
+          onClick={printSelectedRequests}
+          disabled={selectedRequests.length === 0}
+          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
+        >
+          <FontAwesomeIcon icon={faPrint} className="mr-2" />
+          พิมพ์เพื่อจัดการทำเอกสารแนบ
+        </button>
       </div>
 
       <div className="overflow-x-auto shadow-lg rounded-lg">

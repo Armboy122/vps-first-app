@@ -2,6 +2,8 @@
 import { getBranches, getWorkCenters } from '@/app/api/action/getWorkCentersAndBranches';
 import { getDataforPrintAnnouncement } from '@/app/api/action/printAnnoucement';
 import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validations/powerOutageRequest';
+import { faPrint } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Branch, WorkCenter } from '@prisma/client';
 import { useSession } from 'next-auth/react';
@@ -152,6 +154,7 @@ export default function PrintAnnouncement(){
     return (
         <div>
             <button onClick={()=>setIsOpen(true)} className="bg-blue-500 text-white p-2 rounded">
+            <FontAwesomeIcon icon={faPrint} className="mr-2" />
                 พิมพ์ประกาศ
             </button>
             {isOpen && 
