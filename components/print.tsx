@@ -4,6 +4,7 @@ import { getDataforPrintAnnouncement } from '@/app/api/action/printAnnoucement';
 import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validations/powerOutageRequest';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Branch, WorkCenter } from '@prisma/client';
+import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 
@@ -37,6 +38,35 @@ export default function PrintAnnouncement(){
     const [pdfBase64, setPdfBase64] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const {data:session} = useSession();
+    const [authInfo, setAuthInfo] = useState({
+        isAdmin: false,
+        isUser: false,
+        isViewer: false,
+        isManager: false,
+        isSupervisor: false,
+        isLoading: true,
+        userWorkCenterId: session?.user?.workCenterId,
+        userWorkCenterName: session?.user?.workCenterName,
+        userbranch: session?.user?.branchName,
+        userbranchID: session?.user?.branchId,
+    });
+    useEffect(() => {
+        if (session) {
+            setAuthInfo({
+                isAdmin: session?.user?.role === "ADMIN",
+                isUser: session?.user?.role === "USER",
+                isViewer: session?.user?.role === "VIEWER",
+                isManager: session?.user?.role === "MANAGER",
+                isSupervisor: session?.user?.role === "SUPERVISOR",
+                isLoading: false,
+                userWorkCenterId: session?.user?.workCenterId,
+                userWorkCenterName: session?.user?.workCenterName,
+                userbranch: session?.user?.branchName,
+                userbranchID: session?.user?.branchId,
+            });
+        }
+    }, [session]);
 
     const { register, handleSubmit, formState: { errors }, reset, watch } = useForm<GetAnnoucementRequestInput>({
         resolver: zodResolver(GetAnnoucementRequest)
@@ -63,11 +93,18 @@ export default function PrintAnnouncement(){
         setWC()
     },[])
     
-    const onSubmit = async (data: GetAnnoucementRequestInput) =>{
+    const onSubmit = async (data: GetAnnoucementRequestInput) => {
         setIsLoading(true);
         setError(null);
         try {
-            const res = await getDataforPrintAnnouncement(data)
+            // ปรับปรุงข้อมูลที่จะส่งไปตามสิทธิ์ของผู้ใช้
+            const submitData = authInfo.isAdmin ? data : {
+                ...data,
+                workCenterId: String(authInfo.userWorkCenterId),
+                branchId: String(authInfo.userbranchID)
+              };
+    
+            const res = await getDataforPrintAnnouncement(submitData)
             if(res.length == 0){
                 setError('การไฟฟ้าที่คุณเลือกไม่มีการดับไฟในวันดังกล่าว');
                 setIsLoading(false);
@@ -126,6 +163,7 @@ export default function PrintAnnouncement(){
                         >
                             Close
                         </button>
+    
                         <form onSubmit={handleSubmit(onSubmit)} className="mt-16">
                             <div>
                                 <label htmlFor="outageDate" className="block mb-2">วันที่ดับไฟ:</label>
@@ -137,32 +175,42 @@ export default function PrintAnnouncement(){
                                 />
                                 {errors.outageDate && <p className="text-red-500">{errors.outageDate.message}</p>}
                             </div>
-                            <div>
-                                <label htmlFor="workCenterId" className="block mb-2">ศูนย์งาน:</label>
-                                <select
-                                    id="workCenterId"
-                                    {...register('workCenterId')}
-                                    className="w-full p-2 border rounded"
-                                >
-                                    <option value="">เลือกศูนย์งาน</option>
-                                    {workCenters.map(wc => (
-                                    <option key={wc.id} value={wc.id}>{wc.name}</option>
-                                    ))}
-                                </select>
-                                {errors.workCenterId && <p className="text-red-500">{errors.workCenterId.message}</p>}
-                            </div>
-                            <div>
-                                <label htmlFor="branchId" className="block mb-2">สาขา:</label>
-                                <select
-                                    id="branchId"
-                                    {...register('branchId')}
-                                    className="w-full p-2 border rounded"
-                                >
-                                    <option value="">เลือกสาขา</option>
-                                    {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.shortName}</option>)}
-                                </select>
-                                {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}
-                            </div>
+                            {authInfo.isAdmin && (
+                                <>
+                                    <div>
+                                        <label htmlFor="workCenterId" className="block mb-2">ศูนย์งาน:</label>
+                                        <select
+                                            id="workCenterId"
+                                            {...register('workCenterId')}
+                                            className="w-full p-2 border rounded"
+                                        >
+                                            <option value="">เลือกศูนย์งาน</option>
+                                            {workCenters.map(wc => (
+                                            <option key={wc.id} value={wc.id}>{wc.name}</option>
+                                            ))}
+                                        </select>
+                                        {errors.workCenterId && <p className="text-red-500">{errors.workCenterId.message}</p>}
+                                    </div>
+                                    <div>
+                                        <label htmlFor="branchId" className="block mb-2">สาขา:</label>
+                                        <select
+                                            id="branchId"
+                                            {...register('branchId')}
+                                            className="w-full p-2 border rounded"
+                                        >
+                                            <option value="">เลือกสาขา</option>
+                                            {branches.map(branch=><option key={branch.id} value={branch.id}>{branch.shortName}</option>)}
+                                        </select>
+                                        {errors.branchId && <p className="text-red-500">{errors.branchId.message}</p>}
+                                    </div>
+                                </>
+                            )}
+                            {!authInfo.isAdmin && (
+                                <>
+                                    <input type="hidden" {...register('workCenterId')} value={authInfo.userWorkCenterId} />
+                                    <input type="hidden" {...register('branchId')} value={authInfo.userbranchID} />
+                                </>
+                            )}
                             <div className='mt-3 flex flex-row gap-3'>
                                 {!pdfBase64 && !isLoading && 
                                     <button type="submit" className="bg-blue-500 text-white p-2 rounded">
