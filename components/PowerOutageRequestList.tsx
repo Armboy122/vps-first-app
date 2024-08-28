@@ -93,6 +93,17 @@ export default function PowerOutageRequestList() {
   const [selectedRequests, setSelectedRequests] = useState<number[]>([]);
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [selectAll, setSelectAll] = useState(false);
+
+  const [statusFilter, setStatusFilter] = useState<string[]>([]);
+
+  // เพิ่มฟังก์ชันกรอง
+  const filterByStatus = (requests: PowerOutageRequest[]) => {
+    if (statusFilter.length === 0) return requests;
+    return requests.filter((request) =>
+      statusFilter.includes(request.statusRequest)
+    );
+  };
 
   const filterByDate = (requests: PowerOutageRequest[]) => {
     return requests.filter((request) => {
@@ -116,16 +127,18 @@ export default function PowerOutageRequestList() {
       setLoading(true);
       const result = await getPowerOutageRequests();
 
-      const formattedResult = result.map((item) => ({
-        ...item,
-        createdAt: new Date(item.createdAt),
-        outageDate: new Date(item.outageDate),
-        startTime: new Date(item.startTime),
-        endTime: new Date(item.endTime),
-        statusUpdatedAt: item.statusUpdatedAt
-          ? new Date(item.statusUpdatedAt)
-          : null,
-      }));
+      const formattedResult = result
+        .map((item) => ({
+          ...item,
+          createdAt: new Date(item.createdAt),
+          outageDate: new Date(item.outageDate),
+          startTime: new Date(item.startTime),
+          endTime: new Date(item.endTime),
+          statusUpdatedAt: item.statusUpdatedAt
+            ? new Date(item.statusUpdatedAt)
+            : null,
+        }))
+        .sort((a, b) => b.outageDate.getTime() - a.outageDate.getTime());
 
       const filteredResult = formattedResult.filter((request) => {
         if (isAdmin || isViewer) {
@@ -201,9 +214,22 @@ export default function PowerOutageRequestList() {
   };
 
   // New function for handling multiple selection
+  const handleSelectAll = () => {
+    setSelectAll(!selectAll);
+    if (!selectAll) {
+      setSelectedRequests(currentItems.map((request) => request.id));
+    } else {
+      setSelectedRequests([]);
+    }
+  };
+
   const handleSelectRequest = (id: number) => {
     setSelectedRequests((prev) =>
       prev.includes(id) ? prev.filter((reqId) => reqId !== id) : [...prev, id]
+    );
+    // ตรวจสอบว่าทุกรายการถูกเลือกหรือไม่
+    setSelectAll(
+      currentItems.every((request) => selectedRequests.includes(request.id))
     );
   };
 
@@ -270,7 +296,7 @@ export default function PowerOutageRequestList() {
 
     // เงื่อนไขใหม่: สีแดงเมื่อสถานะอนุมัติเป็น "รอดำเนินการ" และเหลือเวลาน้อยกว่า 15 วัน
     if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
-      return "bg-red-500";
+      return "bg-red-400";
     }
 
     // เงื่อนไขเดิม: สำหรับสถานะอนุมัติแล้ว แต่ OMS ยังไม่ดำเนินการ
@@ -279,16 +305,16 @@ export default function PowerOutageRequestList() {
       statusRequest !== "NOT" &&
       statusRequest !== "CANCELLED"
     ) {
-      if (diffDays <= 3 && diffDays > 0) return "bg-red-500";
-      if (diffDays <= 7 && diffDays > 0) return "bg-yellow-500";
-      if (diffDays <= 15 && diffDays > 0) return "bg-green-500";
+      if (diffDays <= 3 && diffDays > 0) return "bg-red-400";
+      if (diffDays <= 7 && diffDays > 0) return "bg-yellow-400";
+      if (diffDays <= 15 && diffDays > 0) return "bg-green-400";
     }
 
     // ไม่แสดงสีในกรณีอื่นๆ
     return "";
   };
 
-  const filteredRequests = filterByDate(requests).filter(
+  const filteredRequests = filterByStatus(filterByDate(requests)).filter(
     (request) =>
       request.transformerNumber
         .toLowerCase()
@@ -330,23 +356,25 @@ export default function PowerOutageRequestList() {
       alert("กรุณาเลือกรายการที่ต้องการพิมพ์");
       return;
     }
-  
+
     // จัดกลุ่มข้อมูลตามวันที่
     const groupedRequests = selectedRequests.reduce((acc, id) => {
       const request = requests.find((r) => r.id === id);
       if (!request) return acc;
-      
-      const dateKey = request.outageDate.toISOString().split('T')[0]; // ใช้ ISO string เพื่อการเรียงลำดับ
+
+      const dateKey = request.outageDate.toISOString().split("T")[0]; // ใช้ ISO string เพื่อการเรียงลำดับ
       if (!acc[dateKey]) {
         acc[dateKey] = [];
       }
       acc[dateKey].push(request);
       return acc;
     }, {} as Record<string, typeof requests>);
-  
+
     // เรียงลำดับวันที่จากเก่าไปใหม่
-    const sortedDates = Object.keys(groupedRequests).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
-  
+    const sortedDates = Object.keys(groupedRequests).sort(
+      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+    );
+
     // สร้าง HTML สำหรับข้อมูลที่เลือก
     const printContent = `
       <html>
@@ -354,9 +382,9 @@ export default function PowerOutageRequestList() {
           <title>รายงานคำขอดับไฟ</title>
           <style>
             @font-face {
-              font-family: 'THSarabunNew';
-              src: url('/fonts/THSarabunNew.ttf') format('truetype');
-            }
+          font-family: 'THSarabunNew';
+          src: url('data:font/truetype;base64,BASE64_ENCODED_FONT_DATA') format('truetype');
+        }
             body { 
               font-family: 'THSarabunNew', sans-serif;
               position: relative;
@@ -404,7 +432,8 @@ export default function PowerOutageRequestList() {
             <h1>รายงานคำขอดับไฟ</h1>
           </div>
           ${sortedDates
-            .map((date) => `
+            .map(
+              (date) => `
               <h2>วันที่ ${new Date(date).toLocaleDateString("th-TH")}</h2>
               <table>
                 <thead>
@@ -416,7 +445,8 @@ export default function PowerOutageRequestList() {
                 </thead>
                 <tbody>
                   ${groupedRequests[date]
-                    .map((request) => `
+                    .map(
+                      (request) => `
                       <tr>
                         <td>${request.startTime.toLocaleTimeString("th-TH", {
                           hour: "2-digit",
@@ -429,22 +459,24 @@ export default function PowerOutageRequestList() {
                         <td>${request.transformerNumber}</td>
                         <td>${request.area}</td>
                       </tr>
-                    `)
+                    `
+                    )
                     .join("")}
                 </tbody>
               </table>
-            `)
+            `
+            )
             .join("")}
         </body>
       </html>
     `;
-  
+
     // เปิดหน้าต่างใหม่และพิมพ์
     const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
-      
+
       // รอให้เนื้อหาโหลดเสร็จก่อนพิมพ์
       printWindow.onload = () => {
         printWindow.print();
@@ -454,7 +486,9 @@ export default function PowerOutageRequestList() {
         };
       };
     } else {
-      alert("ไม่สามารถเปิดหน้าต่างการพิมพ์ได้ โปรดตรวจสอบการตั้งค่า pop-up blocker ของเบราว์เซอร์");
+      alert(
+        "ไม่สามารถเปิดหน้าต่างการพิมพ์ได้ โปรดตรวจสอบการตั้งค่า pop-up blocker ของเบราว์เซอร์"
+      );
     }
   };
 
@@ -510,6 +544,36 @@ export default function PowerOutageRequestList() {
           </div>
         </div>
       </div>
+      <div className="mb-4">
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          กรองตามสถานะอนุมัติ
+        </label>
+        <div>
+          {["CONFIRM", "CANCELLED", "NOT"].map((status) => (
+            <label key={status} className="inline-flex items-center mr-4">
+              <input
+                type="checkbox"
+                checked={statusFilter.includes(status)}
+                onChange={() => {
+                  if (statusFilter.includes(status)) {
+                    setStatusFilter(statusFilter.filter((s) => s !== status));
+                  } else {
+                    setStatusFilter([...statusFilter, status]);
+                  }
+                }}
+                className="form-checkbox h-5 w-5 text-blue-600"
+              />
+              <span className="ml-2 text-sm text-gray-700">
+                {status === "CONFIRM"
+                  ? "อนุมัติดับไฟ"
+                  : status === "CANCELLED"
+                  ? "ยกเลิก"
+                  : "รออนุมัติ"}
+              </span>
+            </label>
+          ))}
+        </div>
+      </div>
 
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center space-x-4">
@@ -534,9 +598,10 @@ export default function PowerOutageRequestList() {
           </select>
         </div>
         <span className="text-sm text-gray-600">
-          {selectedRequests.length} รายการที่เลือก
+          {selectedRequests.length} รายการที่เลือก จากทั้งหมด{" "}
+          {currentItems.length} รายการ
         </span>
-        <PrintAnnouncement/>
+        <PrintAnnouncement />
         <button
           onClick={printSelectedRequests}
           disabled={selectedRequests.length === 0}
@@ -552,7 +617,12 @@ export default function PowerOutageRequestList() {
           <thead className="bg-gray-100">
             <tr>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                เลือก
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={handleSelectAll}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
               </th>
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 วันที่ดับไฟ
