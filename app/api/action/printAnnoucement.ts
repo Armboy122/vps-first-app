@@ -22,7 +22,8 @@ export async function getDataforPrintAnnouncement(input: GetAnnoucementRequestIn
                 },
                 outageDate: true,
                 area: true,
-                gisDetails: true
+                gisDetails: true,
+                transformerNumber: true
             }
         })
         return data

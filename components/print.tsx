@@ -116,7 +116,7 @@ export default function PrintAnnouncement(){
             let tel = "-"
             res.forEach((val,i)=>{
                 const regex = /(\d{2}-\d{6})/
-                const d = val.gisDetails.match(regex)
+                const d = val.transformerNumber.match(regex)
                 tel = val.branch.phoneNumber?val.branch.phoneNumber:"-"
                 peaNo = peaNo+`${(i+1).toFixed(0)}. หมายเลขหม้อแปลง ${d?d[0]:"-"} บริเวณ ${val.area} ${getCutoffTime(val.startTime,val.endTime)} \n`
             })
