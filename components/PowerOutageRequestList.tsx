@@ -21,6 +21,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
 import PrintAnnouncement from "./print";
+import Pagination from "@/app/power-outage-requests/pagination";
 
 interface PowerOutageRequest {
   id: number;
@@ -97,6 +98,8 @@ export default function PowerOutageRequestList() {
 
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
 
+  
+
   // เพิ่มฟังก์ชันกรอง
   const filterByStatus = (requests: PowerOutageRequest[]) => {
     if (statusFilter.length === 0) return requests;
@@ -138,7 +141,6 @@ export default function PowerOutageRequestList() {
             ? new Date(item.statusUpdatedAt)
             : null,
         }))
-        .sort((a, b) => b.outageDate.getTime() - a.outageDate.getTime());
 
       const filteredResult = formattedResult.filter((request) => {
         if (isAdmin || isViewer) {
@@ -305,7 +307,7 @@ export default function PowerOutageRequestList() {
       statusRequest !== "NOT" &&
       statusRequest !== "CANCELLED"
     ) {
-      if (diffDays <= 3 && diffDays > 0) return "bg-red-400";
+      if (diffDays <= 3 && diffDays >= 0) return "bg-red-400";
       if (diffDays <= 7 && diffDays > 0) return "bg-yellow-400";
       if (diffDays <= 15 && diffDays > 0) return "bg-green-400";
     }
@@ -491,6 +493,8 @@ export default function PowerOutageRequestList() {
       );
     }
   };
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
 
   return (
     <div className="container mx-auto p-6">
@@ -764,7 +768,7 @@ export default function PowerOutageRequestList() {
         </table>
       </div>
 
-      <div className="mt-6 flex justify-center">
+      {/* <div className="mt-6 flex justify-center">
         <nav
           className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
           aria-label="Pagination"
@@ -788,7 +792,12 @@ export default function PowerOutageRequestList() {
             )
           )}
         </nav>
-      </div>
+      </div> */}
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        onPageChange={paginate}
+      />
 
       {editingRequest && (
         <UpdatePowerOutageRequestModal

@@ -81,8 +81,18 @@ export async function searchTransformers(searchTerm: string) {
 
 export async function getPowerOutageRequests() {
   try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
     const data = await prisma.powerOutageRequest.findMany({
-      orderBy: { createdAt: "desc" },
+      where: {
+        NOT: {
+          AND: [
+            { omsStatus: "PROCESSED" },
+            { statusRequest: "CONFIRM" }
+          ]
+        }
+      },
       include: {
         createdBy: { select: { fullName: true } },
         workCenter: { select: { name: true, id: true } },
@@ -90,7 +100,34 @@ export async function getPowerOutageRequests() {
       },
     });
 
-    return data;
+    // เรียงลำดับข้อมูลตามเงื่อนไข
+    const sortedData = data.sort((a, b) => {
+      const aOutageDate = new Date(a.outageDate);
+      const bOutageDate = new Date(b.outageDate);
+
+      // เรียง CONFIRM ก่อน
+      if (a.statusRequest === 'CONFIRM' && b.statusRequest !== 'CONFIRM') return -1;
+      if (a.statusRequest !== 'CONFIRM' && b.statusRequest === 'CONFIRM') return 1;
+
+      // ถ้าทั้งคู่เป็น CONFIRM
+      if (a.statusRequest === 'CONFIRM' && b.statusRequest === 'CONFIRM') {
+        // ถ้าทั้งคู่ยังไม่ถึงวันที่ outageDate
+        if (aOutageDate >= today && bOutageDate >= today) {
+          return aOutageDate.getTime() - bOutageDate.getTime(); // เรียงจากใกล้ไปไกล
+        }
+        // ถ้าทั้งคู่ผ่านวันที่ outageDate ไปแล้ว
+        if (aOutageDate < today && bOutageDate < today) {
+          return bOutageDate.getTime() - aOutageDate.getTime(); // เรียงจากไกลไปใกล้
+        }
+        // ถ้าอันหนึ่งยังไม่ถึง และอีกอันผ่านไปแล้ว
+        return aOutageDate >= today ? -1 : 1; // อันที่ยังไม่ถึงอยู่ก่อน
+      }
+
+      // สำหรับรายการที่ไม่ใช่ CONFIRM
+      return a.createdAt.getTime() - b.createdAt.getTime(); // เรียงตาม createdAt
+    });
+
+    return sortedData;
   } catch (error) {
     console.error("Failed to fetch power outage requests:", error);
     throw new Error("Failed to fetch power outage requests");
