@@ -85,14 +85,6 @@ export async function getPowerOutageRequests() {
     today.setHours(0, 0, 0, 0);
 
     const data = await prisma.powerOutageRequest.findMany({
-      where: {
-        NOT: {
-          AND: [
-            { omsStatus: "PROCESSED" },
-            { statusRequest: "CONFIRM" }
-          ]
-        }
-      },
       include: {
         createdBy: { select: { fullName: true } },
         workCenter: { select: { name: true, id: true } },
@@ -105,7 +97,20 @@ export async function getPowerOutageRequests() {
       const aOutageDate = new Date(a.outageDate);
       const bOutageDate = new Date(b.outageDate);
 
-      // เรียง CONFIRM ก่อน
+      // ตรวจสอบสถานะ PROCESSED และ CONFIRM
+      const aIsProcessedAndConfirm = a.omsStatus === "PROCESSED" && a.statusRequest === "CONFIRM";
+      const bIsProcessedAndConfirm = b.omsStatus === "PROCESSED" && b.statusRequest === "CONFIRM";
+
+      // ถ้าทั้งคู่เป็น PROCESSED และ CONFIRM ให้เรียงตาม createdAt
+      if (aIsProcessedAndConfirm && bIsProcessedAndConfirm) {
+        return b.createdAt.getTime() - a.createdAt.getTime();
+      }
+
+      // ถ้าอันใดอันหนึ่งเป็น PROCESSED และ CONFIRM ให้ไว้ท้ายสุด
+      if (aIsProcessedAndConfirm) return 1;
+      if (bIsProcessedAndConfirm) return -1;
+
+      // เรียง CONFIRM ก่อน (ยกเว้น PROCESSED)
       if (a.statusRequest === 'CONFIRM' && b.statusRequest !== 'CONFIRM') return -1;
       if (a.statusRequest !== 'CONFIRM' && b.statusRequest === 'CONFIRM') return 1;
 
@@ -124,7 +129,7 @@ export async function getPowerOutageRequests() {
       }
 
       // สำหรับรายการที่ไม่ใช่ CONFIRM
-      return a.createdAt.getTime() - b.createdAt.getTime(); // เรียงตาม createdAt
+      return b.createdAt.getTime() - a.createdAt.getTime(); // เรียงตาม createdAt จากใหม่ไปเก่า
     });
 
     return sortedData;

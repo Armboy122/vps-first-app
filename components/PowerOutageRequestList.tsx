@@ -97,8 +97,14 @@ export default function PowerOutageRequestList() {
   const [selectAll, setSelectAll] = useState(false);
 
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
+  const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>([]);
 
-  
+  const filterByOMSStatus = (requests: PowerOutageRequest[]) => {
+    if (omsStatusFilter.length === 0) return requests;
+    return requests.filter((request) =>
+      omsStatusFilter.includes(request.omsStatus)
+    );
+  };
 
   // เพิ่มฟังก์ชันกรอง
   const filterByStatus = (requests: PowerOutageRequest[]) => {
@@ -130,17 +136,16 @@ export default function PowerOutageRequestList() {
       setLoading(true);
       const result = await getPowerOutageRequests();
 
-      const formattedResult = result
-        .map((item) => ({
-          ...item,
-          createdAt: new Date(item.createdAt),
-          outageDate: new Date(item.outageDate),
-          startTime: new Date(item.startTime),
-          endTime: new Date(item.endTime),
-          statusUpdatedAt: item.statusUpdatedAt
-            ? new Date(item.statusUpdatedAt)
-            : null,
-        }))
+      const formattedResult = result.map((item) => ({
+        ...item,
+        createdAt: new Date(item.createdAt),
+        outageDate: new Date(item.outageDate),
+        startTime: new Date(item.startTime),
+        endTime: new Date(item.endTime),
+        statusUpdatedAt: item.statusUpdatedAt
+          ? new Date(item.statusUpdatedAt)
+          : null,
+      }));
 
       const filteredResult = formattedResult.filter((request) => {
         if (isAdmin || isViewer) {
@@ -300,6 +305,12 @@ export default function PowerOutageRequestList() {
     if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
       return "bg-red-400";
     }
+    if (statusRequest === "CONFIRM" && omsStatus === "PROCESSED") {
+      return "bg-blue-400";
+    }
+    if (statusRequest === "CONFIRM" && omsStatus === "NOT_ADDED" && diffDays < 0) {
+      return "bg-gradient-to-r from-white via-red-500 to-white";
+    }
 
     // เงื่อนไขเดิม: สำหรับสถานะอนุมัติแล้ว แต่ OMS ยังไม่ดำเนินการ
     if (
@@ -316,7 +327,9 @@ export default function PowerOutageRequestList() {
     return "";
   };
 
-  const filteredRequests = filterByStatus(filterByDate(requests)).filter(
+  const filteredRequests = filterByOMSStatus(
+    filterByStatus(filterByDate(requests))
+  ).filter(
     (request) =>
       request.transformerNumber
         .toLowerCase()
@@ -548,34 +561,75 @@ export default function PowerOutageRequestList() {
           </div>
         </div>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          กรองตามสถานะอนุมัติ
-        </label>
-        <div>
-          {["CONFIRM", "CANCELLED", "NOT"].map((status) => (
-            <label key={status} className="inline-flex items-center mr-4">
-              <input
-                type="checkbox"
-                checked={statusFilter.includes(status)}
-                onChange={() => {
-                  if (statusFilter.includes(status)) {
-                    setStatusFilter(statusFilter.filter((s) => s !== status));
-                  } else {
-                    setStatusFilter([...statusFilter, status]);
-                  }
-                }}
-                className="form-checkbox h-5 w-5 text-blue-600"
-              />
-              <span className="ml-2 text-sm text-gray-700">
-                {status === "CONFIRM"
-                  ? "อนุมัติดับไฟ"
-                  : status === "CANCELLED"
-                  ? "ยกเลิก"
-                  : "รออนุมัติ"}
-              </span>
-            </label>
-          ))}
+      <div className="mb-6 flex flex-wrap justify-between">
+        <div className="w-full md:w-[48%] mb-4 md:mb-0">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            กรองตามสถานะอนุมัติ
+          </label>
+          <div className="flex flex-wrap">
+            {["CONFIRM", "CANCELLED", "NOT"].map((status) => (
+              <label
+                key={status}
+                className="inline-flex items-center mr-4 mb-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={statusFilter.includes(status)}
+                  onChange={() => {
+                    if (statusFilter.includes(status)) {
+                      setStatusFilter(statusFilter.filter((s) => s !== status));
+                    } else {
+                      setStatusFilter([...statusFilter, status]);
+                    }
+                  }}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  {status === "CONFIRM"
+                    ? "อนุมัติดับไฟ"
+                    : status === "CANCELLED"
+                    ? "ยกเลิก"
+                    : "รออนุมัติ"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="w-full md:w-[48%]">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            กรองตามสถานะ OMS
+          </label>
+          <div className="flex flex-wrap">
+            {["NOT_ADDED", "PROCESSED", "CANCELLED"].map((status) => (
+              <label
+                key={status}
+                className="inline-flex items-center mr-4 mb-2"
+              >
+                <input
+                  type="checkbox"
+                  checked={omsStatusFilter.includes(status)}
+                  onChange={() => {
+                    if (omsStatusFilter.includes(status)) {
+                      setOmsStatusFilter(
+                        omsStatusFilter.filter((s) => s !== status)
+                      );
+                    } else {
+                      setOmsStatusFilter([...omsStatusFilter, status]);
+                    }
+                  }}
+                  className="form-checkbox h-5 w-5 text-blue-600"
+                />
+                <span className="ml-2 text-sm text-gray-700">
+                  {status === "NOT_ADDED"
+                    ? "ยังไม่ดำเนินการ"
+                    : status === "PROCESSED"
+                    ? "ดำเนินการแล้ว"
+                    : "ยกเลิก"}
+                </span>
+              </label>
+            ))}
+          </div>
         </div>
       </div>
 
