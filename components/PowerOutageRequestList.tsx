@@ -318,7 +318,7 @@ export default function PowerOutageRequestList() {
       statusRequest !== "NOT" &&
       statusRequest !== "CANCELLED"
     ) {
-      if (diffDays <= 3 && diffDays >= 0) return "bg-red-400";
+      if (diffDays <= 5 && diffDays >= 0) return "bg-red-400";
       if (diffDays <= 7 && diffDays > 0) return "bg-yellow-400";
       if (diffDays <= 15 && diffDays > 0) return "bg-green-400";
     }
