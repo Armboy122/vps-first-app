@@ -3,8 +3,8 @@ FROM node:18-alpine AS base
 
 # Install dependencies only when needed
 FROM base AS deps
-# แก้ตรงนี้ เพิ่ม openssl1.1-compat
-RUN apk add --no-cache libc6-compat openssl1.1-compat
+RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache openssl
 WORKDIR /app
 
 # เพิ่มตรงนี้เพื่อแก้ปัญหา puppeteer
@@ -22,8 +22,7 @@ RUN \
 # Rebuild the source code only when needed
 FROM base AS builder
 WORKDIR /app
-# แก้ตรงนี้ เพิ่ม openssl1.1-compat
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
@@ -38,8 +37,7 @@ FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
-# แก้ตรงนี้ เพิ่ม openssl1.1-compat
-RUN apk add --no-cache openssl1.1-compat
+RUN apk add --no-cache openssl
 
 # Copy necessary files from the builder stage
 COPY --from=builder /app/public ./public
