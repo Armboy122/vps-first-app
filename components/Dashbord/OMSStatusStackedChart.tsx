@@ -12,6 +12,7 @@ import {
   Title,
   Tooltip,
   Legend,
+  ChartOptions,
 } from "chart.js";
 import { getOMSStatusByWorkCenter } from "@/app/api/action/dashboard";
 
@@ -73,67 +74,48 @@ const OMSStatusStackedChart = () => {
     fetchData();
   }, []);
 
-  const options = {
+  const options: ChartOptions<'bar'> = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
       x: { 
         stacked: true,
-        grid: {
-          display: false
-        },
+        grid: { display: false },
         ticks: {
-          font: {
-            size: 12
-          },
+          font: { size: 12 },
           maxRotation: 45,
-          minRotation: 45
-        }
+          minRotation: 45,
+        },
       },
       y: { 
         stacked: true,
-        grid: {
-          color: "rgba(0, 0, 0, 0.05)",
-        },
+        grid: { color: "rgba(0, 0, 0, 0.05)" },
         ticks: {
           precision: 0,
-          font: {
-            size: 12
-          }
+          font: { size: 12 },
         },
         title: {
           display: true,
           text: 'จำนวนงาน',
-          font: {
-            size: 14,
-            weight: 'bold'
-          }
-        }
+          font: { size: 14, weight: 'bold' },
+        },
       },
     },
     plugins: {
       legend: {
-        position: "top" as const,
+        position: "top",
         labels: {
           padding: 20,
           usePointStyle: true,
           pointStyle: 'circle',
-          font: {
-            size: 13
-          }
-        }
+          font: { size: 13 },
+        },
       },
       title: {
         display: true,
         text: 'สถานะงานตามจุดรวมงาน',
-        font: {
-          size: 18,
-          weight: 'bold'
-        },
-        padding: {
-          top: 10,
-          bottom: 30
-        }
+        font: { size: 18, weight: 'bold' },
+        padding: { top: 10, bottom: 30 },
       },
       tooltip: {
         backgroundColor: 'rgba(255, 255, 255, 0.9)',
@@ -149,22 +131,17 @@ const OMSStatusStackedChart = () => {
             const label = context.dataset.label || '';
             const value = context.parsed.y || 0;
             return `${label}: ${value} งาน`;
-          }
-        }
-      }
+          },
+        },
+      },
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuad'// แก้ไขเป็นค่าที่ถูกต้องตาม type
+      easing: 'easeOutQuad', // TypeScript will now check against the correct union
     },
     layout: {
-      padding: {
-        top: 5,
-        right: 16, 
-        bottom: 16,
-        left: 8
-      }
-    }
+      padding: { top: 5, right: 16, bottom: 16, left: 8 },
+    },
   };
 
   return (
