@@ -88,13 +88,22 @@ export async function getOMSStatusByWorkCenter() {
     }
   });
 
+  // สร้างวันที่ปัจจุบัน (เวลา 00:00:00)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   return omsStatusByWorkCenter.map(wc => {
     // กรองเฉพาะรายการที่ statusRequest === 'CONFIRM'
     const confirmedRequests = wc.powerOutageRequests.filter(r => r.statusRequest === 'CONFIRM');
     
+    // กรองเฉพาะ NOT_ADDED ที่ยังไม่เลยวันที่ปัจจุบัน
+    const pendingNotAdded = confirmedRequests.filter(r => 
+      r.omsStatus === 'NOT_ADDED' && new Date(r.outageDate) >= today
+    );
+    
     return {
       name: wc.name,
-      NOT_ADDED: confirmedRequests.filter(r => r.omsStatus === 'NOT_ADDED').length,
+      NOT_ADDED: pendingNotAdded.length,
       PROCESSED: confirmedRequests.filter(r => r.omsStatus === 'PROCESSED').length,
       CANCELLED: confirmedRequests.filter(r => r.omsStatus === 'CANCELLED').length,
       outages: confirmedRequests.map(r => ({
