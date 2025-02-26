@@ -19,9 +19,10 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
-import { OMSStatus, Request } from "@prisma/client";
+import { OMSStatus, Request, WorkCenter } from "@prisma/client";
 import PrintAnnouncement from "./print";
 import Pagination from "@/app/power-outage-requests/pagination";
+import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 
 interface PowerOutageRequest {
   id: number;
@@ -95,9 +96,24 @@ export default function PowerOutageRequestList() {
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
   const [selectAll, setSelectAll] = useState(false);
+  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
 
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>([]);
+  const [workCenterFilter, setWorkCenterFilter] = useState("");
+
+  const fetchWorkCenters = useCallback(async () => {
+      try {
+        const centers = await getWorkCenters();
+        setWorkCenters(centers);
+      } catch (err) {
+        console.error("ไม่สามารถดึงข้อมูลจุดรวมงานได้:", err);
+      }
+    }, []);
+
+  const handleWorkCenterFilter = (value: string) => {
+    setWorkCenterFilter(value);
+  };
 
   const filterByOMSStatus = (requests: PowerOutageRequest[]) => {
     if (omsStatusFilter.length === 0) return requests;
@@ -111,6 +127,12 @@ export default function PowerOutageRequestList() {
     if (statusFilter.length === 0) return requests;
     return requests.filter((request) =>
       statusFilter.includes(request.statusRequest)
+    );
+  };
+  const filterByWorkcenter = (requests: PowerOutageRequest[]) => {
+    if (!workCenterFilter) return requests; // ถ้าไม่ได้เลือกศูนย์งาน ให้แสดงทั้งหมด
+    return requests.filter((request) => 
+      request.workCenterId === parseInt(workCenterFilter)
     );
   };
 
@@ -172,8 +194,9 @@ export default function PowerOutageRequestList() {
   useEffect(() => {
     if (!authLoading) {
       loadRequests();
+      fetchWorkCenters();
     }
-  }, [authLoading, loadRequests, currentPage]);
+  }, [authLoading, loadRequests, currentPage,fetchWorkCenters]);
 
   const handleEdit = (request: PowerOutageRequest) => {
     setEditingRequest(request);
@@ -327,8 +350,10 @@ export default function PowerOutageRequestList() {
     return "";
   };
 
-  const filteredRequests = filterByOMSStatus(
-    filterByStatus(filterByDate(requests))
+  const filteredRequests = filterByWorkcenter(
+    filterByOMSStatus(
+      filterByStatus(filterByDate(requests))
+    )
   ).filter(
     (request) =>
       request.transformerNumber
@@ -559,6 +584,23 @@ export default function PowerOutageRequestList() {
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
           </div>
+          {(isAdmin) && (
+
+          <div>
+            <select
+            value={workCenterFilter}
+            onChange={(e) => handleWorkCenterFilter(e.target.value)}
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          >
+            <option value="">ทุกจุดรวมงาน</option>
+            {workCenters.map((center) => (
+              <option key={center.id} value={center.id.toString()}>
+                {center.name}
+              </option>
+            ))}
+          </select>
+          </div>
+          )}
         </div>
       </div>
       <div className="mb-6 flex flex-wrap justify-between">
@@ -716,6 +758,9 @@ export default function PowerOutageRequestList() {
               <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 การดำเนินการ
               </th>
+              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                วันที่สร้างเอกสาร
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
@@ -815,6 +860,7 @@ export default function PowerOutageRequestList() {
                       isUser={isUser}
                     />
                   </td>
+                  <td className="py-3 px-4">{request.createdAt.toLocaleDateString("th-TH")}</td>
                 </tr>
               );
             })}
