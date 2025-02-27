@@ -5,10 +5,15 @@ import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validat
 import { faPrint } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Branch, WorkCenter } from '@prisma/client';
+import { Branch } from '@prisma/client';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+
+interface WorkCenter {
+    id: number;
+    name: string;
+  }
 
 const getCutoffDate = (date : Date) => {
     const dayOfWeek = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][date.getDay()];

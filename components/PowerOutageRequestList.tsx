@@ -19,7 +19,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
-import { OMSStatus, Request, WorkCenter } from "@prisma/client";
+import { OMSStatus, Request } from "@prisma/client";
 import PrintAnnouncement from "./print";
 import Pagination from "@/app/power-outage-requests/pagination";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
@@ -43,6 +43,11 @@ interface PowerOutageRequest {
   createdBy: { fullName: string };
   workCenter: { name: string; id: number };
   branch: { shortName: string };
+}
+
+interface WorkCenter {
+  id: number;
+  name: string;
 }
 
 const ActionButtons: React.FC<{
