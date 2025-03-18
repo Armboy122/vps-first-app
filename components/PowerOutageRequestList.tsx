@@ -9,14 +9,14 @@ import {
   updateStatusRequest,
 } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequesr";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEdit,
-  faTrash,
-  faSearch,
-  faPlus,
-  faPrint,
-} from "@fortawesome/free-solid-svg-icons";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import {
+//   faEdit,
+//   faTrash,
+//   faSearch,
+//   faPlus,
+//   faPrint,
+// } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
@@ -31,7 +31,7 @@ import { MobileCard } from "./PowerOutageRequest/MobileCard";
 import { FilterSection } from "./PowerOutageRequest/FilterSection";
 import { SearchSection } from "./PowerOutageRequest/SearchSection";
 import { BulkActions } from "./PowerOutageRequest/BulkActions";
-import { printSelectedRequests } from "./PowerOutageRequest/PrintService";
+// import { printSelectedRequests } from "./PowerOutageRequest/PrintService";
 
 interface PowerOutageRequest {
   id: number;
@@ -59,33 +59,33 @@ interface WorkCenter {
   name: string;
 }
 
-const ActionButtons: React.FC<{
-  request: PowerOutageRequest;
-  onEdit: (request: PowerOutageRequest) => void;
-  onDelete: (id: number) => void;
-  isAdmin: boolean;
-  isUser: boolean;
-}> = ({ request, onEdit, onDelete, isAdmin, isUser }) => {
-  if (isAdmin || (isUser && request.statusRequest === "NOT")) {
-    return (
-      <>
-        <button
-          onClick={() => onEdit(request)}
-          className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2 text-sm transition duration-300"
-        >
-          <FontAwesomeIcon icon={faEdit} />
-        </button>
-        <button
-          onClick={() => onDelete(request.id)}
-          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2 text-sm transition duration-300"
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </button>
-      </>
-    );
-  }
-  return null;
-};
+// const ActionButtons: React.FC<{
+//   request: PowerOutageRequest;
+//   onEdit: (request: PowerOutageRequest) => void;
+//   onDelete: (id: number) => void;
+//   isAdmin: boolean;
+//   isUser: boolean;
+// }> = ({ request, onEdit, onDelete, isAdmin, isUser }) => {
+//   if (isAdmin || (isUser && request.statusRequest === "NOT")) {
+//     return (
+//       <>
+//         <button
+//           onClick={() => onEdit(request)}
+//           className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2 text-sm transition duration-300"
+//         >
+//           <FontAwesomeIcon icon={faEdit} />
+//         </button>
+//         <button
+//           onClick={() => onDelete(request.id)}
+//           className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2 text-sm transition duration-300"
+//         >
+//           <FontAwesomeIcon icon={faTrash} />
+//         </button>
+//       </>
+//     );
+//   }
+//   return null;
+// };
 
 export default function PowerOutageRequestList() {
   const {
