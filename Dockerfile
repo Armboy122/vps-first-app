@@ -1,5 +1,5 @@
-# Base image with Node.js
-FROM node:18-alpine
+# Base image with Node.js - explicitly set platform
+FROM --platform=linux/amd64 node:18-alpine
 
 # Set working directory
 WORKDIR /app
@@ -22,10 +22,8 @@ RUN npm ci --legacy-peer-deps || yarn install --frozen-lockfile
 # Copy the rest of the application
 COPY . .
 
-# Generate Prisma Client
-RUN npx prisma generate
-
-# Build the application
+# Build the application without running prisma generate (will be run at runtime)
+ENV PRISMA_SKIP_GENERATE=true
 RUN npm run build || yarn build
 
 # Set environment for production

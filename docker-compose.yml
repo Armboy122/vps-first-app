@@ -60,6 +60,7 @@ services:
     entrypoint: >
       sh -c "
       sleep 10;
+      npx prisma generate;
       npx prisma migrate deploy --schema=./prisma/schema.prisma;
       npm start;
       "
