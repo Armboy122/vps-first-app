@@ -38,7 +38,6 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: runner
       args:
         - NEXT_TELEMETRY_DISABLED=1
       cache_from:
@@ -67,7 +66,7 @@ services:
       sh -c "
       sleep 10;
       npx prisma migrate deploy --schema=./prisma/schema.prisma;
-      node server.js;
+      npm start;
       "
     logging: *default-logging
 
