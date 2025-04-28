@@ -53,6 +53,7 @@ services:
       - db
     networks:
       - mynetwork
+    restart: always
 
 volumes:
   postgresql_pgdata:
