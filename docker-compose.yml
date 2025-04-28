@@ -1,5 +1,10 @@
 version: '3.8'
 
+x-logging: &default-logging
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   db:
     image: postgres:15-alpine
@@ -13,28 +18,31 @@ services:
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U sa -d PeaTransformer"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
-      retries: 5
+      retries: 3
       start_period: 10s
     networks:
       - mynetwork
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '0.3'
           memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    logging: *default-logging
 
   nextjs-app:
     build:
       context: .
       dockerfile: Dockerfile
       target: runner
-    env_file:
-      - .env
+      args:
+        - NEXT_TELEMETRY_DISABLED=1
+      cache_from:
+        - node:18-alpine
     networks:
       - mynetwork
     depends_on:
@@ -44,16 +52,23 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '2'
-          memory: 2G
+          cpus: '0.4'
+          memory: 768M
         reservations:
-          cpus: '1'
-          memory: 1G
+          cpus: '0.2'
+          memory: 384M
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     entrypoint: >
       sh -c "
       npx prisma migrate deploy --schema=./prisma/schema.prisma;
-      yarn start;
+      node server.js;
       "
+    logging: *default-logging
 
   metabase:
     image: metabase/metabase:latest
@@ -68,6 +83,8 @@ services:
       MB_EMBEDDING_REPORTING_ENABLED: "false"
       MB_ADMIN_EMAIL: admin@example.com
       MB_ADMIN_PASSWORD: admin123
+      JAVA_OPTS: "-Xmx384m"
+      MB_JAVA_TIMEZONE: Asia/Bangkok
     depends_on:
       db:
         condition: service_healthy
@@ -77,11 +94,18 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1'
-          memory: 1G
-        reservations:
-          cpus: '0.5'
+          cpus: '0.3'
           memory: 512M
+        reservations:
+          cpus: '0.1'
+          memory: 256M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    logging: *default-logging
 
 volumes:
   postgresql_pgdata:

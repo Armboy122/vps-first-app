@@ -1,67 +1,86 @@
-# Base image with node
+# syntax=docker/dockerfile:1.4
 FROM node:18-alpine AS base
 
-# Install dependencies only when needed
-FROM base AS deps
-RUN apk add --no-cache libc6-compat openssl
+# Set working directory
 WORKDIR /app
+
+# Add common dependencies in base to improve caching
+RUN apk add --no-cache libc6-compat openssl
 
 # เพิ่มตรงนี้เพื่อแก้ปัญหา puppeteer
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV NEXT_TELEMETRY_DISABLED=1
 
-# Install dependencies based on the preferred package manager
+# Install dependencies only when needed
+FROM base AS deps
+
+# Copy only package files to leverage layer caching
 COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
-RUN \
-    if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-    elif [ -f package-lock.json ]; then npm ci --legacy-peer-deps; \
-    elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-    else echo "Lockfile not found." && exit 1; \
+
+# Install dependencies with cache mount for node_modules
+RUN --mount=type=cache,target=/root/.npm \
+    if [ -f yarn.lock ]; then \
+      yarn --frozen-lockfile; \
+    elif [ -f package-lock.json ]; then \
+      npm ci --legacy-peer-deps; \
+    elif [ -f pnpm-lock.yaml ]; then \
+      yarn global add pnpm && pnpm i --frozen-lockfile; \
+    else \
+      echo "Lockfile not found." && exit 1; \
     fi
 
-# Rebuild the source code only when needed
+# Build the application
 FROM base AS builder
-WORKDIR /app
-RUN apk add --no-cache openssl
+
+# Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+
+# Copy only necessary files for build
+COPY package.json .
+COPY prisma ./prisma
+COPY tsconfig*.json ./
+COPY next.config.js ./
+COPY public ./public
+COPY app ./app
+COPY components ./components
+COPY lib ./lib
+COPY styles ./styles
+COPY middleware.ts ./
+COPY next-env.d.ts ./
 
 # Generate Prisma Client
 RUN npx prisma generate
 
-# Build the Next.js application
-RUN yarn build
+# Build Next.js app with cache mount
+RUN --mount=type=cache,target=/app/.next/cache \
+    yarn build
 
-# Production image, copy all the files and run next
+# Production image
 FROM base AS runner
-WORKDIR /app
 
-ENV NODE_ENV production
-RUN apk add --no-cache openssl
+ENV NODE_ENV=production
 
 # Create a non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy necessary files from the builder stage
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/prisma ./prisma
-
-# Set proper permissions
-RUN chown -R nextjs:nodejs /app
+# Copy build output from builder stage
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
+COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY --from=builder --chown=nextjs:nodejs /app/next.config.js ./
 
 # Switch to non-root user
 USER nextjs
 
-EXPOSE 3000
-
-ENV PORT 3000
-ENV NEXT_TELEMETRY_DISABLED 1
-
 # Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+# Set proper env vars
+ENV PORT=3000
+
+EXPOSE 3000
 
 CMD ["node", "server.js"]
