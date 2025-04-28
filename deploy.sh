@@ -41,17 +41,6 @@ fi
 log_info "กำลังดึง code ล่าสุดจาก repository..."
 git pull
 
-# เปิดใช้งาน BuildKit
-export DOCKER_BUILDKIT=1
-export COMPOSE_DOCKER_CLI_BUILD=1
-
-# สำรองข้อมูลก่อน deploy (ถ้าต้องการ)
-# log_info "กำลังสำรองข้อมูล PostgreSQL..."
-# BACKUP_DIR="$CURRENT_DIR/backups"
-# mkdir -p $BACKUP_DIR
-# BACKUP_FILE="$BACKUP_DIR/db_backup_$(date +%Y%m%d_%H%M%S).sql"
-# sudo docker exec db pg_dump -U sa PeaTransformer > $BACKUP_FILE || log_warn "ไม่สามารถสำรองข้อมูลได้ แต่จะดำเนินการต่อ"
-
 # ตรวจสอบและหยุด containers ที่กำลังทำงาน
 log_info "กำลังหยุด containers ที่กำลังทำงาน..."
 sudo docker compose down || log_warn "ไม่สามารถหยุด containers ได้ อาจจะยังไม่มี containers กำลังทำงาน"
@@ -61,9 +50,9 @@ log_info "กำลังล้าง containers และ images ที่ไ�
 sudo docker container prune -f
 sudo docker image prune -f
 
-# Build images ใหม่
-log_info "กำลัง build images ใหม่..."
-sudo docker compose build --no-cache || { log_error "ไม่สามารถ build images ได้"; exit 1; }
+# ดึง image ล่าสุดจาก Docker Hub
+log_info "กำลังดึง image ล่าสุดจาก Docker Hub..."
+sudo docker pull armboy/vps-first-app:290425 || { log_error "ไม่สามารถดึง image ได้"; exit 1; }
 
 # เริ่ม containers
 log_info "กำลังเริ่ม containers..."
