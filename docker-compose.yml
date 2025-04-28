@@ -26,14 +26,6 @@ services:
       start_period: 60s
     networks:
       - mynetwork
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 256M
     logging: *default-logging
 
   nextjs-app:
@@ -49,14 +41,6 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.4'
-          memory: 768M
-        reservations:
-          cpus: '0.2'
-          memory: 384M
     healthcheck:
       test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0"]
       interval: 30s
@@ -87,23 +71,17 @@ services:
       MB_EMBEDDING_REPORTING_ENABLED: "false"
       MB_ADMIN_EMAIL: admin@example.com
       MB_ADMIN_PASSWORD: admin123
-      JAVA_OPTS: "-Xmx384m"
+      JAVA_OPTS: "-Xmx1024m"
       MB_JAVA_TIMEZONE: Asia/Bangkok
       MB_JETTY_PORT: 3001
+    volumes:
+      - metabase_data:/metabase-data
     depends_on:
       db:
         condition: service_healthy
     networks:
       - mynetwork
     restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          cpus: '0.3'
-          memory: 512M
-        reservations:
-          cpus: '0.1'
-          memory: 256M
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health", "||", "exit", "0"]
       interval: 60s
@@ -114,6 +92,8 @@ services:
 
 volumes:
   postgresql_pgdata:
+    driver: local
+  metabase_data:
     driver: local
 
 networks:
