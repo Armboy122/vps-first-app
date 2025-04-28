@@ -2,46 +2,62 @@ version: '3.8'
 
 services:
   db:
-    image: postgres:latest
+    image: postgres:15-alpine
     container_name: db
     environment:
       POSTGRES_USER: sa
       POSTGRES_PASSWORD: 1234
       POSTGRES_DB: PeaTransformer
-    ports:
-      - "5432:5432"
     volumes:
       - postgresql_pgdata:/var/lib/postgresql/data
-    restart: always
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sa -d PeaTransformer"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     networks:
       - mynetwork
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
   nextjs-app:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+      target: production
     env_file:
       - .env
     networks:
       - mynetwork
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
     entrypoint: >
       sh -c "
-      until nc -z db 5432; do
-        echo 'Waiting for the database...';
-        sleep 1;
-      done;
       npx prisma migrate deploy --schema=./prisma/schema.prisma;
       yarn start;
       "
+
   metabase:
     image: metabase/metabase:latest
     container_name: metabase
-    ports:
-      - "3001:3000"
     environment:
       MB_DB_TYPE: postgres
       MB_DB_DBNAME: metabase_metadata
@@ -49,15 +65,32 @@ services:
       MB_DB_USER: sa
       MB_DB_PASS: 1234
       MB_DB_HOST: db
+      MB_EMBEDDING_REPORTING_ENABLED: "false"
+      MB_ADMIN_EMAIL: admin@example.com
+      MB_ADMIN_PASSWORD: admin123
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - mynetwork
-    restart: always
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
 
 volumes:
   postgresql_pgdata:
+    driver: local
 
 networks:
   mynetwork:
     driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
