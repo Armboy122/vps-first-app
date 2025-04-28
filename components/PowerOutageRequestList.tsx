@@ -9,20 +9,29 @@ import {
   updateStatusRequest,
 } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequesr";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faEdit,
-  faTrash,
-  faSearch,
-  faPlus,
-  faPrint,
-} from "@fortawesome/free-solid-svg-icons";
+// import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+// import {
+//   faEdit,
+//   faTrash,
+//   faSearch,
+//   faPlus,
+//   faPrint,
+// } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
 import PrintAnnouncement from "./print";
 import Pagination from "@/app/power-outage-requests/pagination";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
+
+// Import components from PowerOutageRequest folder
+import { TableHeader } from "./PowerOutageRequest/TableHeader";
+import { TableRow } from "./PowerOutageRequest/TableRow";
+import { MobileCard } from "./PowerOutageRequest/MobileCard";
+import { FilterSection } from "./PowerOutageRequest/FilterSection";
+import { SearchSection } from "./PowerOutageRequest/SearchSection";
+import { BulkActions } from "./PowerOutageRequest/BulkActions";
+// import { printSelectedRequests } from "./PowerOutageRequest/PrintService";
 
 interface PowerOutageRequest {
   id: number;
@@ -50,33 +59,33 @@ interface WorkCenter {
   name: string;
 }
 
-const ActionButtons: React.FC<{
-  request: PowerOutageRequest;
-  onEdit: (request: PowerOutageRequest) => void;
-  onDelete: (id: number) => void;
-  isAdmin: boolean;
-  isUser: boolean;
-}> = ({ request, onEdit, onDelete, isAdmin, isUser }) => {
-  if (isAdmin || (isUser && request.statusRequest === "NOT")) {
-    return (
-      <>
-        <button
-          onClick={() => onEdit(request)}
-          className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2 text-sm transition duration-300"
-        >
-          <FontAwesomeIcon icon={faEdit} />
-        </button>
-        <button
-          onClick={() => onDelete(request.id)}
-          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2 text-sm transition duration-300"
-        >
-          <FontAwesomeIcon icon={faTrash} />
-        </button>
-      </>
-    );
-  }
-  return null;
-};
+// const ActionButtons: React.FC<{
+//   request: PowerOutageRequest;
+//   onEdit: (request: PowerOutageRequest) => void;
+//   onDelete: (id: number) => void;
+//   isAdmin: boolean;
+//   isUser: boolean;
+// }> = ({ request, onEdit, onDelete, isAdmin, isUser }) => {
+//   if (isAdmin || (isUser && request.statusRequest === "NOT")) {
+//     return (
+//       <>
+//         <button
+//           onClick={() => onEdit(request)}
+//           className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-2 text-sm transition duration-300"
+//         >
+//           <FontAwesomeIcon icon={faEdit} />
+//         </button>
+//         <button
+//           onClick={() => onDelete(request.id)}
+//           className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 mr-2 text-sm transition duration-300"
+//         >
+//           <FontAwesomeIcon icon={faTrash} />
+//         </button>
+//       </>
+//     );
+//   }
+//   return null;
+// };
 
 export default function PowerOutageRequestList() {
   const {
@@ -102,19 +111,33 @@ export default function PowerOutageRequestList() {
   const [endDate, setEndDate] = useState<string>("");
   const [selectAll, setSelectAll] = useState(false);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-
   const [statusFilter, setStatusFilter] = useState<string[]>([]);
   const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>([]);
   const [workCenterFilter, setWorkCenterFilter] = useState("");
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Check if the screen is mobile
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => {
+      window.removeEventListener('resize', checkIfMobile);
+    };
+  }, []);
 
   const fetchWorkCenters = useCallback(async () => {
-      try {
-        const centers = await getWorkCenters();
-        setWorkCenters(centers);
-      } catch (err) {
-        console.error("ไม่สามารถดึงข้อมูลจุดรวมงานได้:", err);
-      }
-    }, []);
+    try {
+      const centers = await getWorkCenters();
+      setWorkCenters(centers);
+    } catch (err) {
+      console.error("ไม่สามารถดึงข้อมูลจุดรวมงานได้:", err);
+    }
+  }, []);
 
   const handleWorkCenterFilter = (value: string) => {
     setWorkCenterFilter(value);
@@ -127,15 +150,15 @@ export default function PowerOutageRequestList() {
     );
   };
 
-  // เพิ่มฟังก์ชันกรอง
   const filterByStatus = (requests: PowerOutageRequest[]) => {
     if (statusFilter.length === 0) return requests;
     return requests.filter((request) =>
       statusFilter.includes(request.statusRequest)
     );
   };
+  
   const filterByWorkcenter = (requests: PowerOutageRequest[]) => {
-    if (!workCenterFilter) return requests; // ถ้าไม่ได้เลือกศูนย์งาน ให้แสดงทั้งหมด
+    if (!workCenterFilter) return requests;
     return requests.filter((request) => 
       request.workCenterId === parseInt(workCenterFilter)
     );
@@ -196,12 +219,13 @@ export default function PowerOutageRequestList() {
       setLoading(false);
     }
   }, [isAdmin, isViewer, isUser, isManager, isSupervisor, userWorkCenterId]);
+  
   useEffect(() => {
     if (!authLoading) {
       loadRequests();
       fetchWorkCenters();
     }
-  }, [authLoading, loadRequests, currentPage,fetchWorkCenters]);
+  }, [authLoading, loadRequests, currentPage, fetchWorkCenters]);
 
   const handleEdit = (request: PowerOutageRequest) => {
     setEditingRequest(request);
@@ -248,7 +272,6 @@ export default function PowerOutageRequestList() {
     }
   };
 
-  // New function for handling multiple selection
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
@@ -383,8 +406,6 @@ export default function PowerOutageRequestList() {
     </div>
   );
 
-  // ใช้ LoadingSpinner ในส่วน loading
-
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
   if (authLoading)
@@ -396,514 +417,108 @@ export default function PowerOutageRequestList() {
 
   if (authLoading || loading) return <LoadingSpinner />;
 
-  const printSelectedRequests = () => {
-    if (selectedRequests.length === 0) {
-      alert("กรุณาเลือกรายการที่ต้องการพิมพ์");
-      return;
-    }
-
-    // จัดกลุ่มข้อมูลตามวันที่
-    const groupedRequests = selectedRequests.reduce((acc, id) => {
-      const request = requests.find((r) => r.id === id);
-      if (!request) return acc;
-
-      const dateKey = request.outageDate.toISOString().split("T")[0]; // ใช้ ISO string เพื่อการเรียงลำดับ
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(request);
-      return acc;
-    }, {} as Record<string, typeof requests>);
-
-    // เรียงลำดับวันที่จากเก่าไปใหม่
-    const sortedDates = Object.keys(groupedRequests).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
-    );
-
-    // สร้าง HTML สำหรับข้อมูลที่เลือก
-    const printContent = `
-      <html>
-        <head>
-          <title>รายงานคำขอดับไฟ</title>
-          <style>
-            @font-face {
-          font-family: 'THSarabunNew';
-          src: url('data:font/truetype;base64,BASE64_ENCODED_FONT_DATA') format('truetype');
-        }
-            body { 
-              font-family: 'THSarabunNew', sans-serif;
-              position: relative;
-              padding: 20px;
-            }
-            .watermark {
-              position: fixed;
-              top: 50%;
-              left: 50%;
-              transform: translate(-50%, -50%) rotate(-30deg);
-              font-size: 50px;
-              color: rgba(163, 187, 225, 0.3); /* สีเทาอ่อน แตกต่างจากหัวตาราง */
-              z-index: -1;
-            }
-            .header {
-              text-align: center;
-              padding: 20px 0;
-              border-bottom: 2px solid #000;
-              margin-bottom: 20px;
-            }
-            table { 
-              border-collapse: collapse; 
-              width: 100%; 
-              margin-bottom: 20px; 
-            }
-            th, td { 
-              border: 1px solid black; 
-              padding: 8px; 
-              text-align: left; 
-            }
-            h2 { 
-              margin-top: 20px; 
-            }
-            @media print {
-              .watermark {
-                -webkit-print-color-adjust: exact;
-                color-adjust: exact;
-              }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="watermark">ออกจากระบบคำขออนุมัติดับไฟ</div>
-          <div class="header">
-            <h1>รายงานคำขอดับไฟ</h1>
-          </div>
-          ${sortedDates
-            .map(
-              (date) => `
-              <h2>วันที่ ${new Date(date).toLocaleDateString("th-TH")}</h2>
-              <table>
-                <thead>
-                  <tr>
-                    <th>เวลา</th>
-                    <th>หมายเลขหม้อแปลง</th>
-                    <th>บริเวณ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${groupedRequests[date]
-                    .map(
-                      (request) => `
-                      <tr>
-                        <td>${request.startTime.toLocaleTimeString("th-TH", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })} - 
-                            ${request.endTime.toLocaleTimeString("th-TH", {
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}</td>
-                        <td>${request.transformerNumber}</td>
-                        <td>${request.area}</td>
-                      </tr>
-                    `
-                    )
-                    .join("")}
-                </tbody>
-              </table>
-            `
-            )
-            .join("")}
-        </body>
-      </html>
-    `;
-
-    // เปิดหน้าต่างใหม่และพิมพ์
-    const printWindow = window.open("", "_blank");
-    if (printWindow) {
-      printWindow.document.write(printContent);
-      printWindow.document.close();
-
-      // รอให้เนื้อหาโหลดเสร็จก่อนพิมพ์
-      printWindow.onload = () => {
-        printWindow.print();
-        // ปิดหน้าต่างหลังจากพิมพ์เสร็จ (อาจไม่ทำงานในบางเบราว์เซอร์)
-        printWindow.onafterprint = () => {
-          printWindow.close();
-        };
-      };
-    } else {
-      alert(
-        "ไม่สามารถเปิดหน้าต่างการพิมพ์ได้ โปรดตรวจสอบการตั้งค่า pop-up blocker ของเบราว์เซอร์"
-      );
-    }
-  };
-
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-          <div>
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="ค้นหา..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-              />
-              <FontAwesomeIcon
-                icon={faSearch}
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label
-              htmlFor="startDate"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              วันที่เริ่มต้น
-            </label>
-            <input
-              type="date"
-              id="startDate"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-            />
-          </div>
-          <div>
-            <label
-              htmlFor="endDate"
-              className="block text-sm font-medium text-gray-700 mb-1"
-            >
-              วันที่สิ้นสุด
-            </label>
-            <input
-              type="date"
-              id="endDate"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-            />
-          </div>
-          {(isAdmin) && (
-
-          <div>
-            <select
-            value={workCenterFilter}
-            onChange={(e) => handleWorkCenterFilter(e.target.value)}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-          >
-            <option value="">ทุกจุดรวมงาน</option>
-            {workCenters.map((center) => (
-              <option key={center.id} value={center.id.toString()}>
-                {center.name}
-              </option>
-            ))}
-          </select>
-          </div>
-          )}
-        </div>
+    <div className="container mx-auto px-4 py-6">
+      {/* Search Section */}
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
+        <SearchSection 
+          searchTerm={searchTerm}
+          setSearchTerm={setSearchTerm}
+          startDate={startDate}
+          setStartDate={setStartDate}
+          endDate={endDate}
+          setEndDate={setEndDate}
+          workCenterFilter={workCenterFilter}
+          setWorkCenterFilter={handleWorkCenterFilter}
+          workCenters={workCenters}
+          isAdmin={isAdmin}
+        />
       </div>
-      <div className="mb-6 flex flex-wrap justify-between">
-        <div className="w-full md:w-[48%] mb-4 md:mb-0">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            กรองตามสถานะอนุมัติ
-          </label>
-          <div className="flex flex-wrap">
-            {["CONFIRM", "CANCELLED", "NOT"].map((status) => (
-              <label
-                key={status}
-                className="inline-flex items-center mr-4 mb-2"
-              >
-                <input
-                  type="checkbox"
-                  checked={statusFilter.includes(status)}
-                  onChange={() => {
-                    if (statusFilter.includes(status)) {
-                      setStatusFilter(statusFilter.filter((s) => s !== status));
-                    } else {
-                      setStatusFilter([...statusFilter, status]);
-                    }
-                  }}
-                  className="form-checkbox h-5 w-5 text-blue-600"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  {status === "CONFIRM"
-                    ? "อนุมัติดับไฟ"
-                    : status === "CANCELLED"
-                    ? "ยกเลิก"
-                    : "รออนุมัติ"}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        <div className="w-full md:w-[48%]">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            กรองตามสถานะ OMS
-          </label>
-          <div className="flex flex-wrap">
-            {["NOT_ADDED", "PROCESSED", "CANCELLED"].map((status) => (
-              <label
-                key={status}
-                className="inline-flex items-center mr-4 mb-2"
-              >
-                <input
-                  type="checkbox"
-                  checked={omsStatusFilter.includes(status)}
-                  onChange={() => {
-                    if (omsStatusFilter.includes(status)) {
-                      setOmsStatusFilter(
-                        omsStatusFilter.filter((s) => s !== status)
-                      );
-                    } else {
-                      setOmsStatusFilter([...omsStatusFilter, status]);
-                    }
-                  }}
-                  className="form-checkbox h-5 w-5 text-blue-600"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  {status === "NOT_ADDED"
-                    ? "ยังไม่ดำเนินการ"
-                    : status === "PROCESSED"
-                    ? "ดำเนินการแล้ว"
-                    : "ยกเลิก"}
-                </span>
-              </label>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center mb-6">
-        <div className="flex items-center space-x-4">
-          {(isUser || isAdmin) && (
-            <Link
-              href="/power-outage-requests/create"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
-            >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
-              สร้างคำขอดับไฟใหม่
-            </Link>
-          )}
-          <select
-            onChange={(e) => handleBulkStatusChange(e.target.value as Request)}
-            disabled={selectedRequests.length === 0}
-            className="bg-gray-100 text-gray-700 font-semibold py-2 px-4 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="">เปลี่ยนสถานะที่เลือก</option>
-            <option value="CONFIRM">อนุมัติดับไฟ</option>
-            <option value="CANCELLED">ยกเลิก</option>
-            <option value="NOT">รออนุมัติ</option>
-          </select>
-        </div>
-        <span className="text-sm text-gray-600">
-          {selectedRequests.length} รายการที่เลือก จากทั้งหมด{" "}
-          {currentItems.length} รายการ
-        </span>
-        <PrintAnnouncement />
-        <button
-          onClick={printSelectedRequests}
-          disabled={selectedRequests.length === 0}
-          className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
-        >
-          <FontAwesomeIcon icon={faPrint} className="mr-2" />
-          พิมพ์เพื่อจัดการทำเอกสารแนบ
-        </button>
-      </div>
-
-      <div className="overflow-x-auto shadow-lg rounded-lg">
-        <table className="min-w-full bg-white">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                <input
-                  type="checkbox"
-                  checked={selectAll}
-                  onChange={handleSelectAll}
-                  className="form-checkbox h-5 w-5 text-blue-600"
-                />
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                วันที่ดับไฟ
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                เวลา
-              </th>
-              {(isAdmin || isViewer) && (
-                <>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    ศูนย์งาน
-                  </th>
-                  <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    สาขา
-                  </th>
-                </>
-              )}
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                หมายเลขหม้อแปลง
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                บริเวณ
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                สถานะ OMS
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                สถานะอนุมัติ
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                ผู้สร้างคำขอ
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                การดำเนินการ
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                วันที่สร้างเอกสาร
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {currentItems.map((request) => {
-              const bgColor = getRowBackgroundColor(
-                request.outageDate,
-                request.omsStatus,
-                request.statusRequest
-              );
-              return (
-                <tr
-                  key={request.id}
-                  className={`hover:bg-gray-50 transition-colors ${bgColor}`}
-                >
-                  <td className="py-3 px-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedRequests.includes(request.id)}
-                      onChange={() => handleSelectRequest(request.id)}
-                      disabled={
-                        !(
-                          isAdmin ||
-                          (isUser && request.workCenter.id === userWorkCenterId)
-                        )
-                      }
-                      className="form-checkbox h-5 w-5 text-blue-600"
-                    />
-                  </td>
-                  <td className="py-3 px-4">
-                    {request.outageDate.toLocaleDateString("th-TH")}
-                  </td>
-                  <td className="py-3 px-4">
-                    {request.startTime.toLocaleTimeString("th-TH", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -
-                    {request.endTime.toLocaleTimeString("th-TH", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </td>
-                  {(isAdmin || isViewer) && (
-                    <>
-                      <td className="py-3 px-4">{request.workCenter.name}</td>
-                      <td className="py-3 px-4">{request.branch.shortName}</td>
-                    </>
-                  )}
-                  <td className="py-3 px-4">{request.transformerNumber}</td>
-                  <td className="py-3 px-4">{request.area}</td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={request.omsStatus}
-                      onChange={(e) =>
-                        handleEditOmsStatus(
-                          request.id,
-                          e.target.value as OMSStatus
-                        )
-                      }
-                      disabled={!isAdmin && !isSupervisor}
-                      className="border border-gray-300 rounded px-2 py-1 w-full"
-                    >
-                      <option value="NOT_ADDED">ยังไม่ดำเนินการ</option>
-                      <option value="PROCESSED">ดำเนินการแล้ว</option>
-                      <option value="CANCELLED">ยกเลิก</option>
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">
-                    <select
-                      value={request.statusRequest}
-                      onChange={(e) =>
-                        handleEditStatusRequest(
-                          request.id,
-                          e.target.value as Request
-                        )
-                      }
-                      disabled={
-                        !(
-                          isAdmin ||
-                          (isUser && request.workCenter.id === userWorkCenterId)
-                        )
-                      }
-                      className="border border-gray-300 rounded px-2 py-1 w-full"
-                    >
-                      <option value="CONFIRM">อนุมัติดับไฟ</option>
-                      <option value="CANCELLED">ยกเลิก</option>
-                      <option value="NOT">รออนุมัติ</option>
-                    </select>
-                  </td>
-                  <td className="py-3 px-4">{request.createdBy.fullName}</td>
-                  <td className="py-3 px-4">
-                    <ActionButtons
-                      request={request}
-                      onEdit={handleEdit}
-                      onDelete={handleDelete}
-                      isAdmin={isAdmin}
-                      isUser={isUser}
-                    />
-                  </td>
-                  <td className="py-3 px-4">{request.createdAt.toLocaleDateString("th-TH")}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* <div className="mt-6 flex justify-center">
-        <nav
-          className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
-          aria-label="Pagination"
-        >
-          {Array.from(
-            { length: Math.ceil(filteredRequests.length / itemsPerPage) },
-            (_, i) => (
-              <button
-                key={i}
-                onClick={() => paginate(i + 1)}
-                className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium
-                  ${
-                    currentPage === i + 1
-                      ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                      : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                  }
-                `}
-              >
-                {i + 1}
-              </button>
-            )
-          )}
-        </nav>
-      </div> */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={paginate}
+      
+      {/* Filter Section */}
+      <FilterSection 
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        omsStatusFilter={omsStatusFilter}
+        setOmsStatusFilter={setOmsStatusFilter}
       />
+      
+      {/* Bulk Actions Section */}
+      <BulkActions 
+        isUser={isUser}
+        isAdmin={isAdmin}
+        selectedRequests={selectedRequests}
+        requests={requests}
+        handleBulkStatusChange={handleBulkStatusChange}
+      />
+      
+      {/* Mobile or Desktop View Based on Screen Size */}
+      {isMobile ? (
+        // Mobile View
+        <div className="space-y-4">
+          {currentItems.map((request) => (
+            <MobileCard
+              key={request.id}
+              request={request}
+              isAdmin={isAdmin}
+              isUser={isUser}
+              isViewer={isViewer}
+              isSupervisor={isSupervisor}
+              userWorkCenterId={userWorkCenterId}
+              selectedRequests={selectedRequests}
+              setSelectedRequests={setSelectedRequests}
+              handleEdit={handleEdit}
+              handleDelete={handleDelete}
+              handleEditOmsStatus={handleEditOmsStatus}
+              handleEditStatusRequest={handleEditStatusRequest}
+            />
+          ))}
+        </div>
+      ) : (
+        // Desktop View
+        <div className="overflow-x-auto bg-white rounded-lg shadow-lg">
+          <table className="min-w-full bg-white">
+            <TableHeader 
+              selectAll={selectAll}
+              setSelectAll={handleSelectAll}
+              isAdmin={isAdmin}
+              isViewer={isViewer}
+            />
+            <tbody className="divide-y divide-gray-200">
+              {currentItems.map((request) => (
+                <TableRow
+                  key={request.id}
+                  request={request}
+                  isAdmin={isAdmin}
+                  isUser={isUser}
+                  isViewer={isViewer}
+                  isSupervisor={isSupervisor}
+                  userWorkCenterId={userWorkCenterId}
+                  selectedRequests={selectedRequests}
+                  setSelectedRequests={setSelectedRequests}
+                  handleEdit={handleEdit}
+                  handleDelete={handleDelete}
+                  handleEditOmsStatus={handleEditOmsStatus}
+                  handleEditStatusRequest={handleEditStatusRequest}
+                />
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      
+      {/* Pagination */}
+      <div className="mt-6">
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={paginate}
+        />
+      </div>
 
+      {/* Edit Modal */}
       {editingRequest && (
         <UpdatePowerOutageRequestModal
           initialData={{
