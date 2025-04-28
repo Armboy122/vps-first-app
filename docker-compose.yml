@@ -32,7 +32,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-      target: production
+      target: runner
     env_file:
       - .env
     networks:
