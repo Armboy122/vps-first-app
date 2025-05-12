@@ -6,11 +6,13 @@ IMAGE_NAME="armboy/vps-first-app"
 DATE_TAG="dev-$(date +%Y%m%d)"
 CACHE_FROM="$IMAGE_NAME:dev"
 PLATFORMS="linux/amd64"
+DOCKERFILE="Dockerfile.dev"
 # ----------------------------
 
-echo "📦 Building Docker image for development (Fastest First Build):"
+echo "📦 Building Docker image for development with Bun (Fastest Build):"
 echo " - Target Platform: $PLATFORMS"
 echo " - Tags: $IMAGE_NAME:$DATE_TAG, $IMAGE_NAME:dev"
+echo " - Using Dockerfile: $DOCKERFILE"
 
 # ตรวจสอบว่ามี buildx builder หรือไม่
 if ! docker buildx inspect mybuilder >/dev/null 2>&1; then
@@ -23,13 +25,13 @@ fi
 # docker pull $CACHE_FROM || echo "⚠️ No cache image found or platform mismatch. Building from scratch."
 
 # Build ด้วย buildx และ push (จะใช้ cache จาก registry ถ้ามีและตรงกัน)
-echo "🏗️ Building and pushing image..."
+echo "🏗️ Building and pushing image with Bun..."
 docker buildx build \
   --platform $PLATFORMS \
   --cache-from type=registry,ref=$CACHE_FROM \
   --build-arg BUILDKIT_INLINE_CACHE=1 \
   -t $IMAGE_NAME:$DATE_TAG \
-  -t $IMAGE_NAME:dev \
+  -f $DOCKERFILE \
   --push .
 
 echo "✅ Build and push completed successfully!"

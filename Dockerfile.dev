@@ -1,0 +1,39 @@
+# ใช้ base image ของ Bun
+FROM oven/bun:1.0-alpine
+
+WORKDIR /app
+
+# ติดตั้ง tools ที่จำเป็น
+RUN apk add --no-cache libc6-compat openssl && \
+    addgroup --system --gid 1001 bunjs && \
+    adduser --system --uid 1001 nextjs
+
+# ตั้งค่า environment variables
+ENV NODE_ENV=development
+ARG PORT=3000
+ENV PORT=${PORT}
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PRISMA_SKIP_GENERATE=true
+
+# คัดลอกไฟล์ dependencies ก่อน
+COPY package.json bun.lockb* ./
+
+# ติดตั้ง dependencies ด้วย Bun (เร็วกว่า npm มาก)
+RUN bun install
+
+# คัดลอกโค้ดทั้งหมด
+COPY --chown=nextjs:bunjs . .
+
+# ใช้ Bun เพื่อ dev mode (ไม่ต้อง build เหมือน production)
+USER nextjs
+
+# เปิด Port
+EXPOSE ${PORT}
+
+# Healthcheck
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 0
+
+# คำสั่งเริ่มทำงานสำหรับ development
+CMD ["bun", "run", "dev"]
