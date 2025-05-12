@@ -30,6 +30,7 @@ interface PowerOutageRequest {
 interface BulkActionsProps {
   isUser: boolean;
   isAdmin: boolean;
+  isViewer?: boolean;
   selectedRequests: number[];
   requests: PowerOutageRequest[];
   handleBulkStatusChange: (status: Request) => void;
@@ -38,10 +39,15 @@ interface BulkActionsProps {
 export const BulkActions: React.FC<BulkActionsProps> = ({
   isUser,
   isAdmin,
+  isViewer = false,
   selectedRequests,
   requests,
   handleBulkStatusChange,
 }) => {
+  if (isViewer) {
+    return null;
+  }
+  
   return (
     <div className="mb-6 bg-white rounded-lg shadow-md p-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">

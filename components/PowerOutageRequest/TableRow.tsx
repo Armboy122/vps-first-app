@@ -212,20 +212,22 @@ export const TableRow: React.FC<TableRowProps> = ({
 
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${bgColor} border-b border-gray-200`}>
-      <td className="py-3 px-2 align-middle">
-        <input
-          type="checkbox"
-          checked={selectedRequests.includes(request.id)}
-          onChange={() => handleSelectRequest(request.id)}
-          disabled={
-            !(
-              isAdmin ||
-              (isUser && request.workCenter.id === userWorkCenterId)
-            )
-          }
-          className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-        />
-      </td>
+      {!isViewer && (
+        <td className="py-3 px-2 align-middle">
+          <input
+            type="checkbox"
+            checked={selectedRequests.includes(request.id)}
+            onChange={() => handleSelectRequest(request.id)}
+            disabled={
+              !(
+                isAdmin ||
+                (isUser && request.workCenter.id === userWorkCenterId)
+              )
+            }
+            className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+        </td>
+      )}
       <td className={`${cellClass} ${dateClass}`}>
         {formatThaiDate(request.outageDate)}
       </td>
@@ -308,18 +310,20 @@ export const TableRow: React.FC<TableRowProps> = ({
       <td className={`${cellClass} ${fixedWidthCell}`}>
         <TextWithTooltip text={request.createdBy.fullName} maxLength={15} />
       </td>
-      <td className={cellClass}>
-        <div className="flex space-x-1 justify-center">
-          <ActionButtons
-            request={request}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isAdmin={isAdmin}
-            isUser={isUser}
-            userWorkCenterId={userWorkCenterId}
-          />
-        </div>
-      </td>
+      {!isViewer && (
+        <td className={cellClass}>
+          <div className="flex space-x-1 justify-center">
+            <ActionButtons
+              request={request}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              isUser={isUser}
+              userWorkCenterId={userWorkCenterId}
+            />
+          </div>
+        </td>
+      )}
       <td className={`${cellClass} ${dateClass}`}>
         {formatThaiDate(request.createdAt)}
       </td>

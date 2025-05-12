@@ -128,20 +128,22 @@ export const MobileCard: React.FC<MobileCardProps> = ({
     request.statusRequest
   );
 
-  const canEdit = isAdmin || (isUser && request.workCenter.id === userWorkCenterId);
+  const canEdit = isAdmin || (isUser && request.workCenter.id === userWorkCenterId) && !isViewer;
 
   return (
     <div className={`mb-4 rounded-lg shadow-md overflow-hidden ${bgColor}`}>
       <div className="p-4">
         <div className="flex justify-between items-start">
           <div className="flex items-start space-x-3">
-            <input
-              type="checkbox"
-              checked={selectedRequests.includes(request.id)}
-              onChange={() => handleSelectRequest(request.id)}
-              disabled={!(isAdmin || (isUser && request.workCenter.id === userWorkCenterId))}
-              className="form-checkbox h-5 w-5 text-blue-600 mt-1"
-            />
+            {!isViewer && (
+              <input
+                type="checkbox"
+                checked={selectedRequests.includes(request.id)}
+                onChange={() => handleSelectRequest(request.id)}
+                disabled={!(isAdmin || (isUser && request.workCenter.id === userWorkCenterId))}
+                className="form-checkbox h-5 w-5 text-blue-600 mt-1"
+              />
+            )}
             <div>
               <div className="flex items-center space-x-2">
                 <h3 className="font-bold text-gray-800 text-lg">{request.transformerNumber}</h3>

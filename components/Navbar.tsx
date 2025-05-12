@@ -9,11 +9,15 @@ const Navbar = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  
+  // ตรวจสอบว่าเป็น viewer หรือไม่
+  const isViewer = session?.user.role === "VIEWER";
 
   const navItems = [
     { label: "หน้าแรก", path: "/power-outage-requests" },
     { label: "DashBord", path: "/" },
-    { label: "Profile", path: "/user" },
+    // แสดงเมนู Profile เฉพาะกรณีที่ไม่ใช่ viewer
+    ...(!isViewer ? [{ label: "Profile", path: "/user" }] : []),
     ...(session?.user.role === "ADMIN"
       ? [{ label: "Admin", path: "/admin" }]
       : []),

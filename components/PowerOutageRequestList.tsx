@@ -115,6 +115,7 @@ export default function PowerOutageRequestList() {
   const [statusFilter, setStatusFilter] = useState<string[]>(["CONFIRM"]);
   const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>(["NOT_ADDED"]);
   const [workCenterFilter, setWorkCenterFilter] = useState("");
+  const [branchFilter, setBranchFilter] = useState("");
   const [isMobile, setIsMobile] = useState(false);
   const [showPastOutageDates, setShowPastOutageDates] = useState(false);
 
@@ -143,6 +144,12 @@ export default function PowerOutageRequestList() {
 
   const handleWorkCenterFilter = (value: string) => {
     setWorkCenterFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleBranchFilter = (value: string) => {
+    setBranchFilter(value);
+    setCurrentPage(1);
   };
 
   const filterByOMSStatus = (requests: PowerOutageRequest[]) => {
@@ -163,6 +170,13 @@ export default function PowerOutageRequestList() {
     if (!workCenterFilter) return requests;
     return requests.filter((request) => 
       request.workCenterId === parseInt(workCenterFilter)
+    );
+  };
+
+  const filterByBranch = (requests: PowerOutageRequest[]) => {
+    if (!branchFilter) return requests;
+    return requests.filter((request) => 
+      request.branchId === parseInt(branchFilter)
     );
   };
 
@@ -394,9 +408,11 @@ export default function PowerOutageRequestList() {
   };
 
   const filteredRequests = filterByOutageDate(
-    filterByWorkcenter(
-      filterByOMSStatus(
-        filterByStatus(filterByDate(requests))
+    filterByBranch(
+      filterByWorkcenter(
+        filterByOMSStatus(
+          filterByStatus(filterByDate(requests))
+        )
       )
     )
   ).filter(
@@ -425,6 +441,11 @@ export default function PowerOutageRequestList() {
 
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
 
+  // ตรวจสอบการเปลี่ยนแปลงของตัวกรองและรีเซ็ตหน้าเมื่อตัวกรองเปลี่ยน
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [statusFilter, omsStatusFilter, showPastOutageDates, searchTerm, startDate, endDate]);
+
   if (authLoading)
     return <div className="text-center py-10">กำลังโหลดข้อมูลผู้ใช้...</div>;
   if (loading)
@@ -451,6 +472,9 @@ export default function PowerOutageRequestList() {
           setWorkCenterFilter={handleWorkCenterFilter}
           workCenters={workCenters}
           isAdmin={isAdmin}
+          isViewer={isViewer}
+          branchFilter={branchFilter}
+          setBranchFilter={handleBranchFilter}
         />
       </div>
       
@@ -468,6 +492,7 @@ export default function PowerOutageRequestList() {
       <BulkActions 
         isUser={isUser}
         isAdmin={isAdmin}
+        isViewer={isViewer}
         selectedRequests={selectedRequests}
         requests={requests}
         handleBulkStatusChange={handleBulkStatusChange}

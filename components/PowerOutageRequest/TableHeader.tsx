@@ -16,14 +16,16 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
   return (
     <thead className="bg-gray-100">
       <tr>
-        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          <input
-            type="checkbox"
-            checked={selectAll}
-            onChange={() => setSelectAll(!selectAll)}
-            className="form-checkbox h-5 w-5 text-blue-600"
-          />
-        </th>
+        {!isViewer && (
+          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <input
+              type="checkbox"
+              checked={selectAll}
+              onChange={() => setSelectAll(!selectAll)}
+              className="form-checkbox h-5 w-5 text-blue-600"
+            />
+          </th>
+        )}
         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           วันที่ดับไฟ
         </th>
@@ -55,9 +57,11 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           ผู้สร้างคำขอ
         </th>
-        <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-          การดำเนินการ
-        </th>
+        {!isViewer && (
+          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            การดำเนินการ
+          </th>
+        )}
         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           วันที่สร้างเอกสาร
         </th>
