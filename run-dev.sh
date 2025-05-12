@@ -159,7 +159,7 @@ if check_port_in_use $PORT; then
 fi
 
 # Pull the latest image
-echo "📥 กำลังดึง development image ล่าสุด..."
+echo "📥 กำลังดึง development image ล่าสุด.."
 docker pull $FULL_IMAGE_NAME
 
 # Start the container
