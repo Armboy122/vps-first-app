@@ -3,8 +3,8 @@ FROM oven/bun:1.0-alpine
 
 WORKDIR /app
 
-# ติดตั้ง tools ที่จำเป็น
-RUN apk add --no-cache libc6-compat openssl && \
+# ติดตั้ง tools ที่จำเป็น (ไม่ต้องใช้ libc6-compat เพราะ bun image มี glibc อยู่แล้ว)
+RUN apk add --no-cache openssl && \
     addgroup --system --gid 1001 bunjs && \
     adduser --system --uid 1001 nextjs
 
