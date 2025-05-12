@@ -9,8 +9,8 @@ RUN apk add --no-cache openssl && \
     adduser --system --uid 1001 nextjs
 
 # ตั้งค่า environment variables
-ENV NODE_ENV=development
-ARG PORT=3000
+ENV NODE_ENV=production
+ARG PORT=3002
 ENV PORT=${PORT}
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -25,7 +25,10 @@ RUN bun install
 # คัดลอกโค้ดทั้งหมด
 COPY --chown=nextjs:bunjs . .
 
-# ใช้ Bun เพื่อ dev mode (ไม่ต้อง build เหมือน production)
+# Build แอพก่อนรัน
+RUN bun run build
+
+# ใช้ Bun ในโหมด production
 USER nextjs
 
 # เปิด Port
@@ -35,5 +38,5 @@ EXPOSE ${PORT}
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 0
 
-# คำสั่งเริ่มทำงานสำหรับ development
-CMD ["bun", "run", "dev"]
+# คำสั่งเริ่มทำงานสำหรับ production
+CMD ["bun", "start"]
