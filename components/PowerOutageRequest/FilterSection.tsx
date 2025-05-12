@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useCallback, memo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilter, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
@@ -12,31 +12,35 @@ interface FilterSectionProps {
   setShowPastOutageDates: (show: boolean) => void;
 }
 
-export function FilterSection({
+export const FilterSection = memo(({
   statusFilter,
   setStatusFilter,
   omsStatusFilter,
   setOmsStatusFilter,
   showPastOutageDates,
   setShowPastOutageDates
-}: FilterSectionProps) {
+}: FilterSectionProps) => {
   const [isCollapsed, setIsCollapsed] = React.useState(false);
 
-  const handleStatusFilterChange = (status: string) => {
+  const handleStatusFilterChange = useCallback((status: string) => {
     if (statusFilter.includes(status)) {
       setStatusFilter(statusFilter.filter((s) => s !== status));
     } else {
       setStatusFilter([...statusFilter, status]);
     }
-  };
+  }, [statusFilter, setStatusFilter]);
 
-  const handleOmsStatusFilterChange = (status: string) => {
+  const handleOmsStatusFilterChange = useCallback((status: string) => {
     if (omsStatusFilter.includes(status)) {
       setOmsStatusFilter(omsStatusFilter.filter((s) => s !== status));
     } else {
       setOmsStatusFilter([...omsStatusFilter, status]);
     }
-  };
+  }, [omsStatusFilter, setOmsStatusFilter]);
+
+  const handlePastOutageDatesChange = useCallback(() => {
+    setShowPastOutageDates(!showPastOutageDates);
+  }, [showPastOutageDates, setShowPastOutageDates]);
 
   const statusOptions = [
     { value: "CONFIRM", label: "อนุมัติดับไฟ", color: "bg-green-100 text-green-800 border-green-200" },
@@ -61,13 +65,7 @@ export function FilterSection({
                 type="checkbox"
                 className="mr-1 h-4 w-4 text-blue-600"
                 checked={statusFilter.includes(status)}
-                onChange={() => {
-                  if (statusFilter.includes(status)) {
-                    setStatusFilter(statusFilter.filter((s) => s !== status));
-                  } else {
-                    setStatusFilter([...statusFilter, status]);
-                  }
-                }}
+                onChange={() => handleStatusFilterChange(status)}
               />
               <span>
                 {status === "CONFIRM"
@@ -89,15 +87,7 @@ export function FilterSection({
                 type="checkbox"
                 className="mr-1 h-4 w-4 text-blue-600"
                 checked={omsStatusFilter.includes(status)}
-                onChange={() => {
-                  if (omsStatusFilter.includes(status)) {
-                    setOmsStatusFilter(
-                      omsStatusFilter.filter((s) => s !== status)
-                    );
-                  } else {
-                    setOmsStatusFilter([...omsStatusFilter, status]);
-                  }
-                }}
+                onChange={() => handleOmsStatusFilterChange(status)}
               />
               <span>
                 {status === "NOT_ADDED"
@@ -117,11 +107,13 @@ export function FilterSection({
             type="checkbox"
             className="mr-1 h-4 w-4 text-blue-600"
             checked={showPastOutageDates}
-            onChange={() => setShowPastOutageDates(!showPastOutageDates)}
+            onChange={handlePastOutageDatesChange}
           />
           <span>แสดงรายการที่เลยวันดับไฟไปแล้ว</span>
         </label>
       </div>
     </div>
   );
-} 
+});
+
+FilterSection.displayName = 'FilterSection'; 

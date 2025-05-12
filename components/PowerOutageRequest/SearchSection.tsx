@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faSearch, faCalendarAlt, faBuilding, faTimes, faInfoCircle, faCodeBranch } from "@fortawesome/free-solid-svg-icons";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
@@ -31,7 +31,7 @@ interface SearchSectionProps {
   setBranchFilter: (value: string) => void;
 }
 
-export const SearchSection: React.FC<SearchSectionProps> = ({
+export const SearchSection = memo(({
   searchTerm,
   setSearchTerm,
   startDate,
@@ -45,7 +45,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
   isViewer,
   branchFilter,
   setBranchFilter,
-}) => {
+}: SearchSectionProps) => {
   const [isAdvancedSearch, setIsAdvancedSearch] = useState(isAdmin || isViewer);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [searchInfoOpen, setSearchInfoOpen] = useState(false);
@@ -68,15 +68,76 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
     loadBranches();
   }, [workCenterFilter, setBranchFilter]);
 
-  const handleClearSearch = () => {
+  const handleClearSearch = useCallback(() => {
     setSearchTerm("");
     setStartDate("");
     setEndDate("");
+    
+    const hasWorkCenterOrBranchFilter = workCenterFilter !== "" || branchFilter !== "";
+    
     setWorkCenterFilter("");
     setBranchFilter("");
-  };
+  }, [
+    setSearchTerm, 
+    setStartDate, 
+    setEndDate, 
+    setWorkCenterFilter, 
+    setBranchFilter,
+    workCenterFilter,
+    branchFilter
+  ]);
 
-  const hasActiveFilters = searchTerm || startDate || endDate || workCenterFilter || branchFilter;
+  const handleSearchTermChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  }, [setSearchTerm]);
+
+  const handleStartDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setStartDate(e.target.value);
+  }, [setStartDate]);
+
+  const handleEndDateChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setEndDate(e.target.value);
+  }, [setEndDate]);
+
+  const handleWorkCenterChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setWorkCenterFilter(e.target.value);
+  }, [setWorkCenterFilter]);
+
+  const handleBranchChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setBranchFilter(e.target.value);
+  }, [setBranchFilter]);
+
+  const toggleAdvancedSearch = useCallback(() => {
+    setIsAdvancedSearch(!isAdvancedSearch);
+  }, [isAdvancedSearch]);
+
+  const toggleSearchInfo = useCallback(() => {
+    setSearchInfoOpen(!searchInfoOpen);
+  }, [searchInfoOpen]);
+
+  const clearSearchTerm = useCallback(() => {
+    setSearchTerm("");
+  }, [setSearchTerm]);
+
+  const hasActiveFilters = useMemo(() => 
+    Boolean(searchTerm || startDate || endDate || workCenterFilter || branchFilter),
+  [searchTerm, startDate, endDate, workCenterFilter, branchFilter]);
+
+  const workCenterOptions = useMemo(() => 
+    workCenters.map((center) => (
+      <option key={center.id} value={center.id.toString()}>
+        {center.name}
+      </option>
+    )),
+  [workCenters]);
+
+  const branchOptions = useMemo(() => 
+    branches.map((branch) => (
+      <option key={branch.id} value={branch.id.toString()}>
+        {branch.shortName}
+      </option>
+    )),
+  [branches]);
 
   return (
     <div className="space-y-4">
@@ -86,7 +147,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
             type="text"
             placeholder="ค้นหาหมายเลขหม้อแปลง, บริเวณ, หรือผู้สร้างคำขอ..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchTermChange}
             className="w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-700"
           />
           <FontAwesomeIcon
@@ -95,7 +156,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
           />
           {searchTerm && (
             <button
-              onClick={() => setSearchTerm("")}
+              onClick={clearSearchTerm}
               className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
             >
               <FontAwesomeIcon icon={faTimes} />
@@ -105,7 +166,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
         <div className="mt-2 flex justify-between items-center">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsAdvancedSearch(!isAdvancedSearch)}
+              onClick={toggleAdvancedSearch}
               className="text-blue-600 hover:text-blue-800 text-sm font-medium"
             >
               {isAdvancedSearch ? "ซ่อนตัวกรองขั้นสูง" : "แสดงตัวกรองขั้นสูง"}
@@ -113,7 +174,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
             
             <button 
               className="text-gray-500 hover:text-gray-700"
-              onClick={() => setSearchInfoOpen(!searchInfoOpen)}
+              onClick={toggleSearchInfo}
               aria-label="คำแนะนำการค้นหา"
             >
               <FontAwesomeIcon icon={faInfoCircle} />
@@ -129,7 +190,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                 </ul>
                 <div className="mt-2 text-right">
                   <button 
-                    onClick={() => setSearchInfoOpen(false)}
+                    onClick={toggleSearchInfo}
                     className="text-blue-600 hover:text-blue-800 text-xs"
                   >
                     ปิด
@@ -164,7 +225,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
               type="date"
               id="startDate"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+              onChange={handleStartDateChange}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
           </div>
@@ -181,7 +242,7 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
               type="date"
               id="endDate"
               value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+              onChange={handleEndDateChange}
               className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
             />
           </div>
@@ -199,15 +260,11 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                 <select
                   id="workCenter"
                   value={workCenterFilter}
-                  onChange={(e) => setWorkCenterFilter(e.target.value)}
+                  onChange={handleWorkCenterChange}
                   className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                 >
                   <option value="">ทุกจุดรวมงาน</option>
-                  {workCenters.map((center) => (
-                    <option key={center.id} value={center.id.toString()}>
-                      {center.name}
-                    </option>
-                  ))}
+                  {workCenterOptions}
                 </select>
               </div>
               
@@ -222,16 +279,12 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
                 <select
                   id="branch"
                   value={branchFilter}
-                  onChange={(e) => setBranchFilter(e.target.value)}
+                  onChange={handleBranchChange}
                   disabled={!workCenterFilter}
                   className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm ${!workCenterFilter ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                 >
                   <option value="">ทุกสาขา</option>
-                  {branches.map((branch) => (
-                    <option key={branch.id} value={branch.id.toString()}>
-                      {branch.shortName}
-                    </option>
-                  ))}
+                  {branchOptions}
                 </select>
                 {!workCenterFilter && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -245,4 +298,6 @@ export const SearchSection: React.FC<SearchSectionProps> = ({
       )}
     </div>
   );
-}; 
+});
+
+SearchSection.displayName = 'SearchSection'; 

@@ -1,4 +1,5 @@
 "use client";
+import { memo, useCallback } from 'react';
 
 interface TableHeaderProps {
   selectAll: boolean;
@@ -7,12 +8,16 @@ interface TableHeaderProps {
   isViewer: boolean;
 }
 
-export const TableHeader: React.FC<TableHeaderProps> = ({
+export const TableHeader = memo(({
   selectAll,
   setSelectAll,
   isAdmin,
   isViewer,
-}) => {
+}: TableHeaderProps) => {
+  const handleSelectAllChange = useCallback(() => {
+    setSelectAll(!selectAll);
+  }, [selectAll, setSelectAll]);
+
   return (
     <thead className="bg-gray-100">
       <tr>
@@ -21,7 +26,7 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
             <input
               type="checkbox"
               checked={selectAll}
-              onChange={() => setSelectAll(!selectAll)}
+              onChange={handleSelectAllChange}
               className="form-checkbox h-5 w-5 text-blue-600"
             />
           </th>
@@ -68,4 +73,6 @@ export const TableHeader: React.FC<TableHeaderProps> = ({
       </tr>
     </thead>
   );
-}; 
+});
+
+TableHeader.displayName = 'TableHeader'; 

@@ -1,7 +1,7 @@
 "use client";
 import { OMSStatus, Request } from "@prisma/client";
 import { ActionButtons } from "./ActionButtons";
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 interface PowerOutageRequest {
@@ -47,10 +47,7 @@ const truncateText = (text: string | null, maxLength: number = 20) => {
 };
 
 // คอมโพเนนต์สำหรับแสดงข้อความพร้อม tooltip เมื่อข้อความยาวเกินไป
-const TextWithTooltip: React.FC<{ text: string | null; maxLength?: number }> = ({
-  text,
-  maxLength = 20,
-}) => {
+const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; maxLength?: number }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   
   if (!text) return <span className="text-gray-400">-</span>;
@@ -77,10 +74,12 @@ const TextWithTooltip: React.FC<{ text: string | null; maxLength?: number }> = (
       )}
     </div>
   );
-};
+});
+
+TextWithTooltip.displayName = 'TextWithTooltip';
 
 // คอมโพเนนต์สำหรับแสดงสถานะด้วยสีและรูปแบบที่สวยงาม
-const StatusBadge: React.FC<{ status: string; type: "oms" | "request" }> = ({ status, type }) => {
+const StatusBadge = memo(({ status, type }: { status: string; type: "oms" | "request" }) => {
   let bgColor = "bg-gray-200";
   let textColor = "text-gray-800";
   let label = status;
@@ -128,9 +127,11 @@ const StatusBadge: React.FC<{ status: string; type: "oms" | "request" }> = ({ st
       {label}
     </span>
   );
-};
+});
 
-export const TableRow: React.FC<TableRowProps> = ({
+StatusBadge.displayName = 'StatusBadge';
+
+export const TableRow = memo(({
   request,
   isAdmin,
   isUser,
@@ -143,14 +144,14 @@ export const TableRow: React.FC<TableRowProps> = ({
   handleDelete,
   handleEditOmsStatus,
   handleEditStatusRequest,
-}) => {
-  const handleSelectRequest = (id: number) => {
+}: TableRowProps) => {
+  const handleSelectRequest = useCallback((id: number) => {
     setSelectedRequests((prev) =>
       prev.includes(id) ? prev.filter((reqId) => reqId !== id) : [...prev, id]
     );
-  };
+  }, [setSelectedRequests]);
 
-  const getRowBackgroundColor = (
+  const getRowBackgroundColor = useCallback((
     outageDate: Date,
     omsStatus: string,
     statusRequest: string
@@ -181,7 +182,7 @@ export const TableRow: React.FC<TableRowProps> = ({
     }
 
     return "border-l-4 border-transparent";
-  };
+  }, []);
 
   const bgColor = getRowBackgroundColor(
     request.outageDate,
@@ -197,7 +198,7 @@ export const TableRow: React.FC<TableRowProps> = ({
   const dateClass = "font-medium text-gray-700 whitespace-nowrap";
 
   // ฟังก์ชันสำหรับจัดรูปแบบวันที่แบบไทย
-  const formatThaiDate = (date: Date) => {
+  const formatThaiDate = useCallback((date: Date) => {
     try {
       return date.toLocaleDateString("th-TH", {
         year: 'numeric',
@@ -208,7 +209,15 @@ export const TableRow: React.FC<TableRowProps> = ({
       console.error("Error formatting date:", error);
       return "ไม่พบข้อมูล";
     }
-  };
+  }, []);
+
+  const handleOmsStatusChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleEditOmsStatus(request.id, e.target.value as OMSStatus);
+  }, [handleEditOmsStatus, request.id]);
+
+  const handleStatusRequestChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleEditStatusRequest(request.id, e.target.value as Request);
+  }, [handleEditStatusRequest, request.id]);
 
   return (
     <tr className={`hover:bg-gray-50 transition-colors ${bgColor} border-b border-gray-200`}>
@@ -264,12 +273,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         {request.omsStatus === "NOT_ADDED" ? (
           <select
             value={request.omsStatus}
-            onChange={(e) =>
-              handleEditOmsStatus(
-                request.id,
-                e.target.value as OMSStatus
-              )
-            }
+            onChange={handleOmsStatusChange}
             disabled={!isAdmin && !isSupervisor}
             className={selectClass}
           >
@@ -285,12 +289,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         {request.statusRequest === "NOT" ? (
           <select
             value={request.statusRequest}
-            onChange={(e) =>
-              handleEditStatusRequest(
-                request.id,
-                e.target.value as Request
-              )
-            }
+            onChange={handleStatusRequestChange}
             disabled={
               !(
                 isAdmin ||
@@ -329,4 +328,6 @@ export const TableRow: React.FC<TableRowProps> = ({
       </td>
     </tr>
   );
-}; 
+});
+
+TableRow.displayName = 'TableRow'; 

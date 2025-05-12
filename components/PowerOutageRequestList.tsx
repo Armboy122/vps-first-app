@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import {
   getPowerOutageRequests,
@@ -32,6 +32,7 @@ import { MobileCard } from "./PowerOutageRequest/MobileCard";
 import { FilterSection } from "./PowerOutageRequest/FilterSection";
 import { SearchSection } from "./PowerOutageRequest/SearchSection";
 import { BulkActions } from "./PowerOutageRequest/BulkActions";
+import { OMSStatusSummary } from "./PowerOutageRequest/OMSStatusSummary";
 // import { printSelectedRequests } from "./PowerOutageRequest/PrintService";
 
 interface PowerOutageRequest {
@@ -142,15 +143,15 @@ export default function PowerOutageRequestList() {
     }
   }, []);
 
-  const handleWorkCenterFilter = (value: string) => {
+  const handleWorkCenterFilter = useCallback((value: string) => {
     setWorkCenterFilter(value);
     setCurrentPage(1);
-  };
+  }, []);
 
-  const handleBranchFilter = (value: string) => {
+  const handleBranchFilter = useCallback((value: string) => {
     setBranchFilter(value);
     setCurrentPage(1);
-  };
+  }, []);
 
   const filterByOMSStatus = (requests: PowerOutageRequest[]) => {
     if (omsStatusFilter.length === 0) return requests;
@@ -254,7 +255,7 @@ export default function PowerOutageRequestList() {
       loadRequests();
       fetchWorkCenters();
     }
-  }, [authLoading, loadRequests, currentPage, fetchWorkCenters]);
+  }, [authLoading, loadRequests, fetchWorkCenters]);
 
   const handleEdit = (request: PowerOutageRequest) => {
     setEditingRequest(request);
@@ -407,44 +408,101 @@ export default function PowerOutageRequestList() {
     return "";
   };
 
-  const filteredRequests = filterByOutageDate(
-    filterByBranch(
-      filterByWorkcenter(
-        filterByOMSStatus(
-          filterByStatus(filterByDate(requests))
+  // ใช้ useMemo เพื่อป้องกันการคำนวณซ้ำโดยไม่จำเป็น
+  const filteredRequests = useMemo(() => {
+    return filterByOutageDate(
+      filterByBranch(
+        filterByWorkcenter(
+          filterByOMSStatus(
+            filterByStatus(filterByDate(requests))
+          )
         )
       )
-    )
-  ).filter(
-    (request) =>
-      request.transformerNumber
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase()) ||
-      request.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.createdBy.fullName
-        .toLowerCase()
-        .includes(searchTerm.toLowerCase())
-  );
+    ).filter(
+      (request) =>
+        request.transformerNumber
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        request.area?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.createdBy.fullName
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase())
+    );
+  }, [
+    requests, 
+    searchTerm, 
+    omsStatusFilter, 
+    statusFilter, 
+    workCenterFilter, 
+    branchFilter, 
+    startDate, 
+    endDate, 
+    showPastOutageDates
+  ]);
 
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredRequests.slice(
-    indexOfFirstItem,
-    indexOfLastItem
-  );
+  const currentItems = useMemo(() => {
+    const indexOfLastItem = currentPage * itemsPerPage;
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+    
+    // ตรวจสอบว่า filteredRequests มีข้อมูลหรือไม่
+    if (filteredRequests.length === 0) {
+      return [];
+    }
+    
+    // ตรวจสอบว่าหน้าปัจจุบันเกินจำนวนหน้าทั้งหมดหรือไม่
+    const maxPage = Math.ceil(filteredRequests.length / itemsPerPage);
+    const validCurrentPage = currentPage > maxPage ? maxPage : currentPage;
+    
+    const newFirstItem = (validCurrentPage - 1) * itemsPerPage;
+    const newLastItem = Math.min(newFirstItem + itemsPerPage, filteredRequests.length);
+    
+    return filteredRequests.slice(newFirstItem, newLastItem);
+  }, [currentPage, filteredRequests, itemsPerPage]);
 
+  const totalPages = useMemo(() => 
+    Math.max(1, Math.ceil(filteredRequests.length / itemsPerPage)),
+  [filteredRequests.length, itemsPerPage]);
+
+  // นิยาม LoadingSpinner ให้กลับมา
   const LoadingSpinner = () => (
     <div className="flex justify-center items-center h-64">
       <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
     </div>
   );
 
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  // ปรับปรุง paginate function เพื่อให้มั่นใจว่าไม่มีการเปลี่ยนหน้าไปยังหน้าที่ไม่มีข้อมูล
+  const paginate = useCallback((pageNumber: number) => {
+    // ป้องกันการรีเซ็ตหน้าเมื่อกดเลขหน้าเดิม
+    if (pageNumber === currentPage) return;
+    
+    const maxPage = Math.ceil(filteredRequests.length / itemsPerPage);
+    pageNumber = Math.max(1, Math.min(pageNumber, maxPage || 1));
+    setCurrentPage(pageNumber);
+  }, [filteredRequests.length, itemsPerPage, currentPage]);
 
-  // ตรวจสอบการเปลี่ยนแปลงของตัวกรองและรีเซ็ตหน้าเมื่อตัวกรองเปลี่ยน
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [statusFilter, omsStatusFilter, showPastOutageDates, searchTerm, startDate, endDate]);
+  const handleStatusFilter = useCallback((value: string[]) => {
+    setStatusFilter(value);
+  }, []);
+
+  const handleOmsStatusFilter = useCallback((value: string[]) => {
+    setOmsStatusFilter(value);
+  }, []);
+
+  const handleShowPastOutageDates = useCallback((value: boolean) => {
+    setShowPastOutageDates(value);
+  }, []);
+
+  const handleSearchTerm = useCallback((value: string) => {
+    setSearchTerm(value);
+  }, []);
+
+  const handleStartDate = useCallback((value: string) => {
+    setStartDate(value);
+  }, []);
+
+  const handleEndDate = useCallback((value: string) => {
+    setEndDate(value);
+  }, []);
 
   if (authLoading)
     return <div className="text-center py-10">กำลังโหลดข้อมูลผู้ใช้...</div>;
@@ -455,19 +513,17 @@ export default function PowerOutageRequestList() {
 
   if (authLoading || loading) return <LoadingSpinner />;
 
-  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
-
   return (
     <div className="container mx-auto px-4 py-6">
       {/* Search Section */}
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
         <SearchSection 
           searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
+          setSearchTerm={handleSearchTerm}
           startDate={startDate}
-          setStartDate={setStartDate}
+          setStartDate={handleStartDate}
           endDate={endDate}
-          setEndDate={setEndDate}
+          setEndDate={handleEndDate}
           workCenterFilter={workCenterFilter}
           setWorkCenterFilter={handleWorkCenterFilter}
           workCenters={workCenters}
@@ -481,12 +537,15 @@ export default function PowerOutageRequestList() {
       {/* Filter Section */}
       <FilterSection 
         statusFilter={statusFilter}
-        setStatusFilter={setStatusFilter}
+        setStatusFilter={handleStatusFilter}
         omsStatusFilter={omsStatusFilter}
-        setOmsStatusFilter={setOmsStatusFilter}
+        setOmsStatusFilter={handleOmsStatusFilter}
         showPastOutageDates={showPastOutageDates}
-        setShowPastOutageDates={setShowPastOutageDates}
+        setShowPastOutageDates={handleShowPastOutageDates}
       />
+      
+      {/* OMS Status Summary - แสดงเฉพาะ admin และ viewer เท่านั้น */}
+      {(isAdmin || isViewer) && <OMSStatusSummary requests={requests} />}
       
       {/* Bulk Actions Section */}
       <BulkActions 

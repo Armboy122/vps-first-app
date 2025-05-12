@@ -1,6 +1,7 @@
-// components/Pagination.tsx
-import React from 'react';
+"use client";
+import React, { useCallback, useMemo } from 'react';
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
+import { useRouter, useSearchParams } from 'next/navigation';
 
 interface PaginationProps {
   currentPage: number;
@@ -8,16 +9,28 @@ interface PaginationProps {
   onPageChange: (page: number) => void;
 }
 
-const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPageChange }) => {
+const Pagination: React.FC<PaginationProps> = React.memo(({ currentPage, totalPages, onPageChange }) => {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // เมื่อมีการเปลี่ยนหน้า ให้อัปเดต URL แทนการใช้ state เพื่อป้องกันการ re-render
+  const handlePageChange = useCallback((page: number) => {
+    // ป้องกันการเปลี่ยนหน้าซ้ำซึ่งทำให้เกิด re-render โดยไม่จำเป็น
+    if (page === currentPage) return;
+    
+    // เรียกฟังก์ชัน callback ที่ส่งมาจาก parent
+    onPageChange(page);
+  }, [currentPage, onPageChange]);
+
   // สร้างฟังก์ชันสำหรับการสร้างปุ่มหน้า
-  const renderPageButtons = () => {
+  const renderPageButtons = useCallback(() => {
     // สำหรับหน้าจอขนาดเล็ก แสดงเฉพาะปุ่มสำคัญ
-    if (window.innerWidth < 640) {
+    if (typeof window !== 'undefined' && window.innerWidth < 640) {
       return (
         <>
           {currentPage > 1 && (
             <button
-              onClick={() => onPageChange(currentPage - 1)}
+              onClick={() => handlePageChange(currentPage - 1)}
               className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
               <span className="sr-only">ก่อนหน้า</span>
@@ -29,7 +42,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
           </span>
           {currentPage < totalPages && (
             <button
-              onClick={() => onPageChange(currentPage + 1)}
+              onClick={() => handlePageChange(currentPage + 1)}
               className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"
             >
               <span className="sr-only">ถัดไป</span>
@@ -58,7 +71,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
       pageButtons.push(
         <button
           key="first"
-          onClick={() => onPageChange(1)}
+          onClick={() => handlePageChange(1)}
           className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           1
@@ -81,7 +94,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
       pageButtons.push(
         <button
           key={i}
-          onClick={() => onPageChange(i)}
+          onClick={() => handlePageChange(i)}
           className={`relative inline-flex items-center px-4 py-2 border ${
             i === currentPage
               ? "border-blue-500 bg-blue-50 text-blue-600"
@@ -108,7 +121,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
       pageButtons.push(
         <button
           key="last"
-          onClick={() => onPageChange(totalPages)}
+          onClick={() => handlePageChange(totalPages)}
           className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50"
         >
           {totalPages}
@@ -119,7 +132,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
     return (
       <>
         <button
-          onClick={() => onPageChange(Math.max(1, currentPage - 1))}
+          onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
           className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
             currentPage === 1
@@ -132,7 +145,7 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
         </button>
         {pageButtons}
         <button
-          onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
+          onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
           className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
             currentPage === totalPages
@@ -145,15 +158,23 @@ const Pagination: React.FC<PaginationProps> = ({ currentPage, totalPages, onPage
         </button>
       </>
     );
-  };
+  }, [currentPage, totalPages, handlePageChange]);
 
-  return (
-    <div className="mt-6 flex justify-center">
-      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-        {typeof window !== 'undefined' && renderPageButtons()}
-      </nav>
-    </div>
-  );
-};
+  // ใช้ useMemo เพื่อป้องกันการ re-render ที่ไม่จำเป็น
+  const paginationContent = useMemo(() => {
+    return (
+      <div className="mt-6 flex justify-center">
+        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+          {typeof window !== 'undefined' && renderPageButtons()}
+        </nav>
+      </div>
+    );
+  }, [renderPageButtons]);
+
+  return paginationContent;
+});
+
+// เพิ่ม display name สำหรับ React.memo
+Pagination.displayName = 'Pagination';
 
 export default Pagination;
