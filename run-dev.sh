@@ -5,7 +5,7 @@ set -e
 IMAGE_NAME="armboy/vps-first-app"
 CONTAINER_NAME="vps-first-app-dev"
 DEFAULT_RUNTIME_DAYS=2
-DEFAULT_PORT=3000
+DEFAULT_PORT=3002
 TAG="dev-latest"
 # ----------------------------
 
