@@ -216,7 +216,7 @@ export const SearchSection = memo(({
           <div>
             <label
               htmlFor="startDate"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+              className="text-sm font-medium text-gray-700 mb-1 flex items-center"
             >
               <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-gray-500" />
               วันที่เริ่มต้น
@@ -233,7 +233,7 @@ export const SearchSection = memo(({
           <div>
             <label
               htmlFor="endDate"
-              className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+              className="text-sm font-medium text-gray-700 mb-1 flex items-center"
             >
               <FontAwesomeIcon icon={faCalendarAlt} className="mr-2 text-gray-500" />
               วันที่สิ้นสุด
@@ -252,7 +252,7 @@ export const SearchSection = memo(({
               <div>
                 <label
                   htmlFor="workCenter"
-                  className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+                  className="text-sm font-medium text-gray-700 mb-1 flex items-center"
                 >
                   <FontAwesomeIcon icon={faBuilding} className="mr-2 text-gray-500" />
                   จุดรวมงาน
@@ -271,7 +271,7 @@ export const SearchSection = memo(({
               <div>
                 <label
                   htmlFor="branch"
-                  className="block text-sm font-medium text-gray-700 mb-1 flex items-center"
+                  className="text-sm font-medium text-gray-700 mb-1 flex items-center"
                 >
                   <FontAwesomeIcon icon={faCodeBranch} className="mr-2 text-gray-500" />
                   สาขา

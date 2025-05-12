@@ -153,35 +153,35 @@ export default function PowerOutageRequestList() {
     setCurrentPage(1);
   }, []);
 
-  const filterByOMSStatus = (requests: PowerOutageRequest[]) => {
+  const filterByOMSStatus = useCallback((requests: PowerOutageRequest[]) => {
     if (omsStatusFilter.length === 0) return requests;
     return requests.filter((request) =>
       omsStatusFilter.includes(request.omsStatus)
     );
-  };
+  }, [omsStatusFilter]);
 
-  const filterByStatus = (requests: PowerOutageRequest[]) => {
+  const filterByStatus = useCallback((requests: PowerOutageRequest[]) => {
     if (statusFilter.length === 0) return requests;
     return requests.filter((request) =>
       statusFilter.includes(request.statusRequest)
     );
-  };
+  }, [statusFilter]);
   
-  const filterByWorkcenter = (requests: PowerOutageRequest[]) => {
+  const filterByWorkcenter = useCallback((requests: PowerOutageRequest[]) => {
     if (!workCenterFilter) return requests;
     return requests.filter((request) => 
       request.workCenterId === parseInt(workCenterFilter)
     );
-  };
+  }, [workCenterFilter]);
 
-  const filterByBranch = (requests: PowerOutageRequest[]) => {
+  const filterByBranch = useCallback((requests: PowerOutageRequest[]) => {
     if (!branchFilter) return requests;
     return requests.filter((request) => 
       request.branchId === parseInt(branchFilter)
     );
-  };
+  }, [branchFilter]);
 
-  const filterByDate = (requests: PowerOutageRequest[]) => {
+  const filterByDate = useCallback((requests: PowerOutageRequest[]) => {
     return requests.filter((request) => {
       const requestDate = new Date(request.outageDate);
       const start = startDate ? new Date(startDate) : null;
@@ -196,9 +196,9 @@ export default function PowerOutageRequestList() {
       }
       return true;
     });
-  };
+  }, [startDate, endDate]);
 
-  const filterByOutageDate = (requests: PowerOutageRequest[]) => {
+  const filterByOutageDate = useCallback((requests: PowerOutageRequest[]) => {
     if (showPastOutageDates) {
       return requests;
     }
@@ -209,7 +209,7 @@ export default function PowerOutageRequestList() {
              request.omsStatus === "PROCESSED" || 
              request.omsStatus === "CANCELLED";
     });
-  };
+  }, [showPastOutageDates]);
 
   const loadRequests = useCallback(async () => {
     try {
@@ -408,7 +408,7 @@ export default function PowerOutageRequestList() {
     return "";
   };
 
-  // ใช้ useMemo เพื่อป้องกันการคำนวณซ้ำโดยไม่จำเป็น
+  // ปรับปรุง useMemo สำหรับ filteredRequests เพื่อแน่ใจว่ามีการใช้ dependency ที่ถูกต้อง
   const filteredRequests = useMemo(() => {
     return filterByOutageDate(
       filterByBranch(
@@ -430,14 +430,13 @@ export default function PowerOutageRequestList() {
     );
   }, [
     requests, 
-    searchTerm, 
-    omsStatusFilter, 
-    statusFilter, 
-    workCenterFilter, 
-    branchFilter, 
-    startDate, 
-    endDate, 
-    showPastOutageDates
+    searchTerm,
+    filterByBranch,
+    filterByDate,
+    filterByOMSStatus,
+    filterByOutageDate,
+    filterByStatus,
+    filterByWorkcenter
   ]);
 
   const currentItems = useMemo(() => {
@@ -470,7 +469,7 @@ export default function PowerOutageRequestList() {
     </div>
   );
 
-  // ปรับปรุง paginate function เพื่อให้มั่นใจว่าไม่มีการเปลี่ยนหน้าไปยังหน้าที่ไม่มีข้อมูล
+  // ปรับปรุง paginate function
   const paginate = useCallback((pageNumber: number) => {
     // ป้องกันการรีเซ็ตหน้าเมื่อกดเลขหน้าเดิม
     if (pageNumber === currentPage) return;
@@ -482,26 +481,32 @@ export default function PowerOutageRequestList() {
 
   const handleStatusFilter = useCallback((value: string[]) => {
     setStatusFilter(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนตัวกรองสถานะ
   }, []);
 
   const handleOmsStatusFilter = useCallback((value: string[]) => {
     setOmsStatusFilter(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนตัวกรอง OMS Status
   }, []);
 
   const handleShowPastOutageDates = useCallback((value: boolean) => {
     setShowPastOutageDates(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนการแสดงผลวันที่ผ่านมาแล้ว
   }, []);
 
   const handleSearchTerm = useCallback((value: string) => {
     setSearchTerm(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนคำค้นหา
   }, []);
 
   const handleStartDate = useCallback((value: string) => {
     setStartDate(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนวันที่เริ่มต้น
   }, []);
 
   const handleEndDate = useCallback((value: string) => {
     setEndDate(value);
+    // ไม่รีเซ็ตหน้าเมื่อเปลี่ยนวันที่สิ้นสุด
   }, []);
 
   if (authLoading)
