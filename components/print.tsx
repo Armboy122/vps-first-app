@@ -9,6 +9,7 @@ import { Branch } from '@prisma/client';
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { getThailandDate } from "@/lib/date-utils";
 
 interface WorkCenter {
     id: number;
@@ -34,7 +35,7 @@ const setFormattedTime = (time:Date) => {
 };
 
 const getAnnounceDate = () => {
-    const date = new Date();
+    const date = getThailandDate();
     return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 };
 

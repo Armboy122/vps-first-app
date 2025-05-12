@@ -9,6 +9,8 @@ import { getServerSession } from "next-auth";
 
 import { OMSStatus , Request } from '@prisma/client';
 import { authOptions } from "@/authOption";
+import { createThailandDateTime, getThailandDate, getThailandDateAtMidnight } from "@/lib/date-utils";
+import { clearOMSCache } from "@/lib/cache-utils";
 
 // ฟังก์ชันสำหรับ getCurrentUser
 async function getCurrentUser() {
@@ -35,10 +37,10 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   try {
     const validatedData = PowerOutageRequestSchema.parse(data);
 
-    // แปลงเวลาเป็น timezone ของไทย
+    // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
     const outageDate = new Date(validatedData.outageDate);
-    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
-    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
+    const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
+    const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
 
     const result = await prisma.powerOutageRequest.create({
       data: {
@@ -52,6 +54,9 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
         omsStatus: "NOT_ADDED",
       },
     });
+
+    // ล้างแคช OMS หลังจากสร้างคำขอดับไฟ
+    clearOMSCache();
 
     return { success: true, data: result };
   } catch (error) {
@@ -81,8 +86,8 @@ export async function searchTransformers(searchTerm: string) {
 
 export async function getPowerOutageRequests() {
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // ใช้ getThailandDateAtMidnight แทน new Date สำหรับวันที่ปัจจุบันในไทม์โซน UTC+7
+    const today = getThailandDateAtMidnight();
 
     const data = await prisma.powerOutageRequest.findMany({
       include: {
@@ -144,6 +149,10 @@ export async function deletePowerOutageRequest(id: number) {
     await prisma.powerOutageRequest.delete({
       where: { id },
     });
+
+    // ล้างแคช OMS หลังจากลบคำขอดับไฟ
+    clearOMSCache();
+
     return { success: true, message: "คำขอถูกลบเรียบร้อยแล้ว" };
   } catch (error) {
     console.error("Error deleting power outage request:", error);
@@ -163,9 +172,9 @@ export async function updatePowerOutageRequest(
       area: true,
     }).parse(data);
 
-    // แปลงเวลาเป็น timezone ของไทย
-    const startTime = new Date(`${validatedData.outageDate}T${validatedData.startTime}+07:00`);
-    const endTime = new Date(`${validatedData.outageDate}T${validatedData.endTime}+07:00`);
+    // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
+    const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
+    const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
 
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       throw new Error("Invalid time format");
@@ -179,6 +188,9 @@ export async function updatePowerOutageRequest(
         area: validatedData.area,
       },
     });
+
+    // ล้างแคช OMS หลังจากอัปเดตคำขอดับไฟ
+    clearOMSCache();
 
     return {
       success: true,
@@ -201,7 +213,6 @@ export async function updatePowerOutageRequest(
   }
 }
 
-
 export async function updateOMS(id: number, omsStatus: OMSStatus) {
   const currentUser = await getCurrentUser();
   try {
@@ -209,10 +220,13 @@ export async function updateOMS(id: number, omsStatus: OMSStatus) {
       where: { id },
       data: {
         omsStatus,
-        omsUpdatedAt: new Date(),
+        omsUpdatedAt: getThailandDate(),
         omsUpdatedById: currentUser.id
       },
     });
+
+    // ล้างแคช OMS หลังจากอัปเดตสถานะ OMS
+    clearOMSCache();
 
     console.log("Updated OMS status:", updatedRequest);
 
@@ -235,18 +249,21 @@ export async function updateOMS(id: number, omsStatus: OMSStatus) {
     }
   }
 }
-export async function updateStatusRequest(id: number, statusRequest: Request) {
 
+export async function updateStatusRequest(id: number, statusRequest: Request) {
   const currentUser = await getCurrentUser();
   try {
     const updatedRequest = await prisma.powerOutageRequest.update({
       where: { id },
       data: {
         statusRequest,
-        statusUpdatedAt: new Date(),
+        statusUpdatedAt: getThailandDate(),
         statusUpdatedById: currentUser.id
       },
     });
+
+    // ล้างแคช OMS หลังจากอัปเดตสถานะคำขอ
+    clearOMSCache();
 
     console.log("Updated status request:", updatedRequest);
 

@@ -23,6 +23,7 @@ import { OMSStatus, Request } from "@prisma/client";
 import PrintAnnouncement from "./print";
 import Pagination from "@/app/power-outage-requests/pagination";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
+import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 // Import components from PowerOutageRequest folder
 import { TableHeader } from "./PowerOutageRequest/TableHeader";
@@ -111,10 +112,11 @@ export default function PowerOutageRequestList() {
   const [endDate, setEndDate] = useState<string>("");
   const [selectAll, setSelectAll] = useState(false);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [statusFilter, setStatusFilter] = useState<string[]>([]);
-  const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>([]);
+  const [statusFilter, setStatusFilter] = useState<string[]>(["CONFIRM"]);
+  const [omsStatusFilter, setOmsStatusFilter] = useState<string[]>(["NOT_ADDED"]);
   const [workCenterFilter, setWorkCenterFilter] = useState("");
   const [isMobile, setIsMobile] = useState(false);
+  const [showPastOutageDates, setShowPastOutageDates] = useState(false);
 
   // Check if the screen is mobile
   useEffect(() => {
@@ -178,6 +180,19 @@ export default function PowerOutageRequestList() {
         return requestDate <= end;
       }
       return true;
+    });
+  };
+
+  const filterByOutageDate = (requests: PowerOutageRequest[]) => {
+    if (showPastOutageDates) {
+      return requests;
+    }
+    const today = getThailandDateAtMidnight();
+    return requests.filter(request => {
+      const outageDate = new Date(request.outageDate);
+      return outageDate >= today || 
+             request.omsStatus === "PROCESSED" || 
+             request.omsStatus === "CANCELLED";
     });
   };
 
@@ -347,7 +362,7 @@ export default function PowerOutageRequestList() {
     omsStatus: string,
     statusRequest: string
   ) => {
-    const today = new Date();
+    const today = getThailandDateAtMidnight();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -378,9 +393,11 @@ export default function PowerOutageRequestList() {
     return "";
   };
 
-  const filteredRequests = filterByWorkcenter(
-    filterByOMSStatus(
-      filterByStatus(filterByDate(requests))
+  const filteredRequests = filterByOutageDate(
+    filterByWorkcenter(
+      filterByOMSStatus(
+        filterByStatus(filterByDate(requests))
+      )
     )
   ).filter(
     (request) =>
@@ -443,6 +460,8 @@ export default function PowerOutageRequestList() {
         setStatusFilter={setStatusFilter}
         omsStatusFilter={omsStatusFilter}
         setOmsStatusFilter={setOmsStatusFilter}
+        showPastOutageDates={showPastOutageDates}
+        setShowPastOutageDates={setShowPastOutageDates}
       />
       
       {/* Bulk Actions Section */}

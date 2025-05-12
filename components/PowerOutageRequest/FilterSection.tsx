@@ -1,22 +1,26 @@
 "use client";
-import { useState } from "react";
+import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faFilter, faChevronDown, faChevronUp } from "@fortawesome/free-solid-svg-icons";
 
 interface FilterSectionProps {
   statusFilter: string[];
-  setStatusFilter: (value: string[]) => void;
+  setStatusFilter: (filter: string[]) => void;
   omsStatusFilter: string[];
-  setOmsStatusFilter: (value: string[]) => void;
+  setOmsStatusFilter: (filter: string[]) => void;
+  showPastOutageDates: boolean;
+  setShowPastOutageDates: (show: boolean) => void;
 }
 
-export const FilterSection: React.FC<FilterSectionProps> = ({
+export function FilterSection({
   statusFilter,
   setStatusFilter,
   omsStatusFilter,
   setOmsStatusFilter,
-}) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  showPastOutageDates,
+  setShowPastOutageDates
+}: FilterSectionProps) {
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
 
   const handleStatusFilterChange = (status: string) => {
     if (statusFilter.includes(status)) {
@@ -47,81 +51,77 @@ export const FilterSection: React.FC<FilterSectionProps> = ({
   ];
 
   return (
-    <div className="mb-6 bg-white p-4 md:p-6 rounded-lg shadow-md">
-      <div className="flex justify-between items-center mb-4">
-        <div className="flex items-center">
-          <FontAwesomeIcon icon={faFilter} className="text-blue-500 mr-2" />
-          <h3 className="text-lg font-medium text-gray-800">ตัวกรอง</h3>
+    <div className="mb-6 flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow-md">
+      <div>
+        <div className="text-gray-700 font-medium mb-2">สถานะคำของานดับไฟ</div>
+        <div className="flex gap-2 flex-wrap">
+          {["CONFIRM", "NOT", "CANCELLED"].map((status) => (
+            <label key={status} className="flex items-center mr-4">
+              <input
+                type="checkbox"
+                className="mr-1 h-4 w-4 text-blue-600"
+                checked={statusFilter.includes(status)}
+                onChange={() => {
+                  if (statusFilter.includes(status)) {
+                    setStatusFilter(statusFilter.filter((s) => s !== status));
+                  } else {
+                    setStatusFilter([...statusFilter, status]);
+                  }
+                }}
+              />
+              <span>
+                {status === "CONFIRM"
+                  ? "อนุมัติแล้ว"
+                  : status === "NOT"
+                  ? "รอการอนุมัติ"
+                  : "ยกเลิก"}
+              </span>
+            </label>
+          ))}
         </div>
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="text-gray-500 hover:text-gray-700"
-        >
-          <FontAwesomeIcon icon={isCollapsed ? faChevronDown : faChevronUp} />
-        </button>
       </div>
-
-      {!isCollapsed && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              กรองตามสถานะอนุมัติ
+      <div>
+        <div className="text-gray-700 font-medium mb-2">สถานะการลงข้อมูลในระบบ OMS</div>
+        <div className="flex gap-2 flex-wrap">
+          {["NOT_ADDED", "PROCESSED", "CANCELLED"].map((status) => (
+            <label key={status} className="flex items-center mr-4">
+              <input
+                type="checkbox"
+                className="mr-1 h-4 w-4 text-blue-600"
+                checked={omsStatusFilter.includes(status)}
+                onChange={() => {
+                  if (omsStatusFilter.includes(status)) {
+                    setOmsStatusFilter(
+                      omsStatusFilter.filter((s) => s !== status)
+                    );
+                  } else {
+                    setOmsStatusFilter([...omsStatusFilter, status]);
+                  }
+                }}
+              />
+              <span>
+                {status === "NOT_ADDED"
+                  ? "ยังไม่ได้เพิ่ม"
+                  : status === "PROCESSED"
+                  ? "ดำเนินการแล้ว"
+                  : "ยกเลิก"}
+              </span>
             </label>
-            <div className="flex flex-wrap gap-2">
-              {statusOptions.map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() => handleStatusFilterChange(status.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    statusFilter.includes(status.value)
-                      ? status.color
-                      : "bg-white text-gray-500 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {status.label}
-                </button>
-              ))}
-            </div>
-            {statusFilter.length > 0 && (
-              <button
-                onClick={() => setStatusFilter([])}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-              >
-                ล้างตัวกรอง
-              </button>
-            )}
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              กรองตามสถานะ OMS
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {omsStatusOptions.map((status) => (
-                <button
-                  key={status.value}
-                  onClick={() => handleOmsStatusFilterChange(status.value)}
-                  className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                    omsStatusFilter.includes(status.value)
-                      ? status.color
-                      : "bg-white text-gray-500 border-gray-300 hover:bg-gray-50"
-                  }`}
-                >
-                  {status.label}
-                </button>
-              ))}
-            </div>
-            {omsStatusFilter.length > 0 && (
-              <button
-                onClick={() => setOmsStatusFilter([])}
-                className="mt-2 text-sm text-blue-600 hover:text-blue-800"
-              >
-                ล้างตัวกรอง
-              </button>
-            )}
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+      <div>
+        <div className="text-gray-700 font-medium mb-2">การกรองตามวันที่</div>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            className="mr-1 h-4 w-4 text-blue-600"
+            checked={showPastOutageDates}
+            onChange={() => setShowPastOutageDates(!showPastOutageDates)}
+          />
+          <span>แสดงรายการที่เลยวันดับไฟไปแล้ว</span>
+        </label>
+      </div>
     </div>
   );
-}; 
+} 

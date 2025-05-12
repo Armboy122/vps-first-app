@@ -3,6 +3,7 @@ import { useState } from "react";
 import { OMSStatus, Request } from "@prisma/client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEdit, faTrash, faChevronDown, faChevronUp, faCalendarAlt, faClock, faMapMarkerAlt, faUser, faBuilding, faCodeBranch } from "@fortawesome/free-solid-svg-icons";
+import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -67,7 +68,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
     omsStatus: string,
     statusRequest: string
   ) => {
-    const today = new Date();
+    const today = getThailandDateAtMidnight();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );

@@ -2,6 +2,7 @@
 import { OMSStatus, Request } from "@prisma/client";
 import { ActionButtons } from "./ActionButtons";
 import { useState } from "react";
+import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -154,7 +155,7 @@ export const TableRow: React.FC<TableRowProps> = ({
     omsStatus: string,
     statusRequest: string
   ) => {
-    const today = new Date();
+    const today = getThailandDateAtMidnight();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
