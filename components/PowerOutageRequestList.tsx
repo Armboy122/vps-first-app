@@ -545,7 +545,13 @@ export default function PowerOutageRequestList() {
       />
       
       {/* OMS Status Summary - แสดงเฉพาะ admin และ viewer เท่านั้น */}
-      {(isAdmin || isViewer) && <OMSStatusSummary requests={requests} />}
+      {(isAdmin || isViewer) && 
+        <OMSStatusSummary 
+          requests={requests} 
+          filteredRequests={filteredRequests}
+          showFilteredSummary={true} // ให้แสดงตามการกรอง
+        />
+      }
       
       {/* Bulk Actions Section */}
       <BulkActions 
