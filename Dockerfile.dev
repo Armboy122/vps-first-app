@@ -1,42 +1,35 @@
-# ใช้ base image ของ Bun
-FROM oven/bun:1.0-alpine
+# ใช้ Node.js Debian-based (แก้ปัญหา Prisma + OpenSSL)
+FROM node:18-slim
 
+# อัปเดตและติดตั้ง dependencies ที่จำเป็น
+RUN apt-get update && apt-get install -y \
+    openssl \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# สร้างโฟลเดอร์ทำงาน
 WORKDIR /app
 
-# ติดตั้ง tools ที่จำเป็น (ไม่ต้องใช้ libc6-compat เพราะ bun image มี glibc อยู่แล้ว)
-RUN apk add --no-cache openssl && \
-    addgroup --system --gid 1001 bunjs && \
-    adduser --system --uid 1001 nextjs
+# ก๊อปปี้ package.json และ package-lock.json
+COPY package.json package-lock.json* ./
 
-# ตั้งค่า environment variables
-ENV NODE_ENV=production
-ARG PORT=3002
-ENV PORT=${PORT}
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV PRISMA_SKIP_GENERATE=true
+# ติดตั้ง dependencies ด้วย npm
+RUN npm ci
 
-# คัดลอกไฟล์ dependencies ก่อน
-COPY package.json bun.lockb* ./
+# ก๊อปปี้โค้ดทั้งหมด
+COPY . .
 
-# ติดตั้ง dependencies ด้วย Bun (เร็วกว่า npm มาก)
-RUN bun install
+# Generate Prisma Client
+RUN npx prisma generate
 
-# คัดลอกโค้ดทั้งหมด
-COPY --chown=nextjs:bunjs . .
+# สร้าง production build
+RUN npm run build
 
-# Build แอพก่อนรัน
-RUN bun run build
+# ตั้งค่าพอร์ตให้เป็น 3002
+ENV PORT=3002
 
-# ใช้ Bun ในโหมด production
-USER nextjs
+# เปิดพอร์ต 3002
+EXPOSE 3002
 
-# เปิด Port
-EXPOSE ${PORT}
-
-# Healthcheck
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:${PORT}/ || exit 0
-
-# คำสั่งเริ่มทำงานสำหรับ production
-CMD ["bun", "start"]
+# รันแอป
+CMD ["npm", "start"]
