@@ -599,6 +599,7 @@ export default function PowerOutageRequestList() {
               setSelectAll={handleSelectAll}
               isAdmin={isAdmin}
               isViewer={isViewer}
+              isSupervisor={isSupervisor}
             />
             <tbody className="divide-y divide-gray-200">
               {currentItems.map((request) => (

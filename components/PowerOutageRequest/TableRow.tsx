@@ -49,27 +49,45 @@ const truncateText = (text: string | null, maxLength: number = 20) => {
 // คอมโพเนนต์สำหรับแสดงข้อความพร้อม tooltip เมื่อข้อความยาวเกินไป
 const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; maxLength?: number }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
   if (!text) return <span className="text-gray-400">-</span>;
   
   const shouldTruncate = text.length > maxLength;
   const displayText = shouldTruncate ? `${text.substring(0, maxLength)}...` : text;
   
+  if (!shouldTruncate) {
+    return <span>{displayText}</span>;
+  }
+  
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+    setShowTooltip(true);
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+  };
+  
   return (
-    <div className="relative group">
+    <div className="relative inline-block w-full">
       <span 
-        className={`${shouldTruncate ? "cursor-pointer" : ""} transition-colors duration-200 group-hover:text-blue-600`}
-        onMouseEnter={() => shouldTruncate && setShowTooltip(true)}
+        className="cursor-pointer border-b border-dotted border-gray-400 transition-colors duration-200 hover:text-blue-600"
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowTooltip(false)}
       >
         {displayText}
       </span>
       {showTooltip && (
-        <div className="absolute z-10 p-2 bg-gray-800 text-white text-sm rounded-md shadow-lg whitespace-normal max-w-xs left-0 -mt-1 transform -translate-y-full animate-fadeIn">
-          <div className="relative">
-            <div className="absolute w-3 h-3 bg-gray-800 transform rotate-45 -bottom-1 left-3"></div>
-            {text}
-          </div>
+        <div 
+          className="fixed z-[9999] bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow-lg pointer-events-none max-w-xs break-words"
+          style={{
+            left: `${mousePos.x + 10}px`,
+            top: `${mousePos.y - 40}px`,
+          }}
+        >
+          {text}
         </div>
       )}
     </div>
@@ -161,7 +179,7 @@ export const TableRow = memo(({
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
+    if (statusRequest === "NOT" && diffDays < 10 && diffDays > 0) {
       return "bg-red-400";
     }
     if (statusRequest === "CONFIRM" && omsStatus === "PROCESSED") {
@@ -309,7 +327,7 @@ export const TableRow = memo(({
       <td className={`${cellClass} ${fixedWidthCell}`}>
         <TextWithTooltip text={request.createdBy.fullName} maxLength={15} />
       </td>
-      {!isViewer && (
+      {!isViewer && !isSupervisor && (
         <td className={cellClass}>
           <div className="flex space-x-1 justify-center">
             <ActionButtons
