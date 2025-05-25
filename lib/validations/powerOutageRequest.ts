@@ -3,11 +3,31 @@
 import { z } from 'zod'
 
 export const PowerOutageRequestSchema = z.object({
-  outageDate: z.string(),
-  startTime: z.string(),
-  endTime: z.string(),
-  workCenterId: z.string(),
-  branchId: z.string(),
+  outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
+  startTime: z.string().min(1, "กรุณาระบุเวลาเริ่มต้น"),
+  endTime: z.string().min(1, "กรุณาระบุเวลาสิ้นสุด"),
+  workCenterId: z.string().min(1, "กรุณาเลือกศูนย์งาน"),
+  branchId: z.string().min(1, "กรุณาเลือกสาขา"),
+  transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
+  gisDetails: z.string(),
+  area: z.string().nullable(),
+}).refine((data) => {
+  // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้น
+  const startTime = new Date(`${data.outageDate}T${data.startTime}`);
+  const endTime = new Date(`${data.outageDate}T${data.endTime}`);
+  return endTime > startTime;
+}, {
+  message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น",
+  path: ["endTime"],
+});
+
+// Schema สำหรับการ update (ไม่มี refine เพื่อให้ใช้ pick ได้)
+export const PowerOutageRequestUpdateSchema = z.object({
+  outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
+  startTime: z.string().min(1, "กรุณาระบุเวลาเริ่มต้น"),
+  endTime: z.string().min(1, "กรุณาระบุเวลาสิ้นสุด"),
+  workCenterId: z.string().min(1, "กรุณาเลือกศูนย์งาน"),
+  branchId: z.string().min(1, "กรุณาเลือกสาขา"),
   transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),
   area: z.string().nullable(),
