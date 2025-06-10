@@ -1247,11 +1247,11 @@ const ExportDataComponent = () => {
   );
 
   const handleExport = useCallback(async () => {
-    if (!powerOutageData) return;
+    if (!powerOutageData || !powerOutageData.data) return;
 
     setIsExporting(true);
     try {
-      const filteredData = powerOutageData.filter(item => {
+      const filteredData = powerOutageData.data.filter((item: any) => {
         const outageDate = new Date(item.outageDate);
         const fromDate = new Date(dateFrom);
         const toDate = new Date(dateTo);
@@ -1273,7 +1273,7 @@ const ExportDataComponent = () => {
         'วันที่สร้าง'
       ];
 
-      const csvData = filteredData.map(item => [
+      const csvData = filteredData.map((item: any) => [
         new Date(item.outageDate).toLocaleDateString('th-TH'),
         new Date(item.startTime).toLocaleTimeString('th-TH'),
         new Date(item.endTime).toLocaleTimeString('th-TH'),
@@ -1289,7 +1289,7 @@ const ExportDataComponent = () => {
       ]);
 
       const csvContent = [csvHeaders, ...csvData]
-        .map(row => row.map(field => `"${field}"`).join(','))
+        .map((row: any[]) => row.map((field: any) => `"${field}"`).join(','))
         .join('\n');
 
       const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1349,7 +1349,7 @@ const ExportDataComponent = () => {
       <div className="bg-gray-50 rounded-md p-4">
         <h3 className="font-medium text-gray-800 mb-2">ข้อมูลที่จะ Export</h3>
         <p className="text-sm text-gray-600">
-          จำนวนรายการทั้งหมด: <span className="font-medium">{powerOutageData?.length || 0}</span> รายการ
+          จำนวนรายการทั้งหมด: <span className="font-medium">{powerOutageData?.pagination?.total || 0}</span> รายการ
         </p>
         <p className="text-sm text-gray-600 mt-1">
           ไฟล์จะรวมข้อมูล: วันที่ดับไฟ, เวลา, สาเหตุ, รายละเอียด, หม้อแปลง, จุดรวมงาน, สถานะ และอื่นๆ
