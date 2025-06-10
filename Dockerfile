@@ -1,20 +1,24 @@
-# 🚀 Ultra-Fast Multi-stage Dockerfile สำหรับ Next.js + Prisma
+# Ultra-Fast Multi-stage Dockerfile สำหรับ Next.js + Prisma
 # Stage 1: Base - ติดตั้ง dependencies พื้นฐาน
 FROM node:18-alpine AS base
 RUN apk add --no-cache libc6-compat openssl curl dumb-init
 WORKDIR /app
 
-# Stage 2: Dependencies - ติดตั้ง dependencies ครั้งเดียว (ทั้ง prod + dev)
+# Stage 2: Production Dependencies
 FROM base AS deps
 COPY package.json package-lock.json* ./
-# ติดตั้งทั้งหมดครั้งเดียว แล้วใช้ cache layer
-RUN npm ci --prefer-offline --no-audit --no-fund && npm cache clean --force
+RUN npm ci --only=production && npm cache clean --force
 
-# Stage 3: Builder - build application และ generate Prisma
+# Stage 3: Build Dependencies
+FROM base AS build-deps
+COPY package.json package-lock.json* ./
+RUN npm ci && npm cache clean --force
+
+# Stage 4: Builder - build application และ generate Prisma
 FROM base AS builder
-# คัดลอก dependencies จาก deps stage (ใช้ cache)
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/package*.json ./
+# คัดลอก build dependencies
+COPY --from=build-deps /app/node_modules ./node_modules
+COPY --from=build-deps /app/package*.json ./
 
 # คัดลอก source code ทั้งหมด
 COPY . .
@@ -24,12 +28,10 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# Generate Prisma client และ build Next.js standalone (รวมกัน)
-RUN npx prisma generate && \
-    npm run build && \
-    npm prune --production
+# Generate Prisma client และ build Next.js standalone
+RUN npx prisma generate && npm run build
 
-# Stage 4: Runner - Production image ที่เล็กที่สุด
+# Stage 5: Runner - Production image ที่เล็กที่สุด
 FROM base AS runner
 
 # สร้าง non-root user
@@ -41,8 +43,8 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
 
-# คัดลอกเฉพาะ production dependencies (pruned แล้ว)
-COPY --from=builder /app/node_modules ./node_modules
+# คัดลอกเฉพาะ production dependencies
+COPY --from=deps /app/node_modules ./node_modules
 
 # คัดลอกเฉพาะไฟล์ที่จำเป็นสำหรับ Next.js standalone
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./

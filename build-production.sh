@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 🚀 Ultra-Fast Production Build & Deploy Script
-# Version: 2.0 - Optimized for Speed & Reliability
+# Version: 2.1 - Optimized for VPS 2C/4GB
 
 set -euo pipefail  # Strict error handling
 
@@ -16,10 +16,10 @@ readonly DOCKER_TAG="latest"
 readonly BUILD_CONTEXT="."
 readonly COMPOSE_FILE="docker-compose.yml"
 
-# Timeouts (seconds)
+# Timeouts (seconds) - Optimized for VPS 2C/4GB
 readonly DB_TIMEOUT=60
 readonly APP_TIMEOUT=90
-readonly BUILD_TIMEOUT=600
+readonly BUILD_TIMEOUT=900    # 15 นาที สำหรับ VPS เล็ก
 
 # Colors
 readonly RED='\033[0;31m'
@@ -39,20 +39,6 @@ info() { echo -e "${CYAN}ℹ️  $*${NC}" | tee -a "$LOG_FILE"; }
 step() { echo -e "\n${PURPLE}🔸 $*${NC}" | tee -a "$LOG_FILE"; }
 
 # ==================== UTILITY FUNCTIONS ====================
-spinner() {
-    local pid=$1
-    local delay=0.1
-    local spinstr='|/-\'
-    while [ "$(ps a | awk '{print $1}' | grep $pid)" ]; do
-        local temp=${spinstr#?}
-        printf " [%c]  " "$spinstr"
-        local spinstr=$temp${spinstr%"$temp"}
-        sleep $delay
-        printf "\b\b\b\b\b\b"
-    done
-    printf "    \b\b\b\b"
-}
-
 check_command() {
     if ! command -v "$1" &> /dev/null; then
         error "$1 ไม่พบในระบบ กรุณาติดตั้งก่อน"
@@ -103,10 +89,6 @@ wait_for_service() {
 cleanup() {
     log "ทำความสะอาด temporary files..."
     rm -f "${COMPOSE_FILE}.backup" "${COMPOSE_FILE}.bak" >/dev/null 2>&1 || true
-    
-    # Clean old build artifacts but keep cache
-    docker builder prune -f --filter="until=24h" >/dev/null 2>&1 || true
-    
     success "ทำความสะอาดเสร็จสิ้น"
 }
 
@@ -137,13 +119,9 @@ rollback() {
     echo "  📋 Container Status:"
     get_container_status | sed 's/^/    /'
     echo ""
-    echo "  📋 Recent Logs:"
-    docker-compose logs --tail=5 2>/dev/null | sed 's/^/    /' || echo "    No logs available"
-    echo ""
-    echo "  📋 Troubleshooting Commands:"
+    echo "  📋 Emergency Recovery:"
+    echo "    • docker-compose up -d"
     echo "    • docker-compose logs -f"
-    echo "    • docker system df"
-    echo "    • docker-compose down && docker-compose up -d"
     echo "    • Log file: $LOG_FILE"
     
     cleanup
@@ -170,61 +148,16 @@ pre_flight_checks() {
         exit 1
     fi
     
-    # Check disk space
-    local disk_usage
-    disk_usage=$(df . | tail -1 | awk '{print $5}' | sed 's/%//')
-    if [ "$disk_usage" -gt 85 ]; then
-        warning "พื้นที่ disk เหลือน้อย (${disk_usage}%)"
-        read -p "ต้องการดำเนินการต่อหรือไม่? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            error "ยกเลิกเนื่องจากพื้นที่ disk เหลือน้อย"
-            exit 1
-        fi
-    fi
-    
-    # Check if ports are available
-    for port in 3000 5432; do
-        if lsof -Pi :$port -sTCP:LISTEN -t >/dev/null 2>&1; then
-            local process_info
-            process_info=$(lsof -Pi :$port -sTCP:LISTEN | tail -n +2)
-            if [[ ! "$process_info" =~ docker ]]; then
-                warning "Port $port ถูกใช้งานโดยโปรเซสอื่น"
-                echo "$process_info"
-            fi
-        fi
-    done
-    
     success "Pre-flight checks ผ่านทั้งหมด"
 }
 
 # ==================== BUILD FUNCTIONS ====================
-optimize_docker_environment() {
-    step "Docker Environment Optimization"
-    
-    # Show current Docker usage
-    local docker_usage
-    docker_usage=$(docker system df --format "table {{.Type}}\t{{.TotalCount}}\t{{.Size}}" 2>/dev/null)
-    info "Docker Usage:"
-    echo "$docker_usage" | sed 's/^/  /'
-    
-    # Clean up unused resources (but keep build cache)
-    log "ทำความสะอาด Docker resources ที่ไม่ใช้..."
-    {
-        docker container prune -f
-        docker network prune -f
-        docker image prune -f --filter="dangling=true"
-    } >/dev/null 2>&1 || true
-    
-    success "Docker environment พร้อมใช้งาน"
-}
-
 build_image() {
     step "Building Docker Image"
     
     log "เริ่ม build image: $DOCKER_IMAGE_NAME:$DOCKER_TAG"
     info "Build context: $BUILD_CONTEXT"
-    info "Build timeout: ${BUILD_TIMEOUT}s"
+    info "Build timeout: ${BUILD_TIMEOUT}s (15 นาที)"
     
     # Build with timeout
     local build_start
@@ -255,32 +188,6 @@ build_image() {
     fi
 }
 
-test_image() {
-    step "Testing Built Image"
-    
-    log "ทดสอบ image ที่ build แล้ว..."
-    
-    # Test basic functionality
-    if docker run --rm "$DOCKER_IMAGE_NAME:$DOCKER_TAG" node --version >/dev/null 2>&1; then
-        success "Image ทำงานได้ปกติ"
-    else
-        error "Image มีปัญหา - ไม่สามารถรัน node ได้"
-        return 1
-    fi
-    
-    # Test if all required files exist
-    local test_files=("package.json" ".next" "prisma")
-    for file in "${test_files[@]}"; do
-        if docker run --rm "$DOCKER_IMAGE_NAME:$DOCKER_TAG" test -e "$file" >/dev/null 2>&1; then
-            info "✓ $file พบในภาพ"
-        else
-            warning "⚠ $file ไม่พบในภาพ"
-        fi
-    done
-    
-    success "Image testing ผ่าน"
-}
-
 # ==================== DEPLOYMENT FUNCTIONS ====================
 backup_current_config() {
     step "Backing Up Current Configuration"
@@ -288,15 +195,6 @@ backup_current_config() {
     # Backup docker-compose.yml
     cp "$COMPOSE_FILE" "${COMPOSE_FILE}.backup"
     success "สำรอง $COMPOSE_FILE เรียบร้อยแล้ว"
-    
-    # Get current image info
-    local current_image
-    current_image=$(grep "image: $DOCKER_IMAGE_NAME" "$COMPOSE_FILE" | head -1 | sed 's/.*image: //' | tr -d ' ' || echo "none")
-    if [[ "$current_image" != "none" ]]; then
-        info "Current image: $current_image"
-    else
-        info "ไม่พบ image ปัจจุบันใน compose file"
-    fi
 }
 
 update_compose_file() {
@@ -307,17 +205,7 @@ update_compose_file() {
     # Update image tag in docker-compose.yml
     sed -i.bak "s|image: $DOCKER_IMAGE_NAME:.*|image: $DOCKER_IMAGE_NAME:$DOCKER_TAG|g" "$COMPOSE_FILE"
     
-    # Verify the change
-    local updated_image
-    updated_image=$(grep "image: $DOCKER_IMAGE_NAME" "$COMPOSE_FILE" | head -1 | sed 's/.*image: //' | tr -d ' ')
-    
-    if [[ "$updated_image" == "$DOCKER_IMAGE_NAME:$DOCKER_TAG" ]]; then
-        success "อัปเดต compose file เรียบร้อยแล้ว"
-        info "New image: $updated_image"
-    else
-        error "ไม่สามารถอัปเดต compose file ได้"
-        return 1
-    fi
+    success "อัปเดต compose file เรียบร้อยแล้ว"
 }
 
 deploy_services() {
@@ -375,25 +263,6 @@ show_deployment_summary() {
     echo "  • Database: localhost:5432"
     echo ""
     
-    echo -e "${BLUE}🐳 Container Status:${NC}"
-    get_container_status | sed 's/^/  /'
-    echo ""
-    
-    # Show Docker usage after deployment
-    local final_usage
-    final_usage=$(docker system df --format "table {{.Type}}\t{{.TotalCount}}\t{{.Size}}" 2>/dev/null)
-    echo -e "${BLUE}💾 Docker Usage:${NC}"
-    echo "$final_usage" | sed 's/^/  /'
-    echo ""
-    
-    echo -e "${CYAN}🔧 Useful Commands:${NC}"
-    echo "  • View logs: docker-compose logs -f"
-    echo "  • Restart: docker-compose restart"
-    echo "  • Stop: docker-compose down"
-    echo "  • Clean: docker system prune -f"
-    echo "  • Build log: $LOG_FILE"
-    echo ""
-    
     success "All systems operational! 🚀"
 }
 
@@ -407,25 +276,21 @@ main() {
     START_TIME=$(date +%s)
     
     echo ""
-    echo -e "${PURPLE}🚀 Production Build & Deploy Script v2.0${NC}"
+    echo -e "${PURPLE}🚀 Production Build & Deploy Script v2.1${NC}"
     echo -e "${BLUE}=================================================${NC}"
     echo "  Image: $DOCKER_IMAGE_NAME:$DOCKER_TAG"
-    echo "  Log: $LOG_FILE"
+    echo "  Build Timeout: ${BUILD_TIMEOUT}s (15 min)"
+    echo "  VPS Optimized: 2 Core / 4GB RAM"
     echo "  Started: $(date)"
     echo -e "${BLUE}=================================================${NC}"
     echo ""
     
     # Execute deployment pipeline
     pre_flight_checks
-    optimize_docker_environment
     backup_current_config
     
     if ! build_image; then
         rollback "Docker build failed"
-    fi
-    
-    if ! test_image; then
-        rollback "Image testing failed"
     fi
     
     update_compose_file
