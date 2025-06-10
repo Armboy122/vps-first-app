@@ -19,6 +19,10 @@ DOCKER_IMAGE_NAME="armboy/vps-first-app"
 DOCKER_TAG=$(date +%d%m%y)
 BUILD_CONTEXT="."
 
+# เก็บข้อมูลสำหรับ rollback
+BACKUP_COMPOSE="docker-compose.yml.backup"
+CURRENT_IMAGE=""
+
 echo -e "${BLUE}📋 การตั้งค่า Build:${NC}"
 echo "  - Image Name: $DOCKER_IMAGE_NAME"
 echo "  - Tag: $DOCKER_TAG"
@@ -50,6 +54,47 @@ fi
 
 show_success "Docker พร้อมใช้งาน"
 
+# ฟังก์ชัน rollback
+rollback_on_failure() {
+    show_error "เกิดข้อผิดพลาดในขั้นตอน: $1"
+    echo ""
+    
+    show_status "กำลังทำ rollback..."
+    
+    # คืนค่า docker-compose.yml เดิม
+    if [ -f "$BACKUP_COMPOSE" ]; then
+        mv "$BACKUP_COMPOSE" docker-compose.yml
+        show_success "คืนค่า docker-compose.yml เรียบร้อยแล้ว"
+    fi
+    
+    # เริ่มต้น services ด้วย image เดิม (ถ้ามี)
+    if [ ! -z "$CURRENT_IMAGE" ]; then
+        show_status "เริ่มต้น services ด้วย image เดิม..."
+        if docker-compose up -d; then
+            show_success "Rollback สำเร็จ - กลับไปใช้ image เดิม: $CURRENT_IMAGE"
+        else
+            show_error "ไม่สามารถ rollback ได้ กรุณาตรวจสอบ manually"
+        fi
+    else
+        show_warning "ไม่พบ image เดิม ไม่สามารถ rollback ได้"
+    fi
+    
+    # แสดงคำแนะนำ
+    echo ""
+    echo -e "${YELLOW}🔧 วิธีแก้ไขปัญหา:${NC}"
+    echo "  1. ตรวจสอบ logs: docker-compose logs -f"
+    echo "  2. ตรวจสอบ Dockerfile syntax"
+    echo "  3. เช็ค disk space: df -h และ docker system df"
+    echo "  4. ลอง build manual: docker build -t test ."
+    echo "  5. ตรวจสอบ network: ping docker.io"
+    echo ""
+    
+    exit 1
+}
+
+# Trap error และทำ rollback
+trap 'rollback_on_failure "Unexpected error"' ERR
+
 # 1. ล้างขยะ Docker ก่อน (เก็บ build cache และ volumes)
 show_status "ล้างขยะ Docker (เก็บ build cache และ volumes)..."
 DISK_BEFORE=$(docker system df --format "table {{.Type}}\t{{.TotalCount}}\t{{.Size}}")
@@ -61,7 +106,22 @@ echo ""
 docker system prune -f
 show_success "ล้างขยะเรียบร้อยแล้ว (เก็บ build cache และ volumes ไว้)"
 
-# 2. หยุดการทำงานของ containers ทั้งหมด
+# 2. สำรองข้อมูลเดิมสำหรับ rollback
+show_status "สำรองข้อมูลสำหรับ rollback..."
+
+# เก็บ image ปัจจุบัน
+CURRENT_IMAGE=$(grep "image: $DOCKER_IMAGE_NAME" docker-compose.yml | head -1 | sed 's/.*image: //' | tr -d ' ')
+if [ ! -z "$CURRENT_IMAGE" ]; then
+    show_success "เก็บ image เดิม: $CURRENT_IMAGE"
+else
+    show_warning "ไม่พบ image เดิมใน docker-compose.yml"
+fi
+
+# สำรอง docker-compose.yml
+cp docker-compose.yml "$BACKUP_COMPOSE"
+show_success "สำรอง docker-compose.yml เรียบร้อยแล้ว"
+
+# 3. หยุดการทำงานของ containers ทั้งหมด
 show_status "หยุดการทำงานของ Docker containers..."
 if docker-compose down --remove-orphans; then
     show_success "หยุด containers เรียบร้อยแล้ว"
@@ -69,21 +129,45 @@ else
     show_warning "ไม่มี containers ที่กำลังทำงาน"
 fi
 
-# 3. Build Docker image ใหม่ (ใช้ build cache เพื่อความเร็ว)
+# 4. Build Docker image ใหม่ (ใช้ build cache เพื่อความเร็ว)
 show_status "เริ่ม build Docker image สำหรับ production..."
 echo -e "${YELLOW}⏳ กำลัง build... (ใช้ cache เพื่อความเร็ว)${NC}"
 
-if docker build \
+# Pre-build validation
+show_status "ตรวจสอบไฟล์ก่อน build..."
+
+if [ ! -f "Dockerfile" ]; then
+    rollback_on_failure "ไม่พบ Dockerfile"
+fi
+
+if [ ! -f "package.json" ]; then
+    rollback_on_failure "ไม่พบ package.json"
+fi
+
+# Check disk space
+DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+if [ "$DISK_USAGE" -gt 85 ]; then
+    show_warning "พื้นที่ disk เหลือน้อย ($DISK_USAGE%)"
+    echo "ต้องการดำเนินการต่อหรือไม่? (y/N):"
+    read -r REPLY
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        rollback_on_failure "ยกเลิกเนื่องจากพื้นที่ disk เหลือน้อย"
+    fi
+fi
+
+show_success "ไฟล์พร้อมสำหรับ build"
+
+# Build with error handling
+if ! docker build \
     --platform linux/amd64 \
     -t "$DOCKER_IMAGE_NAME:$DOCKER_TAG" \
     -t "$DOCKER_IMAGE_NAME:latest" \
     --build-arg NODE_ENV=production \
     "$BUILD_CONTEXT"; then
-    show_success "Build สำเร็จ! Image: $DOCKER_IMAGE_NAME:$DOCKER_TAG"
-else
-    show_error "Build ล้มเหลว!"
-    exit 1
+    rollback_on_failure "Docker build ล้มเหลว"
 fi
+
+show_success "Build สำเร็จ! Image: $DOCKER_IMAGE_NAME:$DOCKER_TAG"
 
 # 4. แสดงขนาดของ image
 IMAGE_SIZE=$(docker images "$DOCKER_IMAGE_NAME:$DOCKER_TAG" --format "table {{.Size}}" | tail -n 1)
@@ -105,12 +189,11 @@ show_success "อัปเดต docker-compose.yml เรียบร้อย�
 
 # 7. เริ่มต้น services ใหม่
 show_status "เริ่มต้น production services..."
-if docker-compose up -d; then
-    show_success "Services เริ่มทำงานเรียบร้อยแล้ว"
-else
-    show_error "ไม่สามารถเริ่มต้น services ได้"
-    exit 1
+if ! docker-compose up -d; then
+    rollback_on_failure "ไม่สามารถเริ่มต้น services ได้"
 fi
+
+show_success "Services เริ่มทำงานเรียบร้อยแล้ว"
 
 # 8. รอให้ services พร้อมใช้งาน
 show_status "รอให้ services พร้อมใช้งาน..."
@@ -130,8 +213,7 @@ while [ $counter -lt $timeout ]; do
 done
 
 if [ $counter -ge $timeout ]; then
-    show_error "Database ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
-    exit 1
+    rollback_on_failure "Database ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
 fi
 
 # รอให้ Next.js app พร้อม
@@ -148,8 +230,7 @@ while [ $counter -lt $timeout ]; do
 done
 
 if [ $counter -ge $timeout ]; then
-    show_error "Next.js App ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
-    exit 1
+    rollback_on_failure "Next.js App ไม่พร้อมใช้งานภายในเวลาที่กำหนด"  
 fi
 
 # 9. แสดงสถานะสุดท้าย
@@ -215,6 +296,9 @@ else
     show_status "ข้ามการเคลียร์เพิ่มเติม - เก็บ cache ไว้เพื่อความเร็วในรอบถัดไป"
 fi
 
+# ล้าง backup files
+rm -f "$BACKUP_COMPOSE"
+
 echo ""
 echo -e "${BLUE}🔧 คำแนะนำ:${NC}"
 echo "  • ตรวจสอบ logs: docker-compose logs -f"
@@ -222,4 +306,6 @@ echo "  • หยุด services: docker-compose down"
 echo "  • เริ่มใหม่: docker-compose up -d"
 echo "  • เช็คพื้นที่ Docker: docker system df"
 echo "  • เคลียร์พื้นที่: docker system prune -af"
+echo "  • ดู image ทั้งหมด: docker images"
+echo "  • ลบ image เก่า: docker rmi <image_name>"
 echo "" 

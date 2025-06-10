@@ -32,6 +32,9 @@ ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
+# Generate Prisma client ก่อน build
+RUN npx prisma generate
+
 # Build แอปพลิเคชัน
 RUN yarn build
 
