@@ -5,8 +5,8 @@ import dayjs from "dayjs";
  */
 export const getDaysFromToday = (date: string): number | null => {
   if (!date) return null;
-  const selectedDate = dayjs(date);
-  const today = dayjs();
+  const selectedDate = dayjs(date).startOf('day');
+  const today = dayjs().startOf('day');
   return selectedDate.diff(today, 'day');
 };
 
@@ -14,7 +14,7 @@ export const getDaysFromToday = (date: string): number | null => {
  * คำนวณวันที่ขั้นต่ำที่สามารถเลือกได้ (มากกว่า 10 วันจากวันปัจจุบัน)
  */
 export const getMinSelectableDate = (): string => {
-  const today = dayjs();
+  const today = dayjs().startOf('day');
   const minDate = today.add(11, 'day');
   return minDate.format('YYYY-MM-DD');
 };
@@ -28,8 +28,8 @@ export const validateDateAndTime = (
   startTime?: string,
   endTime?: string
 ): { isValid: boolean; error?: string } => {
-  const selectedDate = dayjs(outageDate);
-  const minDate = dayjs(minSelectableDate);
+  const selectedDate = dayjs(outageDate).startOf('day');
+  const minDate = dayjs(minSelectableDate).startOf('day');
   
   // ตรวจสอบวันที่
   if (selectedDate.isBefore(minDate)) {
