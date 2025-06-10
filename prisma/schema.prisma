@@ -111,6 +111,10 @@ model PowerOutageRequest {
   omsUpdatedBy      User?       @relation("OMSUpdater", fields: [omsUpdatedById], references: [id])
 
   @@index([workCenterId, branchId, transformerNumber])
+  @@index([outageDate, omsStatus, statusRequest])
+  @@index([createdAt])
+  @@index([workCenterId, omsStatus])
+  @@index([statusRequest, omsStatus, outageDate])
 }
 
 // enum OMSStatus: กำหนดสถานะที่เป็นไปได้สำหรับ OMS (ระบบจัดการการดับไฟ)

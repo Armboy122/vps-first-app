@@ -35,6 +35,8 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: "postgresql://sa:1234@db:5432/PeaTransformer?schema=public"
+      NEXTAUTH_SECRET: "armoby122"
+      NEXT_PUBLIC_GENERATE_PDF: "https://script.google.com/macros/s/AKfycbzMlQp7F8jI9v3nN1PSkV_laJ8BY66vLAheexB120jO5o7n8O8X0otZlHGCenOESvN61Q/exec"
     networks:
       - mynetwork
     depends_on:
@@ -42,11 +44,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0"]
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
       interval: 30s
       timeout: 5s
-      retries: 3
-      start_period: 30s
+      retries: 5
+      start_period: 60s
     entrypoint: >
       sh -c "
       sleep 10;

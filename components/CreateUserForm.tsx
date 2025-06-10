@@ -2,14 +2,17 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createUser } from "../app/api/action/User";
-import { useState, useEffect } from "react";
+import { createUser, checkEmployeeIdExists } from "../app/api/action/User";
+import { useState, useEffect, useMemo } from "react";
 import { z } from "zod";
 import { CreateUserSchema } from "@/lib/validations/user";
 import {
   getWorkCenters,
   getBranches,
 } from "@/app/api/action/getWorkCentersAndBranches";
+import { useRouter } from "next/navigation";
+import { debounce } from "lodash";
+import { FormField, FormInput, FormSelect, FormButton } from "@/components/forms";
 
 type WorkCenter = {
   id: number;
@@ -19,16 +22,37 @@ type WorkCenter = {
 type Branch = {
   id: number;
   shortName: string;
+  fullName?: string;
   workCenterId: number;
 };
 
 type FormData = z.infer<typeof CreateUserSchema>;
+
+const ROLE_OPTIONS = [
+  { value: "USER", label: "พนักงานหม้อแปลง" },
+  { value: "SUPERVISOR", label: "พนักงาน EO" },
+  { value: "MANAGER", label: "ผู้บริหารจุดรวมงาน" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "VIEWER", label: "กฟต.3" }
+];
 
 export default function CreateUserForm() {
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [employeeIdCheck, setEmployeeIdCheck] = useState<{
+    isChecking: boolean;
+    exists: boolean;
+    message: string;
+    error?: boolean;
+  }>({
+    isChecking: false,
+    exists: false,
+    message: ""
+  });
+  const router = useRouter();
 
   const {
     control,
@@ -36,7 +60,7 @@ export default function CreateUserForm() {
     watch,
     setValue,
     reset,
-    formState: { errors },
+    formState: { errors, isValid },
   } = useForm<FormData>({
     resolver: zodResolver(CreateUserSchema),
     defaultValues: {
@@ -47,130 +71,362 @@ export default function CreateUserForm() {
       branchId: 0,
       role: "USER",
     },
+    mode: "onChange"
   });
 
   const selectedWorkCenter = watch("workCenterId");
+  const employeeId = watch("employeeId");
+
+  // Debounced function for employee ID check
+  const debouncedCheckEmployeeId = useMemo(
+    () => debounce(async (empId: string) => {
+      if (!empId || empId.length < 6) {
+        setEmployeeIdCheck({
+          isChecking: false,
+          exists: false,
+          message: ""
+        });
+        return;
+      }
+
+      setEmployeeIdCheck(prev => ({ ...prev, isChecking: true }));
+      
+      try {
+        const result = await checkEmployeeIdExists(empId);
+        setEmployeeIdCheck({
+          isChecking: false,
+          exists: result.exists,
+          message: result.message,
+          error: result.error
+        });
+      } catch (error) {
+        setEmployeeIdCheck({
+          isChecking: false,
+          exists: false,
+          message: "เกิดข้อผิดพลาดในการตรวจสอบ",
+          error: true
+        });
+      }
+    }, 800),
+    []
+  );
+
+  // Check employee ID when it changes
+  useEffect(() => {
+    if (employeeId) {
+      debouncedCheckEmployeeId(employeeId);
+    } else {
+      setEmployeeIdCheck({
+        isChecking: false,
+        exists: false,
+        message: ""
+      });
+    }
+    
+    return () => {
+      debouncedCheckEmployeeId.cancel();
+    };
+  }, [employeeId, debouncedCheckEmployeeId]);
+
+  // Auto-update password to match employee ID
+  useEffect(() => {
+    if (employeeId && employeeId.length >= 6) {
+      setValue("password", employeeId, { shouldValidate: true });
+    }
+  }, [employeeId, setValue]);
 
   useEffect(() => {
-    setIsLoading(true);
-    getWorkCenters()
-      .then(setWorkCenters)
-      .catch((err) => setError("Failed to load work centers"))
-      .finally(() => setIsLoading(false));
+    const loadWorkCenters = async () => {
+      setIsLoading(true);
+      try {
+        const centers = await getWorkCenters();
+        setWorkCenters(centers);
+      } catch (err) {
+        setError("ไม่สามารถโหลดข้อมูลจุดรวมงานได้");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadWorkCenters();
   }, []);
 
   useEffect(() => {
-    if (selectedWorkCenter) {
-      setIsLoading(true);
-      getBranches(Number(selectedWorkCenter))
-        .then(setBranches)
-        .catch((err) => setError("Failed to load branches"))
-        .finally(() => setIsLoading(false));
-    } else {
-      setBranches([]);
-    }
-    setValue("branchId", 0);
+    const loadBranches = async () => {
+      if (selectedWorkCenter) {
+        setIsLoading(true);
+        try {
+          const branchList = await getBranches(Number(selectedWorkCenter));
+          setBranches(branchList);
+        } catch (err) {
+          setError("ไม่สามารถโหลดข้อมูลสาขาได้");
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setBranches([]);
+      }
+      setValue("branchId", 0);
+    };
+    loadBranches();
   }, [selectedWorkCenter, setValue]);
 
   const onSubmit = async (data: FormData) => {
     setError("");
+    setIsSubmitting(true);
+    
     try {
-      setIsLoading(true);
       const result = await createUser(data);
       if (result.success) {
-        alert("User created successfully!");
-        reset();
+        alert(`✅ สร้างผู้ใช้เรียบร้อยแล้ว!\n\nชื่อ: ${data.fullName}\nรหัสพนักงาน: ${data.employeeId}\nรหัสผ่าน: ${data.password}\n\nกำลังกลับสู่หน้ารายชื่อผู้ใช้...`);
+        router.push("/admin");
       } else {
-        setError(`Failed to create user: ${result.error}`);
+        setError(`ไม่สามารถสร้างผู้ใช้ได้: ${result.error}`);
       }
     } catch (err) {
-      setError("An error occurred while creating the user");
+      setError("เกิดข้อผิดพลาดในการสร้างผู้ใช้");
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  if (isLoading) return <div className="text-center py-4">กำลังโหลด...</div>;
-  if (error) return <div className="text-red-500 text-center py-4">ข้อผิดพลาด: {error}</div>;
+  if (isLoading && workCenters.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+        <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
+      </div>
+    );
+  }
+
+  const workCenterOptions = workCenters.map(wc => ({ value: wc.id, label: wc.name }));
+  const branchOptions = branches.map(branch => ({ value: branch.id, label: `${branch.shortName} - ${branch.fullName}` }));
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-      {['employeeId', 'password', 'fullName'].map((fieldName) => (
-        <div key={fieldName}>
-          <label htmlFor={fieldName} className="block text-sm font-medium text-gray-700 mb-1">
-            {fieldName === 'employeeId' ? 'รหัสพนักงาน' : fieldName === 'password' ? 'รหัสผ่าน' : 'ชื่อ-นามสกุล'}
-          </label>
+    <div className="max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Employee ID Field */}
+        <FormField
+          label="รหัสพนักงาน"
+          name="employeeId"
+          error={errors.employeeId}
+          required
+          icon="🏷️"
+        >
           <Controller
-            name={fieldName as keyof FormData}
+            name="employeeId"
             control={control}
             render={({ field }) => (
-              <input
+              <FormInput
                 {...field}
-                type={fieldName === 'password' ? 'password' : 'text'}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                type="text"
+                placeholder="กรอกรหัสพนักงาน 6 ตัวอักษร"
+                maxLength={10}
+                error={errors.employeeId || (employeeIdCheck.exists ? { message: employeeIdCheck.message } as any : undefined)}
+                icon={
+                  employeeIdCheck.isChecking ? (
+                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                  ) : employeeIdCheck.exists ? (
+                    <span className="text-red-500 text-lg">❌</span>
+                  ) : employeeIdCheck.message && !employeeIdCheck.error ? (
+                    <span className="text-green-500 text-lg">✅</span>
+                  ) : null
+                }
               />
             )}
           />
-          {errors[fieldName as keyof FormData] && (
-            <p className="mt-1 text-sm text-red-600">{errors[fieldName as keyof FormData]?.message}</p>
+          
+          {/* Employee ID Check Status */}
+          {!errors.employeeId && employeeIdCheck.message && (
+            <p className={`text-sm flex items-center ${
+              employeeIdCheck.exists || employeeIdCheck.error ? 'text-red-600' : 'text-green-600'
+            }`}>
+              <span className="mr-1">
+                {employeeIdCheck.isChecking ? "🔍" : 
+                 employeeIdCheck.exists ? "❌" : 
+                 employeeIdCheck.error ? "⚠️" : "✅"}
+              </span>
+              {employeeIdCheck.isChecking ? "กำลังตรวจสอบ..." : employeeIdCheck.message}
+            </p>
           )}
-        </div>
-      ))}
+          
+          {/* Password Preview */}
+          {employeeId && employeeId.length >= 6 && !employeeIdCheck.exists && (
+            <p className="text-sm text-green-600 flex items-center">
+              <span className="mr-1">🔐</span>
+              รหัสผ่านจะถูกตั้งเป็น: {employeeId}
+            </p>
+          )}
+        </FormField>
 
-      {['workCenterId', 'branchId', 'role'].map((fieldName) => (
-        <div key={fieldName}>
-          <label htmlFor={fieldName} className="block text-sm font-medium text-gray-700 mb-1">
-            {fieldName === 'workCenterId' ? 'จุดรวมงาน' : fieldName === 'branchId' ? 'สาขา' : 'บทบาท'}
-          </label>
+        {/* Password Field */}
+        <FormField
+          label="รหัสผ่าน"
+          name="password"
+          error={errors.password}
+          required
+          icon="🔐"
+        >
           <Controller
-            name={fieldName as keyof FormData}
+            name="password"
             control={control}
             render={({ field }) => (
-              <select
+              <FormInput
                 {...field}
-                className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                disabled={fieldName === 'branchId' && !selectedWorkCenter}
-                onChange={(e) => {
-                  const value = fieldName === 'role' ? e.target.value : Number(e.target.value);
-                  field.onChange(value);
-                }}
-              >
-                <option value="">เลือก{fieldName === 'workCenterId' ? 'จุดรวมงาน' : fieldName === 'branchId' ? 'สาขา' : 'บทบาท'}</option>
-                {fieldName === 'workCenterId' && workCenters.map((wc) => (
-                  <option key={wc.id} value={wc.id}>{wc.name}</option>
-                ))}
-                {fieldName === 'branchId' && branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>{branch.shortName}</option>
-                ))}
-                {fieldName === 'role' && [
-                  {value: "USER", label: "พนักงานหม้อแปลง"},
-                  {value: "SUPERVISOR", label: "พนักงาน EO"},
-                  {value: "MANAGER", label: "ผู้บริหารจุดรวมงาน"},
-                  {value: "ADMIN", label: "Admin"},
-                  {value: "VIEWER", label: "กฟต.3"}
-                ].map((role) => (
-                  <option key={role.value} value={role.value}>{role.label}</option>
-                ))}
-              </select>
+                type="text"
+                placeholder="รหัสผ่านจะถูกตั้งเป็นรหัสพนักงานอัตโนมัติ"
+                readOnly={employeeId ? employeeId.length >= 6 : false}
+                error={errors.password}
+                icon={employeeId && employeeId.length >= 6 ? <span className="text-green-500">🔒</span> : undefined}
+              />
             )}
           />
-          {errors[fieldName as keyof FormData] && (
-            <p className="mt-1 text-sm text-red-600">{errors[fieldName as keyof FormData]?.message}</p>
-          )}
-        </div>
-      ))}
+          <p className="text-xs text-gray-500">
+            💡 รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ ผู้ใช้สามารถเปลี่ยนได้ภายหลัง
+          </p>
+        </FormField>
 
-      <div className="flex items-center justify-between">
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-          disabled={isLoading}
+        {/* Full Name Field */}
+        <FormField
+          label="ชื่อ-นามสกุล"
+          name="fullName"
+          error={errors.fullName}
+          required
+          icon="👤"
         >
-          {isLoading ? "กำลังสร้าง..." : "สร้างผู้ใช้"}
-        </button>
-      </div>
+          <Controller
+            name="fullName"
+            control={control}
+            render={({ field }) => (
+              <FormInput
+                {...field}
+                type="text"
+                placeholder="กรอกชื่อ-นามสกุล"
+                error={errors.fullName}
+              />
+            )}
+          />
+        </FormField>
 
-      {error && <div className="mt-4 text-red-500 text-center">{error}</div>}
-    </form>
+        {/* Work Center Field */}
+        <FormField
+          label="จุดรวมงาน"
+          name="workCenterId"
+          error={errors.workCenterId}
+          required
+          icon="🏢"
+        >
+          <Controller
+            name="workCenterId"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                {...field}
+                options={workCenterOptions}
+                placeholder="เลือกจุดรวมงาน"
+                error={errors.workCenterId}
+                onChange={(e) => field.onChange(Number(e.target.value))}
+              />
+            )}
+          />
+        </FormField>
+
+        {/* Branch Field */}
+        <FormField
+          label="สาขา"
+          name="branchId"
+          error={errors.branchId}
+          required
+          icon="🏪"
+        >
+          <Controller
+            name="branchId"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                {...field}
+                options={branchOptions}
+                placeholder={!selectedWorkCenter ? "กรุณาเลือกจุดรวมงานก่อน" : "เลือกสาขา"}
+                error={errors.branchId}
+                disabled={!selectedWorkCenter}
+                onChange={(e) => field.onChange(Number(e.target.value))}
+              />
+            )}
+          />
+          {isLoading && selectedWorkCenter && (
+            <p className="text-sm text-blue-600 flex items-center">
+              <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-2"></div>
+              กำลังโหลดรายชื่อสาขา...
+            </p>
+          )}
+        </FormField>
+
+        {/* Role Field */}
+        <FormField
+          label="บทบาท"
+          name="role"
+          error={errors.role}
+          required
+          icon="👑"
+        >
+          <Controller
+            name="role"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                {...field}
+                options={ROLE_OPTIONS}
+                placeholder="เลือกบทบาท"
+                error={errors.role}
+              />
+            )}
+          />
+        </FormField>
+
+        {/* Submit Button */}
+        <div className="pt-6">
+          <FormButton
+            type="submit"
+            variant="primary"
+            size="lg"
+            isLoading={isSubmitting || employeeIdCheck.isChecking}
+            disabled={!isValid || employeeIdCheck.exists}
+            className="w-full"
+            icon={
+              employeeIdCheck.isChecking ? undefined :
+              employeeIdCheck.exists ? "❌" :
+              isSubmitting ? undefined : "✨"
+            }
+          >
+            {employeeIdCheck.exists 
+              ? "รหัสพนักงานซ้ำ - ไม่สามารถสร้างได้"
+              : "สร้างผู้ใช้"
+            }
+          </FormButton>
+        </div>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <span className="text-red-500 mr-2">❌</span>
+              <span className="text-red-700 font-medium">เกิดข้อผิดพลาด:</span>
+            </div>
+            <p className="text-red-600 mt-1">{error}</p>
+          </div>
+        )}
+
+        {/* Info Panel */}
+        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h4 className="font-semibold text-blue-800 mb-2">📝 ข้อมูลสำคัญ:</h4>
+          <ul className="text-sm text-blue-700 space-y-1">
+            <li>• ระบบจะตรวจสอบรหัสพนักงานซ้ำอัตโนมัติขณะพิมพ์</li>
+            <li>• รหัสผ่านเริ่มต้นจะเป็นรหัสพนักงาน</li>
+            <li>• ผู้ใช้สามารถเปลี่ยนรหัสผ่านได้ภายหลัง</li>
+            <li>• ต้องเลือกจุดรวมงานก่อนจึงจะเลือกสาขาได้</li>
+            <li>• รหัสพนักงานใช้ได้: a-z, A-Z, 0-9 (6-10 ตัวอักษร)</li>
+          </ul>
+        </div>
+      </form>
+    </div>
   );
 }

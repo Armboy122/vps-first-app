@@ -1,9 +1,15 @@
 'use server'
 
 import prisma from '@/lib/prisma'
+import { getThailandDateAtMidnight, getDaysDifference, isDateInFuture } from '@/lib/date-utils'
+import { cacheOMSStatusByWorkCenter, cacheOMSStatusDistribution, clearOMSCache } from '@/lib/cache-utils'
 
-export async function getOMSStatusDistributionByWorkCenter() {
-  const today = new Date();
+/**
+ * ดึงข้อมูลการกระจายสถานะ OMS ตามศูนย์งาน พร้อมกับแคชข้อมูลไว้
+ * @returns ข้อมูลการกระจายสถานะ OMS ตามศูนย์งาน
+ */
+export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(async () => {
+  const today = getThailandDateAtMidnight();
   
   const workCenters = await prisma.workCenter.findMany({
     include: {
@@ -18,63 +24,50 @@ export async function getOMSStatusDistributionByWorkCenter() {
   });
 
   const result = workCenters.map(wc => {
-    // กรองเฉพาะรายการที่ statusRequest = CONFIRM และ omsStatus = PROCESSED
-    const processedRequests = wc.powerOutageRequests.filter(
+    // กรองเฉพาะรายการที่ statusRequest = CONFIRM และ omsStatus = NOT_ADDED
+    const pendingRequests = wc.powerOutageRequests.filter(
       r => r.statusRequest === 'CONFIRM' && r.omsStatus === 'NOT_ADDED'
     );
     
-    // แบ่งตามช่วงเวลา
-    const PROCESSED_OVER_15_DAYS = processedRequests.filter(r => {
-      const diffDays = Math.ceil(
-        (new Date(r.outageDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays > 15;
-    }).length;
-    
-    const PROCESSED_8_TO_15_DAYS = processedRequests.filter(r => {
-      const diffDays = Math.ceil(
-        (new Date(r.outageDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays > 7 && diffDays <= 15;
-    }).length;
-    
-    const PROCESSED_6_TO_7_DAYS = processedRequests.filter(r => {
-      const diffDays = Math.ceil(
-        (new Date(r.outageDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays > 5 && diffDays <= 7;
-    }).length;
-    
-    const PROCESSED_1_TO_5_DAYS = processedRequests.filter(r => {
-      const diffDays = Math.ceil(
-        (new Date(r.outageDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays >= 1 && diffDays <= 5;
-    }).length;
-    
-    const PROCESSED_OVERDUE = processedRequests.filter(r => {
-      const diffDays = Math.ceil(
-        (new Date(r.outageDate).getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
-      );
-      return diffDays <= 0;
-    }).length;
+    // ฟังก์ชันสำหรับคำนวณความแตกต่างของวันและจัดกลุ่มตามช่วงเวลา
+    const getRequestsInDateRange = (
+      minDays: number | null, 
+      maxDays: number | null
+    ): number => {
+      return pendingRequests.filter(r => {
+        const outageDate = new Date(r.outageDate);
+        const diffDays = getDaysDifference(outageDate, today);
+        
+        if (minDays !== null && maxDays !== null) {
+          return diffDays >= minDays && diffDays <= maxDays;
+        } else if (minDays !== null) {
+          return diffDays >= minDays;
+        } else if (maxDays !== null) {
+          return diffDays <= maxDays;
+        }
+        return false;
+      }).length;
+    };
 
     return {
       workCenterId: wc.id,
       workCenterName: wc.name,
-      PROCESSED_OVER_15_DAYS,
-      PROCESSED_8_TO_15_DAYS,
-      PROCESSED_6_TO_7_DAYS,
-      PROCESSED_1_TO_5_DAYS,
-      PROCESSED_OVERDUE
+      PROCESSED_OVER_15_DAYS: getRequestsInDateRange(16, null),
+      PROCESSED_8_TO_15_DAYS: getRequestsInDateRange(8, 15),
+      PROCESSED_6_TO_7_DAYS: getRequestsInDateRange(6, 7),
+      PROCESSED_1_TO_5_DAYS: getRequestsInDateRange(1, 5),
+      PROCESSED_OVERDUE: getRequestsInDateRange(null, 0)
     };
   });
-  console.log(result);
+
   return result;
-}
+});
 
-
-export async function getOMSStatusByWorkCenter() {
+/**
+ * ดึงข้อมูลสถานะ OMS ตามศูนย์งาน พร้อมกับแคชข้อมูลไว้
+ * @returns ข้อมูลสถานะ OMS ตามศูนย์งาน
+ */
+export const getOMSStatusByWorkCenter = cacheOMSStatusByWorkCenter(async () => {
   const omsStatusByWorkCenter = await prisma.workCenter.findMany({
     select: {
       name: true,
@@ -88,18 +81,18 @@ export async function getOMSStatusByWorkCenter() {
     }
   });
 
-  // สร้างวันที่ปัจจุบัน (เวลา 00:00:00)
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // สร้างวันที่ปัจจุบันในไทม์โซน UTC+7
+  const today = getThailandDateAtMidnight();
 
   return omsStatusByWorkCenter.map(wc => {
     // กรองเฉพาะรายการที่ statusRequest === 'CONFIRM'
     const confirmedRequests = wc.powerOutageRequests.filter(r => r.statusRequest === 'CONFIRM');
     
     // กรองเฉพาะ NOT_ADDED ที่ยังไม่เลยวันที่ปัจจุบัน
-    const pendingNotAdded = confirmedRequests.filter(r => 
-      r.omsStatus === 'NOT_ADDED' && new Date(r.outageDate) >= today
-    );
+    const pendingNotAdded = confirmedRequests.filter(r => {
+      const outageDate = new Date(r.outageDate);
+      return r.omsStatus === 'NOT_ADDED' && isDateInFuture(outageDate);
+    });
     
     return {
       name: wc.name,
@@ -112,5 +105,12 @@ export async function getOMSStatusByWorkCenter() {
       }))
     };
   });
+});
+
+/**
+ * ล้างแคชข้อมูล OMS
+ */
+export async function invalidateOMSCache() {
+  clearOMSCache();
 }
 

@@ -1,49 +1,79 @@
-# Base image with Node.js - explicitly set platform
-FROM --platform=linux/amd64 node:18-alpine
-
-# Set working directory
+# Multi-stage build สำหรับ production optimization
+# Stage 1: Dependencies
+FROM node:18-alpine AS deps
 WORKDIR /app
 
-# Install dependencies
+# ติดตั้ง tools ที่จำเป็นสำหรับ build
 RUN apk add --no-cache libc6-compat openssl
 
-# Set environment variables
-ENV PUPPETEER_SKIP_DOWNLOAD=true
-ENV NEXT_TELEMETRY_DISABLED=1
+# คัดลอกไฟล์ package เพื่อใช้ cache layer
+COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
 
-# Copy package files
-COPY package.json ./
-COPY package-lock.json* ./
-COPY yarn.lock* ./
+# ติดตั้ง dependencies ตาม package manager ที่มี
+RUN \
+  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
+  elif [ -f package-lock.json ]; then npm ci; \
+  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
+  else echo "Lockfile not found." && exit 1; \
+  fi
 
-# Install dependencies
-RUN npm ci --legacy-peer-deps || yarn install --frozen-lockfile
+# Stage 2: Builder
+FROM node:18-alpine AS builder
+WORKDIR /app
 
-# Copy the rest of the application
+# คัดลอก dependencies จาก stage แรก
+COPY --from=deps /app/node_modules ./node_modules
+
+# คัดลอกโค้ดทั้งหมด
 COPY . .
 
-# Build the application without running prisma generate (will be run at runtime)
-ENV PRISMA_SKIP_GENERATE=true
-RUN npm run build || yarn build
-
-# Set environment for production
+# ตั้งค่า environment variables สำหรับ build
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# Create a non-root user
+# Build แอปพลิเคชัน
+RUN yarn build
+
+# Stage 3: Runner (Production)
+FROM node:18-alpine AS runner
+WORKDIR /app
+
+# ติดตั้ง tools ที่จำเป็นสำหรับ production
+RUN apk add --no-cache libc6-compat openssl curl
+
+# สร้าง user ที่ไม่ใช่ root
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser --system --uid 1001 nextjs && \
-    chown -R nextjs:nodejs /app
+    adduser --system --uid 1001 nextjs
 
-# Switch to non-root user
+# ตั้งค่า environment variables
+ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+
+# คัดลอกไฟล์ที่จำเป็น
+COPY --from=builder /app/public ./public
+COPY --from=builder /app/package.json ./package.json
+
+# คัดลอก .next/standalone ถ้ามี (Next.js standalone output)
+COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
+COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+
+# คัดลอก Prisma
+COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
+# เปลี่ยนเป็น non-root user
 USER nextjs
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 0
-
-# Expose port
+# เปิด Port
 EXPOSE 3000
+ENV PORT=3000
 
-# Start the application
-CMD ["npm", "start"]
+# Healthcheck
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:3000/api/health || exit 1
+
+# คำสั่งเริ่มทำงาน
+CMD ["node", "server.js"]

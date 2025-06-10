@@ -1,7 +1,8 @@
 "use client";
 import { OMSStatus, Request } from "@prisma/client";
 import { ActionButtons } from "./ActionButtons";
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
+import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -45,91 +46,132 @@ const truncateText = (text: string | null, maxLength: number = 20) => {
   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 };
 
-// คอมโพเนนต์สำหรับแสดงข้อความพร้อม tooltip เมื่อข้อความยาวเกินไป
-const TextWithTooltip: React.FC<{ text: string | null; maxLength?: number }> = ({
-  text,
-  maxLength = 20,
-}) => {
+// Fixed TextWithTooltip with mouse position tracking
+const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; maxLength?: number }) => {
   const [showTooltip, setShowTooltip] = useState(false);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
   if (!text) return <span className="text-gray-400">-</span>;
   
   const shouldTruncate = text.length > maxLength;
-  const displayText = shouldTruncate ? `${text.substring(0, maxLength)}...` : text;
+  
+  if (!shouldTruncate) {
+    return <span>{text}</span>;
+  }
+  
+  const displayText = `${text.substring(0, maxLength)}...`;
+  
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+    setShowTooltip(true);
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    setMousePos({ x: e.clientX, y: e.clientY });
+  };
   
   return (
-    <div className="relative group">
+    <div className="relative inline-block w-full">
       <span 
-        className={`${shouldTruncate ? "cursor-pointer" : ""} transition-colors duration-200 group-hover:text-blue-600`}
-        onMouseEnter={() => shouldTruncate && setShowTooltip(true)}
+        className="cursor-help border-b border-dotted border-gray-400 transition-colors duration-200 hover:text-pea-600"
+        onMouseEnter={handleMouseEnter}
+        onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowTooltip(false)}
+        title={text} // Fallback native tooltip
       >
         {displayText}
       </span>
       {showTooltip && (
-        <div className="absolute z-10 p-2 bg-gray-800 text-white text-sm rounded-md shadow-lg whitespace-normal max-w-xs left-0 -mt-1 transform -translate-y-full animate-fadeIn">
-          <div className="relative">
-            <div className="absolute w-3 h-3 bg-gray-800 transform rotate-45 -bottom-1 left-3"></div>
-            {text}
-          </div>
+        <div 
+          className="fixed z-[9999] bg-gray-900 text-white text-xs px-3 py-2 rounded-md shadow-lg pointer-events-none max-w-sm break-words"
+          style={{
+            left: `${mousePos.x + 10}px`,
+            top: `${mousePos.y - 40}px`,
+          }}
+        >
+          {text}
         </div>
       )}
     </div>
   );
+});
+
+TextWithTooltip.displayName = 'TextWithTooltip';
+
+// Pre-calculate commonly used styles
+const getRowClassName = (omsStatus: string, statusRequest: string, outageDate: Date) => {
+  const today = getThailandDateAtMidnight();
+  const diffTime = outageDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  let className = "border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150";
+  
+  if (omsStatus === "PROCESSED" && statusRequest === "CONFIRM") {
+    className += " bg-gray-100";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 5 && diffDays >= 0) {
+    className += " bg-red-50 border-red-200";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 7 && diffDays > 0) {
+    className += " bg-yellow-50 border-yellow-200";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 15 && diffDays > 0) {
+    className += " bg-green-50 border-green-200";
+  }
+  
+  return className;
 };
 
-// คอมโพเนนต์สำหรับแสดงสถานะด้วยสีและรูปแบบที่สวยงาม
-const StatusBadge: React.FC<{ status: string; type: "oms" | "request" }> = ({ status, type }) => {
-  let bgColor = "bg-gray-200";
-  let textColor = "text-gray-800";
+// Optimized StatusBadge with PEA theme
+const StatusBadge = memo(({ status, type }: { status: string; type: "oms" | "request" }) => {
+  let colorClasses = "";
   let label = status;
   
   if (type === "oms") {
     switch (status) {
       case "NOT_ADDED":
-        bgColor = "bg-yellow-100";
-        textColor = "text-yellow-800";
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         label = "ยังไม่ดำเนินการ";
         break;
       case "PROCESSED":
-        bgColor = "bg-green-100";
-        textColor = "text-green-800";
+        colorClasses = "bg-pea-100 text-pea-800 border border-pea-300";
         label = "ดำเนินการแล้ว";
         break;
       case "CANCELLED":
-        bgColor = "bg-red-100";
-        textColor = "text-red-800";
+        colorClasses = "bg-red-100 text-red-700 border border-red-300";
         label = "ยกเลิก";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         break;
     }
   } else {
     switch (status) {
       case "CONFIRM":
-        bgColor = "bg-blue-100";
-        textColor = "text-blue-800";
+        colorClasses = "bg-emerald-100 text-emerald-800 border border-emerald-300";
         label = "อนุมัติดับไฟ";
         break;
       case "NOT":
-        bgColor = "bg-orange-100";
-        textColor = "text-orange-800";
+        colorClasses = "bg-amber-100 text-amber-800 border border-amber-300";
         label = "รออนุมัติ";
         break;
       case "CANCELLED":
-        bgColor = "bg-red-100";
-        textColor = "text-red-800";
+        colorClasses = "bg-red-100 text-red-700 border border-red-300";
         label = "ยกเลิก";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         break;
     }
   }
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-200 ${colorClasses}`}>
       {label}
     </span>
   );
-};
+});
 
-export const TableRow: React.FC<TableRowProps> = ({
+StatusBadge.displayName = 'StatusBadge';
+
+export const TableRow = memo(({
   request,
   isAdmin,
   isUser,
@@ -142,24 +184,24 @@ export const TableRow: React.FC<TableRowProps> = ({
   handleDelete,
   handleEditOmsStatus,
   handleEditStatusRequest,
-}) => {
-  const handleSelectRequest = (id: number) => {
+}: TableRowProps) => {
+  const handleSelectRequest = useCallback((id: number) => {
     setSelectedRequests((prev) =>
       prev.includes(id) ? prev.filter((reqId) => reqId !== id) : [...prev, id]
     );
-  };
+  }, [setSelectedRequests]);
 
-  const getRowBackgroundColor = (
+  const getRowBackgroundColor = useCallback((
     outageDate: Date,
     omsStatus: string,
     statusRequest: string
   ) => {
-    const today = new Date();
+    const today = getThailandDateAtMidnight();
     const diffDays = Math.ceil(
       (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
+    if (statusRequest === "NOT" && diffDays < 10 && diffDays > 0) {
       return "bg-red-400";
     }
     if (statusRequest === "CONFIRM" && omsStatus === "PROCESSED") {
@@ -180,7 +222,7 @@ export const TableRow: React.FC<TableRowProps> = ({
     }
 
     return "border-l-4 border-transparent";
-  };
+  }, []);
 
   const bgColor = getRowBackgroundColor(
     request.outageDate,
@@ -188,15 +230,15 @@ export const TableRow: React.FC<TableRowProps> = ({
     request.statusRequest
   );
 
-  // กำหนดคลาสสำหรับ cell ที่มีข้อมูลยาว
-  const cellClass = "py-3 px-2 overflow-hidden align-middle";
+  // กำหนดคลาสสำหรับ cell ที่มีข้อมูลยาว - PEA Theme
+  const cellClass = "py-4 px-3 overflow-hidden align-middle";
   const fixedWidthCell = "min-w-[120px] max-w-[180px]";
-  const selectClass = "border border-gray-300 rounded-md px-2 py-1 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-  const transformerClass = "font-medium text-gray-900";
+  const selectClass = "border border-pea-300 rounded-md px-2 py-1 w-full text-sm focus:outline-none focus:ring-2 focus:ring-pea-500 focus:border-pea-500 transition-all duration-200";
+  const transformerClass = "font-semibold text-pea-800";
   const dateClass = "font-medium text-gray-700 whitespace-nowrap";
 
   // ฟังก์ชันสำหรับจัดรูปแบบวันที่แบบไทย
-  const formatThaiDate = (date: Date) => {
+  const formatThaiDate = useCallback((date: Date) => {
     try {
       return date.toLocaleDateString("th-TH", {
         year: 'numeric',
@@ -207,24 +249,34 @@ export const TableRow: React.FC<TableRowProps> = ({
       console.error("Error formatting date:", error);
       return "ไม่พบข้อมูล";
     }
-  };
+  }, []);
+
+  const handleOmsStatusChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleEditOmsStatus(request.id, e.target.value as OMSStatus);
+  }, [handleEditOmsStatus, request.id]);
+
+  const handleStatusRequestChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    handleEditStatusRequest(request.id, e.target.value as Request);
+  }, [handleEditStatusRequest, request.id]);
 
   return (
-    <tr className={`hover:bg-gray-50 transition-colors ${bgColor} border-b border-gray-200`}>
-      <td className="py-3 px-2 align-middle">
-        <input
-          type="checkbox"
-          checked={selectedRequests.includes(request.id)}
-          onChange={() => handleSelectRequest(request.id)}
-          disabled={
-            !(
-              isAdmin ||
-              (isUser && request.workCenter.id === userWorkCenterId)
-            )
-          }
-          className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-        />
-      </td>
+    <tr className={`hover:shadow-md transition-all duration-200 ${bgColor}`}>
+      {!isViewer && (
+        <td className="py-3 px-2 align-middle">
+          <input
+            type="checkbox"
+            checked={selectedRequests.includes(request.id)}
+            onChange={() => handleSelectRequest(request.id)}
+            disabled={
+              !(
+                isAdmin ||
+                (isUser && request.workCenter.id === userWorkCenterId)
+              )
+            }
+            className="form-checkbox h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+          />
+        </td>
+      )}
       <td className={`${cellClass} ${dateClass}`}>
         {formatThaiDate(request.outageDate)}
       </td>
@@ -261,12 +313,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         {request.omsStatus === "NOT_ADDED" ? (
           <select
             value={request.omsStatus}
-            onChange={(e) =>
-              handleEditOmsStatus(
-                request.id,
-                e.target.value as OMSStatus
-              )
-            }
+            onChange={handleOmsStatusChange}
             disabled={!isAdmin && !isSupervisor}
             className={selectClass}
           >
@@ -282,12 +329,7 @@ export const TableRow: React.FC<TableRowProps> = ({
         {request.statusRequest === "NOT" ? (
           <select
             value={request.statusRequest}
-            onChange={(e) =>
-              handleEditStatusRequest(
-                request.id,
-                e.target.value as Request
-              )
-            }
+            onChange={handleStatusRequestChange}
             disabled={
               !(
                 isAdmin ||
@@ -307,21 +349,25 @@ export const TableRow: React.FC<TableRowProps> = ({
       <td className={`${cellClass} ${fixedWidthCell}`}>
         <TextWithTooltip text={request.createdBy.fullName} maxLength={15} />
       </td>
-      <td className={cellClass}>
-        <div className="flex space-x-1 justify-center">
-          <ActionButtons
-            request={request}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            isAdmin={isAdmin}
-            isUser={isUser}
-            userWorkCenterId={userWorkCenterId}
-          />
-        </div>
-      </td>
+      {!isViewer && !isSupervisor && (
+        <td className={cellClass}>
+          <div className="flex space-x-1 justify-center">
+            <ActionButtons
+              request={request}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isAdmin={isAdmin}
+              isUser={isUser}
+              userWorkCenterId={userWorkCenterId}
+            />
+          </div>
+        </td>
+      )}
       <td className={`${cellClass} ${dateClass}`}>
         {formatThaiDate(request.createdAt)}
       </td>
     </tr>
   );
-}; 
+});
+
+TableRow.displayName = 'TableRow'; 

@@ -50,17 +50,17 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
     <div className="flex space-x-2">
       <button
         onClick={() => onEdit(request)}
-        className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 text-sm transition duration-300 flex items-center"
+        className="bg-blue-500 text-white px-3 py-1.5 rounded-md hover:bg-blue-600 text-sm transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
         aria-label="แก้ไข"
       >
-        <FontAwesomeIcon icon={faEdit} />
+        <FontAwesomeIcon icon={faEdit} className="w-3 h-3" />
       </button>
       <button
         onClick={() => onDelete(request.id)}
-        className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 text-sm transition duration-300 flex items-center"
+        className="bg-red-500 text-white px-3 py-1.5 rounded-md hover:bg-red-600 text-sm transition-all duration-200 flex items-center shadow-sm hover:shadow-md"
         aria-label="ลบ"
       >
-        <FontAwesomeIcon icon={faTrash} />
+        <FontAwesomeIcon icon={faTrash} className="w-3 h-3" />
       </button>
     </div>
   );

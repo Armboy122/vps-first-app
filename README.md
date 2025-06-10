@@ -34,3 +34,32 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+## การจัดการไทม์โซน (Timezone Management)
+
+ระบบนี้ได้รับการออกแบบให้รองรับการทำงานกับไทม์โซน UTC+7 (ประเทศไทย) อย่างถูกต้อง โดยใช้ไลบรารี utility ที่สร้างขึ้นมาเฉพาะสำหรับการจัดการวันและเวลา:
+
+- `lib/date-utils.ts` - ชุดฟังก์ชันสำหรับจัดการวันและเวลาในไทม์โซนประเทศไทย
+
+ฟังก์ชันหลักที่ใช้ในการจัดการไทม์โซน:
+- `getThailandDate()` - สร้างวันที่ปัจจุบันในไทม์โซน UTC+7
+- `getThailandDateAtMidnight()` - สร้างวันที่ปัจจุบันเวลา 00:00:00 ในไทม์โซน UTC+7
+- `createThailandDateTime()` - สร้างวันที่และเวลาตามที่กำหนดในไทม์โซน UTC+7
+- `isDateInFuture()` - ตรวจสอบว่าวันที่อยู่ในอนาคตหรือไม่
+- `getDaysDifference()` - คำนวณความแตกต่างของวันระหว่างสองวันที่
+
+## การแคชข้อมูล (Data Caching)
+
+ระบบมีการใช้การแคชข้อมูลเพื่อลดภาระของฐานข้อมูลและเพิ่มประสิทธิภาพ โดยใช้คุณสมบัติ `unstable_cache` ของ Next.js โดยมีไลบรารี utility สำหรับการจัดการแคช:
+
+- `lib/cache-utils.ts` - ชุดฟังก์ชันสำหรับจัดการการแคชข้อมูล
+
+ฟังก์ชันหลักสำหรับการแคชข้อมูล:
+- `cacheData()` - ฟังก์ชันพื้นฐานสำหรับแคชข้อมูลทั่วไป
+- `cacheOMSStatusByWorkCenter()` - แคชข้อมูลสถานะ OMS ตามศูนย์งาน
+- `cacheOMSStatusDistribution()` - แคชข้อมูลการกระจายสถานะ OMS
+- `clearCacheByPath()` - ล้างแคชตามพาธ
+- `clearCacheByTag()` - ล้างแคชตามแท็ก
+- `clearOMSCache()` - ล้างแคชข้อมูล OMS ทั้งหมด
+
+การแคชข้อมูลจะถูกล้างโดยอัตโนมัติเมื่อมีการสร้าง แก้ไข หรือลบข้อมูลที่เกี่ยวข้อง เพื่อให้ข้อมูลที่แสดงเป็นข้อมูลล่าสุดเสมอ
