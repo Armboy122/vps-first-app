@@ -45,11 +45,11 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health',{timeout:2000}).then(r=>r.ok||process.exit(1)).catch(()=>process.exit(1))"]
-      interval: 15s
-      timeout: 3s
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health',{timeout:3000}).then(r=>r.ok||process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 20s
+      timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
     # 🚀 เร็วมาก! เฉพาะ Prisma migrate ก่อน start (Prisma generate ทำใน build time แล้ว)
     entrypoint: >
       sh -c "

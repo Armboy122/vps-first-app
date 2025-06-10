@@ -61,9 +61,9 @@ USER nextjs
 # เปิด port
 EXPOSE 3000
 
-# Health check (เร็วขึ้น)
-HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
-    CMD node -e "fetch('http://localhost:3000/api/health',{timeout:2000}).then(r=>r.ok||process.exit(1)).catch(()=>process.exit(1))"
+# Health check (ใช้ built-in Node.js fetch แทน curl)
+HEALTHCHECK --interval=20s --timeout=5s --start-period=15s --retries=3 \
+    CMD node -e "fetch('http://localhost:3000/api/health',{timeout:3000}).then(r=>r.ok||process.exit(1)).catch(()=>process.exit(1))"
 
 # ใช้ dumb-init สำหรับ proper signal handling และ Next.js standalone
 CMD ["dumb-init", "node", "server.js"]
