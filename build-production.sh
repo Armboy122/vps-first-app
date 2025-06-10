@@ -203,34 +203,67 @@ echo -e "${YELLOW}⏳ กำลังตรวจสอบ health check...${NC}"
 timeout=60
 counter=0
 while [ $counter -lt $timeout ]; do
-    if docker-compose ps db | grep -q "healthy"; then
+    # เช็ค health status ที่แม่นยำกว่า
+    DB_STATUS=$(docker-compose ps db --format "table {{.State}}" | tail -n 1)
+    if [[ "$DB_STATUS" == *"healthy"* ]] || docker exec db pg_isready -U sa -d PeaTransformer >/dev/null 2>&1; then
         show_success "Database พร้อมใช้งาน"
         break
     fi
+    
+    # แสดงสถานะ database ทุก 15 วินาที
+    if [ $((counter % 15)) -eq 0 ] && [ $counter -gt 0 ]; then
+        echo ""
+        show_status "กำลังรอ Database... (${counter}/${timeout}s)"
+        show_status "สถานะ DB: $DB_STATUS"
+        echo -n "รอต่อ: "
+    fi
+    
     sleep 2
     counter=$((counter + 2))
     echo -n "."
 done
 
 if [ $counter -ge $timeout ]; then
-    rollback_on_failure "Database ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
+    echo ""
+    show_error "Database ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
+    show_status "Debug - สถานะ Database ปัจจุบัน:"
+    docker-compose ps db
+    show_status "Debug - Database logs:"
+    docker-compose logs --tail=10 db
+    rollback_on_failure "Database timeout"
 fi
 
 # รอให้ Next.js app พร้อม
 timeout=120
 counter=0
+echo ""
 while [ $counter -lt $timeout ]; do
-    if curl -f http://localhost:3000 >/dev/null 2>&1; then
+    # เช็ค health check endpoint ที่ถูกต้อง
+    if curl -f http://localhost:3000/api/health >/dev/null 2>&1; then
         show_success "Next.js App พร้อมใช้งาน"
         break
     fi
+    
+    # แสดงสถานะ container ทุก 30 วินาที
+    if [ $((counter % 30)) -eq 0 ] && [ $counter -gt 0 ]; then
+        echo ""
+        show_status "กำลังรอ Next.js App... (${counter}/${timeout}s)"
+        show_status "ตรวจสอบสถานะ container:"
+        docker-compose ps nextjs-app
+        echo -n "รอต่อ: "
+    fi
+    
     sleep 3
     counter=$((counter + 3))
     echo -n "."
 done
 
 if [ $counter -ge $timeout ]; then
-    rollback_on_failure "Next.js App ไม่พร้อมใช้งานภายในเวลาที่กำหนด"  
+    echo ""
+    show_error "Next.js App ไม่พร้อมใช้งานภายในเวลาที่กำหนด"
+    show_status "ตรวจสอบ logs สำหรับ debug:"
+    docker-compose logs --tail=20 nextjs-app
+    rollback_on_failure "Next.js App timeout"
 fi
 
 # 9. แสดงสถานะสุดท้าย

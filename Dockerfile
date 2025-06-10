@@ -1,82 +1,91 @@
-# Multi-stage build สำหรับ production optimization
-# Stage 1: Dependencies
-FROM node:18-alpine AS deps
+# Multi-stage build optimized สำหรับ pnpm และความเร็ว
+# Stage 1: Base - เตรียม pnpm และ tools พื้นฐาน
+FROM node:18-alpine AS base
+
+# เปิดใช้งาน pnpm ผ่าน corepack (built-in ใน Node.js 16.13+)
+RUN corepack enable pnpm
+
+# ติดตั้ง tools ที่จำเป็น
+RUN apk add --no-cache libc6-compat openssl curl
+
+# Stage 2: Dependencies - ติดตั้ง packages
+FROM base AS deps
 WORKDIR /app
 
-# ติดตั้ง tools ที่จำเป็นสำหรับ build
-RUN apk add --no-cache libc6-compat openssl
+# คัดลอก package.json
+COPY package.json ./
 
-# คัดลอกไฟล์ package เพื่อใช้ cache layer
-COPY package.json yarn.lock* package-lock.json* pnpm-lock.yaml* ./
+# สร้าง pnpm-lock.yaml และติดตั้ง dependencies
+RUN pnpm install --frozen-lockfile || pnpm install
 
-# ติดตั้ง dependencies ตาม package manager ที่มี
-RUN \
-  if [ -f yarn.lock ]; then yarn --frozen-lockfile; \
-  elif [ -f package-lock.json ]; then npm ci; \
-  elif [ -f pnpm-lock.yaml ]; then yarn global add pnpm && pnpm i --frozen-lockfile; \
-  else echo "Lockfile not found." && exit 1; \
-  fi
-
-# Stage 2: Builder
-FROM node:18-alpine AS builder
+# Stage 3: Builder - build application
+FROM base AS builder
 WORKDIR /app
 
-# คัดลอก dependencies จาก stage แรก
+# คัดลอก dependencies จาก deps stage
 COPY --from=deps /app/node_modules ./node_modules
+COPY --from=deps /app/pnpm-lock.yaml* ./
 
-# คัดลอกโค้ดทั้งหมด
+# คัดลอก source code
 COPY . .
 
-# ตั้งค่า environment variables สำหรับ build
+# ตั้งค่า environment สำหรับ build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# Generate Prisma client ก่อน build
-RUN npx prisma generate
+# Generate Prisma client
+RUN pnpm dlx prisma generate
 
-# Build แอปพลิเคชัน
-RUN yarn build
+# Build application
+RUN pnpm build
 
-# Stage 3: Runner (Production)
-FROM node:18-alpine AS runner
+# Stage 4: Production deps - ติดตั้ง production dependencies เท่านั้น
+FROM base AS prod-deps
 WORKDIR /app
 
-# ติดตั้ง tools ที่จำเป็นสำหรับ production
-RUN apk add --no-cache libc6-compat openssl curl
+# คัดลอก package files
+COPY package.json ./
+COPY --from=deps /app/pnpm-lock.yaml* ./
+
+# ติดตั้งเฉพาะ production dependencies
+RUN pnpm install --frozen-lockfile --prod || pnpm install --prod
+
+# Stage 5: Runner - final production image
+FROM base AS runner
+WORKDIR /app
 
 # สร้าง user ที่ไม่ใช่ root
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# ตั้งค่า environment variables
+# ตั้งค่า environment
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PORT=3000
 
 # คัดลอกไฟล์ที่จำเป็น
-COPY --from=builder /app/public ./public
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./package.json
 
-# คัดลอก .next/standalone ถ้ามี (Next.js standalone output)
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+# คัดลอก built application
+COPY --from=builder --chown=nextjs:nodejs /app/.next ./.next
+COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
-# คัดลอก Prisma
+# คัดลอก Prisma files
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # เปลี่ยนเป็น non-root user
 USER nextjs
 
-# เปิด Port
+# เปิด port
 EXPOSE 3000
-ENV PORT=3000
 
-# Healthcheck
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+# Healthcheck - optimized
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -f http://localhost:3000/api/health || exit 1
 
-# คำสั่งเริ่มทำงาน
-CMD ["node", "server.js"]
+# Start application
+CMD ["pnpm", "start"]
