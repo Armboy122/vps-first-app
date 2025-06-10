@@ -1,11 +1,13 @@
-# Dependencies
+# Dependencies (ยกเว้น production dependencies ใน final stage)
 node_modules
 .pnp
 .pnp.js
 .yarn/install-state.gz
 
-# Build outputs
+# Build outputs (ยกเว้น .next/standalone)
 .next
+!.next/standalone
+!.next/static
 out
 build
 dist
@@ -43,8 +45,25 @@ yarn-error.log*
 ehthumbs.db
 Thumbs.db
 
+# Development และ testing files
+*.test.js
+*.spec.js
+__tests__
+coverage
+.nyc_output
+
+# Scripts
+*.sh
+!docker-entrypoint.sh
+
 # Editor directories and files
 .idea
 .vscode
 *.swp
 *~
+
+# Cache directories  
+.cache
+.parcel-cache
+.npm
+.yarn-cache
