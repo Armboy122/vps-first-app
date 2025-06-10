@@ -1,18 +1,22 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import {
   PowerOutageRequestSchema,
   PowerOutageRequestInput,
   PowerOutageRequestUpdateSchema,
 } from "@/lib/validations/powerOutageRequest";
 import { getServerSession } from "next-auth";
-
 import { OMSStatus , Request } from '@prisma/client';
 import { authOptions } from "@/authOption";
-import { createThailandDateTime, getThailandDate, getThailandDateAtMidnight } from "@/lib/date-utils";
+import { createThailandDateTime } from "@/lib/date-utils";
 import { clearOMSCache } from "@/lib/cache-utils";
 import { z } from "zod";
+import { 
+  PowerOutageRequestService, 
+  TransformerService, 
+  UserService 
+} from "@/lib/services";
+import prisma from "@/lib/prisma";
 
 // ฟังก์ชันสำหรับ getCurrentUser
 async function getCurrentUser() {
@@ -21,11 +25,7 @@ async function getCurrentUser() {
     throw new Error("Unauthorized: No session found");
   }
 
-  const employeeId = session.user.employeeId;
-  const user = await prisma.user.findUnique({
-    where: { employeeId: employeeId },
-  });
-
+  const user = await UserService.getUserByEmployeeId(session.user.employeeId);
   if (!user) {
     throw new Error("User not found");
   }
@@ -37,50 +37,31 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   const currentUser = await getCurrentUser();
 
   try {
-    console.log("Creating power outage request with data:", data);
     const validatedData = PowerOutageRequestSchema.parse(data);
 
-    // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
+    // แปลงเวลาเป็น timezone ของไทย
     const outageDate = new Date(validatedData.outageDate);
     const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
     const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
 
-    console.log("Timezone check:");
-    console.log("- outageDate:", outageDate.toISOString(), "(UTC)");
-    console.log("- startTime:", startTime.toISOString(), "(should be UTC+7)");
-    console.log("- endTime:", endTime.toISOString(), "(should be UTC+7)");
-    console.log("- startTime local:", startTime.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }));
-    console.log("- endTime local:", endTime.toLocaleString('th-TH', { timeZone: 'Asia/Bangkok' }));
-
-    // ตรวจสอบว่าวันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน
-    const today = getThailandDateAtMidnight();
-    const diffTime = outageDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    console.log("Date validation - diffDays:", diffDays, "outageDate:", outageDate, "today:", today);
-
-    if (diffDays < 10) {
-      console.log("Date validation failed - diffDays < 10");
-      return { 
-        success: false, 
-        error: "ไม่สามารถสร้างคำขอดับไฟได้ เนื่องจากวันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน" 
-      };
+    // ตรวจสอบวันที่ดับไฟ
+    const validation = PowerOutageRequestService.validateOutageDate(outageDate);
+    if (!validation.isValid) {
+      return { success: false, error: validation.error };
     }
 
-    const result = await prisma.powerOutageRequest.create({
-      data: {
-        ...validatedData,
-        outageDate,
-        startTime,
-        endTime,
-        workCenterId: Number(validatedData.workCenterId),
-        branchId: Number(validatedData.branchId),
-        createdById: currentUser.id,
-        omsStatus: "NOT_ADDED",
-      },
+    // สร้างคำขอดับไฟ
+    const result = await PowerOutageRequestService.createRequest({
+      outageDate,
+      startTime,
+      endTime,
+      workCenterId: Number(validatedData.workCenterId),
+      branchId: Number(validatedData.branchId),
+      transformerNumber: validatedData.transformerNumber,
+      gisDetails: validatedData.gisDetails,
+      area: validatedData.area,
+      createdById: currentUser.id,
     });
-
-    console.log("Power outage request created successfully:", result.id);
 
     // ล้างแคช OMS หลังจากสร้างคำขอดับไฟ
     clearOMSCache();
@@ -89,13 +70,11 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
   } catch (error) {
     console.error("Failed to create power outage request:", error);
     
-    // ตรวจสอบว่าเป็น validation error หรือไม่
     if (error instanceof z.ZodError) {
       const errorMessages = error.errors.map(err => err.message).join(', ');
       return { success: false, error: `ข้อมูลไม่ถูกต้อง: ${errorMessages}` };
     }
     
-    // ตรวจสอบว่าเป็น Prisma error หรือไม่
     if (error && typeof error === 'object' && 'code' in error) {
       if (error.code === 'P2002') {
         return { success: false, error: "ข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ" };
@@ -125,60 +104,31 @@ export async function searchTransformers(searchTerm: string) {
   }
 }
 
-export async function getPowerOutageRequests() {
+export async function getPowerOutageRequests(
+  page: number = 1,
+  limit: number = 50,
+  filters?: {
+    workCenterId?: number;
+    omsStatus?: OMSStatus;
+    statusRequest?: Request;
+    startDate?: Date;
+    endDate?: Date;
+  }
+) {
   try {
-    // ใช้ getThailandDateAtMidnight แทน new Date สำหรับวันที่ปัจจุบันในไทม์โซน UTC+7
-    const today = getThailandDateAtMidnight();
+    // ใช้ service layer สำหรับ pagination
+    const result = await PowerOutageRequestService.getPaginatedRequests(
+      { page, limit },
+      filters
+    );
 
-    const data = await prisma.powerOutageRequest.findMany({
-      include: {
-        createdBy: { select: { fullName: true } },
-        workCenter: { select: { name: true, id: true } },
-        branch: { select: { shortName: true } },
-      },
-    });
+    // ใช้ business logic สำหรับ sorting ที่ซับซ้อน
+    const sortedData = PowerOutageRequestService.sortRequests(result.data);
 
-    // เรียงลำดับข้อมูลตามเงื่อนไข
-    const sortedData = data.sort((a, b) => {
-      const aOutageDate = new Date(a.outageDate);
-      const bOutageDate = new Date(b.outageDate);
-
-      // ตรวจสอบสถานะ PROCESSED และ CONFIRM
-      const aIsProcessedAndConfirm = a.omsStatus === "PROCESSED" && a.statusRequest === "CONFIRM";
-      const bIsProcessedAndConfirm = b.omsStatus === "PROCESSED" && b.statusRequest === "CONFIRM";
-
-      // ถ้าทั้งคู่เป็น PROCESSED และ CONFIRM ให้เรียงตาม createdAt
-      if (aIsProcessedAndConfirm && bIsProcessedAndConfirm) {
-        return b.createdAt.getTime() - a.createdAt.getTime();
-      }
-
-      // ถ้าอันใดอันหนึ่งเป็น PROCESSED และ CONFIRM ให้ไว้ท้ายสุด
-      if (aIsProcessedAndConfirm) return 1;
-      if (bIsProcessedAndConfirm) return -1;
-
-      // เรียง CONFIRM ก่อน (ยกเว้น PROCESSED)
-      if (a.statusRequest === 'CONFIRM' && b.statusRequest !== 'CONFIRM') return -1;
-      if (a.statusRequest !== 'CONFIRM' && b.statusRequest === 'CONFIRM') return 1;
-
-      // ถ้าทั้งคู่เป็น CONFIRM
-      if (a.statusRequest === 'CONFIRM' && b.statusRequest === 'CONFIRM') {
-        // ถ้าทั้งคู่ยังไม่ถึงวันที่ outageDate
-        if (aOutageDate >= today && bOutageDate >= today) {
-          return aOutageDate.getTime() - bOutageDate.getTime(); // เรียงจากใกล้ไปไกล
-        }
-        // ถ้าทั้งคู่ผ่านวันที่ outageDate ไปแล้ว
-        if (aOutageDate < today && bOutageDate < today) {
-          return bOutageDate.getTime() - aOutageDate.getTime(); // เรียงจากไกลไปใกล้
-        }
-        // ถ้าอันหนึ่งยังไม่ถึง และอีกอันผ่านไปแล้ว
-        return aOutageDate >= today ? -1 : 1; // อันที่ยังไม่ถึงอยู่ก่อน
-      }
-
-      // สำหรับรายการที่ไม่ใช่ CONFIRM
-      return b.createdAt.getTime() - a.createdAt.getTime(); // เรียงตาม createdAt จากใหม่ไปเก่า
-    });
-
-    return sortedData;
+    return {
+      data: sortedData,
+      pagination: result.pagination
+    };
   } catch (error) {
     console.error("Failed to fetch power outage requests:", error);
     throw new Error("Failed to fetch power outage requests");
@@ -187,9 +137,7 @@ export async function getPowerOutageRequests() {
 
 export async function deletePowerOutageRequest(id: number) {
   try {
-    await prisma.powerOutageRequest.delete({
-      where: { id },
-    });
+    await PowerOutageRequestService.deleteRequest(id);
 
     // ล้างแคช OMS หลังจากลบคำขอดับไฟ
     clearOMSCache();
@@ -221,13 +169,10 @@ export async function updatePowerOutageRequest(
       throw new Error("Invalid time format");
     }
 
-    const updatedRequest = await prisma.powerOutageRequest.update({
-      where: { id },
-      data: {
-        startTime,
-        endTime,
-        area: validatedData.area,
-      },
+    const updatedRequest = await PowerOutageRequestService.updateRequest(id, {
+      startTime,
+      endTime,
+      area: validatedData.area,
     });
 
     // ล้างแคช OMS หลังจากอัปเดตคำขอดับไฟ
@@ -257,19 +202,14 @@ export async function updatePowerOutageRequest(
 export async function updateOMS(id: number, omsStatus: OMSStatus) {
   const currentUser = await getCurrentUser();
   try {
-    const updatedRequest = await prisma.powerOutageRequest.update({
-      where: { id },
-      data: {
-        omsStatus,
-        omsUpdatedAt: getThailandDate(),
-        omsUpdatedById: currentUser.id
-      },
-    });
+    const updatedRequest = await PowerOutageRequestService.updateOMSStatus(
+      id, 
+      omsStatus, 
+      currentUser.id
+    );
 
     // ล้างแคช OMS หลังจากอัปเดตสถานะ OMS
     clearOMSCache();
-
-    console.log("Updated OMS status:", updatedRequest);
 
     return {
       success: true,
@@ -294,19 +234,14 @@ export async function updateOMS(id: number, omsStatus: OMSStatus) {
 export async function updateStatusRequest(id: number, statusRequest: Request) {
   const currentUser = await getCurrentUser();
   try {
-    const updatedRequest = await prisma.powerOutageRequest.update({
-      where: { id },
-      data: {
-        statusRequest,
-        statusUpdatedAt: getThailandDate(),
-        statusUpdatedById: currentUser.id
-      },
-    });
+    const updatedRequest = await PowerOutageRequestService.updateRequestStatus(
+      id, 
+      statusRequest, 
+      currentUser.id
+    );
 
     // ล้างแคช OMS หลังจากอัปเดตสถานะคำขอ
     clearOMSCache();
-
-    console.log("Updated status request:", updatedRequest);
 
     return {
       success: true,
@@ -346,7 +281,6 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
       gisDetails: string;
       area: string | null;
       createdById: number;
-      omsStatus: "NOT_ADDED";
     }> = [];
     const validationErrors: Array<{
       index: number;
@@ -360,14 +294,12 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
         
         // ตรวจสอบวันที่สำหรับแต่ละรายการ
         const outageDate = new Date(validatedData.outageDate);
-        const today = getThailandDateAtMidnight();
-        const diffTime = outageDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-        if (diffDays < 10) {
+        const validation = PowerOutageRequestService.validateOutageDate(outageDate);
+        
+        if (!validation.isValid) {
           validationErrors.push({
             index: i + 1,
-            error: "วันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน",
+            error: validation.error!,
             data: validatedData
           });
           continue;
@@ -378,14 +310,15 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
         const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
 
         validatedDataList.push({
-          ...validatedData,
           outageDate,
           startTime,
           endTime,
           workCenterId: Number(validatedData.workCenterId),
           branchId: Number(validatedData.branchId),
+          transformerNumber: validatedData.transformerNumber,
+          gisDetails: validatedData.gisDetails,
+          area: validatedData.area,
           createdById: currentUser.id,
-          omsStatus: "NOT_ADDED" as const,
         });
       } catch (error) {
         if (error instanceof z.ZodError) {
@@ -416,19 +349,8 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
       };
     }
 
-    // ใช้ Transaction เพื่อบันทึกข้อมูลทั้งหมดพร้อมกัน
-    const results = await prisma.$transaction(async (tx) => {
-      const createdRequests = [];
-      
-      for (const data of validatedDataList) {
-        const result = await tx.powerOutageRequest.create({
-          data,
-        });
-        createdRequests.push(result);
-      }
-      
-      return createdRequests;
-    });
+    // ใช้ service layer สำหรับสร้างหลายรายการ
+    const results = await PowerOutageRequestService.createMultipleRequests(validatedDataList);
 
     console.log("Successfully created", results.length, "power outage requests");
 

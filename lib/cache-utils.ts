@@ -36,7 +36,7 @@ export function cacheData<T>(
 export function cacheOMSStatusByWorkCenter<T>(
   fn: () => Promise<T>
 ) {
-  return cacheData(fn, ['oms-status-by-workcenter'], ['oms-status'], 60 * 5); // แคช 5 นาที
+  return cacheData(fn, ['oms-status-by-workcenter'], ['oms-status'], 60 * 30); // แคช 30 นาที
 }
 
 /**
@@ -48,7 +48,7 @@ export function cacheOMSStatusByWorkCenter<T>(
 export function cacheOMSStatusDistribution<T>(
   fn: () => Promise<T>
 ) {
-  return cacheData(fn, ['oms-status-distribution'], ['oms-status'], 60 * 5); // แคช 5 นาที
+  return cacheData(fn, ['oms-status-distribution'], ['oms-status'], 60 * 30); // แคช 30 นาที
 }
 
 /**

@@ -24,7 +24,7 @@ const Navbar = () => {
   ];
 
   return (
-    <nav className="bg-gray-800 text-white fixed top-0 left-0 right-0 z-50">
+    <nav className="bg-gradient-to-r from-pea-700 to-pea-600 text-white fixed top-0 left-0 right-0 z-50 shadow-pea">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
@@ -45,10 +45,10 @@ const Navbar = () => {
                   <Link
                     key={item.path}
                     href={item.path}
-                    className={`px-3 py-2 rounded-md text-sm font-medium ${
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
                       pathname === item.path
-                        ? "bg-gray-900 text-white"
-                        : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                        ? "bg-pea-800 text-white shadow-md"
+                        : "text-pea-100 hover:bg-pea-600 hover:text-white hover:shadow-md"
                     }`}
                   >
                     {item.label}
@@ -66,7 +66,7 @@ const Navbar = () => {
                   </span>
                   <button
                     onClick={() => signOut()}
-                    className="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                    className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md"
                   >
                     ออกจากระบบ
                   </button>
@@ -74,7 +74,7 @@ const Navbar = () => {
               ) : (
                 <button
                   onClick={() => signIn()}
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                  className="bg-pea-accent-500 hover:bg-pea-accent-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 hover:shadow-md"
                 >
                   เข้าสู่ระบบ
                 </button>
@@ -84,7 +84,7 @@ const Navbar = () => {
           <div className="-mr-2 flex md:hidden">
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white"
+              className="inline-flex items-center justify-center p-2 rounded-md text-pea-200 hover:text-white hover:bg-pea-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-pea-700 focus:ring-white transition-all duration-200"
             >
               <span className="sr-only">Open main menu</span>
               {!isMenuOpen ? (
@@ -132,10 +132,10 @@ const Navbar = () => {
               <Link
                 key={item.path}
                 href={item.path}
-                className={`block px-3 py-2 rounded-md text-base font-medium ${
+                className={`block px-3 py-2 rounded-md text-base font-medium transition-all duration-200 ${
                   pathname === item.path
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                    ? "bg-pea-800 text-white"
+                    : "text-pea-100 hover:bg-pea-600 hover:text-white"
                 }`}
                 onClick={() => setIsMenuOpen(false)}
               >
@@ -143,7 +143,7 @@ const Navbar = () => {
               </Link>
             ))}
           </div>
-          <div className="pt-4 pb-3 border-t border-gray-700">
+          <div className="pt-4 pb-3 border-t border-pea-500">
             {session ? (
               <div className="flex items-center px-5">
                 <div className="flex-shrink-0">
@@ -151,7 +151,7 @@ const Navbar = () => {
                 </div>
                 <button
                   onClick={() => signOut()}
-                  className="ml-auto bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                  className="ml-auto bg-red-500 hover:bg-red-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   ออกจากระบบ
                 </button>
@@ -160,7 +160,7 @@ const Navbar = () => {
               <div className="px-5">
                 <button
                   onClick={() => signIn()}
-                  className="block w-full bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-md text-sm font-medium"
+                  className="block w-full bg-pea-accent-500 hover:bg-pea-accent-600 text-white px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200"
                 >
                   เข้าสู่ระบบ
                 </button>

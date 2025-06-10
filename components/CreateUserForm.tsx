@@ -12,6 +12,7 @@ import {
 } from "@/app/api/action/getWorkCentersAndBranches";
 import { useRouter } from "next/navigation";
 import { debounce } from "lodash";
+import { FormField, FormInput, FormSelect, FormButton } from "@/components/forms";
 
 type WorkCenter = {
   id: number;
@@ -28,11 +29,11 @@ type Branch = {
 type FormData = z.infer<typeof CreateUserSchema>;
 
 const ROLE_OPTIONS = [
-  { value: "USER", label: "พนักงานหม้อแปลง", color: "bg-blue-100 text-blue-800" },
-  { value: "SUPERVISOR", label: "พนักงาน EO", color: "bg-green-100 text-green-800" },
-  { value: "MANAGER", label: "ผู้บริหารจุดรวมงาน", color: "bg-purple-100 text-purple-800" },
-  { value: "ADMIN", label: "Admin", color: "bg-red-100 text-red-800" },
-  { value: "VIEWER", label: "กฟต.3", color: "bg-gray-100 text-gray-800" }
+  { value: "USER", label: "พนักงานหม้อแปลง" },
+  { value: "SUPERVISOR", label: "พนักงาน EO" },
+  { value: "MANAGER", label: "ผู้บริหารจุดรวมงาน" },
+  { value: "ADMIN", label: "Admin" },
+  { value: "VIEWER", label: "กฟต.3" }
 ];
 
 export default function CreateUserForm() {
@@ -76,7 +77,7 @@ export default function CreateUserForm() {
   const selectedWorkCenter = watch("workCenterId");
   const employeeId = watch("employeeId");
 
-  // Debounced function สำหรับตรวจสอบรหัสพนักงาน
+  // Debounced function for employee ID check
   const debouncedCheckEmployeeId = useMemo(
     () => debounce(async (empId: string) => {
       if (!empId || empId.length < 6) {
@@ -110,7 +111,7 @@ export default function CreateUserForm() {
     []
   );
 
-  // ตรวจสอบรหัสพนักงานเมื่อมีการเปลี่ยนแปลง
+  // Check employee ID when it changes
   useEffect(() => {
     if (employeeId) {
       debouncedCheckEmployeeId(employeeId);
@@ -122,13 +123,12 @@ export default function CreateUserForm() {
       });
     }
     
-    // Cleanup function เพื่อยกเลิก debounce ที่กำลัง pending
     return () => {
       debouncedCheckEmployeeId.cancel();
     };
   }, [employeeId, debouncedCheckEmployeeId]);
 
-  // อัพเดทรหัสผ่านให้ตรงกับรหัสพนักงานอัตโนมัติ
+  // Auto-update password to match employee ID
   useEffect(() => {
     if (employeeId && employeeId.length >= 6) {
       setValue("password", employeeId, { shouldValidate: true });
@@ -198,51 +198,42 @@ export default function CreateUserForm() {
     );
   }
 
+  const workCenterOptions = workCenters.map(wc => ({ value: wc.id, label: wc.name }));
+  const branchOptions = branches.map(branch => ({ value: branch.id, label: `${branch.shortName} - ${branch.fullName}` }));
+
   return (
     <div className="max-w-2xl mx-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Employee ID Field */}
-        <div className="space-y-2">
-          <label htmlFor="employeeId" className="block text-sm font-semibold text-gray-700">
-            🏷️ รหัสพนักงาน
-          </label>
+        <FormField
+          label="รหัสพนักงาน"
+          name="employeeId"
+          error={errors.employeeId}
+          required
+          icon="🏷️"
+        >
           <Controller
             name="employeeId"
             control={control}
             render={({ field }) => (
-              <div className="relative">
-                <input
-                  {...field}
-                  type="text"
-                  placeholder="กรอกรหัสพนักงาน 6 ตัวอักษร"
-                  className={`w-full p-3 pr-12 border rounded-lg transition-colors ${
-                    errors.employeeId || employeeIdCheck.exists ? 'border-red-300 bg-red-50' : 
-                    employeeIdCheck.message && !employeeIdCheck.exists && !employeeIdCheck.error ? 'border-green-300 bg-green-50' :
-                    'border-gray-300 focus:border-blue-500'
-                  } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
-                  maxLength={10}
-                />
-                {/* Status Icon */}
-                <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                  {employeeIdCheck.isChecking ? (
+              <FormInput
+                {...field}
+                type="text"
+                placeholder="กรอกรหัสพนักงาน 6 ตัวอักษร"
+                maxLength={10}
+                error={errors.employeeId || (employeeIdCheck.exists ? { message: employeeIdCheck.message } as any : undefined)}
+                icon={
+                  employeeIdCheck.isChecking ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
                   ) : employeeIdCheck.exists ? (
                     <span className="text-red-500 text-lg">❌</span>
                   ) : employeeIdCheck.message && !employeeIdCheck.error ? (
                     <span className="text-green-500 text-lg">✅</span>
-                  ) : null}
-                </div>
-              </div>
+                  ) : null
+                }
+              />
             )}
           />
-          
-          {/* Error Messages */}
-          {errors.employeeId && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.employeeId.message}
-            </p>
-          )}
           
           {/* Employee ID Check Status */}
           {!errors.employeeId && employeeIdCheck.message && (
@@ -265,211 +256,152 @@ export default function CreateUserForm() {
               รหัสผ่านจะถูกตั้งเป็น: {employeeId}
             </p>
           )}
-        </div>
+        </FormField>
 
         {/* Password Field */}
-        <div className="space-y-2">
-          <label htmlFor="password" className="block text-sm font-semibold text-gray-700">
-            🔐 รหัสผ่าน
-          </label>
+        <FormField
+          label="รหัสผ่าน"
+          name="password"
+          error={errors.password}
+          required
+          icon="🔐"
+        >
           <Controller
             name="password"
             control={control}
             render={({ field }) => (
-              <div className="relative">
-                <input
-                  {...field}
-                  type="text"
-                  placeholder="รหัสผ่านจะถูกตั้งเป็นรหัสพนักงานอัตโนมัติ"
-                  className={`w-full p-3 border rounded-lg transition-colors ${
-                    errors.password ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-500'
-                  } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
-                  readOnly={employeeId ? employeeId.length >= 6 : false}
-                />
-                {employeeId && employeeId.length >= 6 && (
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                    <span className="text-green-500">🔒</span>
-                  </div>
-                )}
-              </div>
+              <FormInput
+                {...field}
+                type="text"
+                placeholder="รหัสผ่านจะถูกตั้งเป็นรหัสพนักงานอัตโนมัติ"
+                readOnly={employeeId ? employeeId.length >= 6 : false}
+                error={errors.password}
+                icon={employeeId && employeeId.length >= 6 ? <span className="text-green-500">🔒</span> : undefined}
+              />
             )}
           />
-          {errors.password && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.password.message}
-            </p>
-          )}
           <p className="text-xs text-gray-500">
             💡 รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ ผู้ใช้สามารถเปลี่ยนได้ภายหลัง
           </p>
-        </div>
+        </FormField>
 
         {/* Full Name Field */}
-        <div className="space-y-2">
-          <label htmlFor="fullName" className="block text-sm font-semibold text-gray-700">
-            👤 ชื่อ-นามสกุล
-          </label>
+        <FormField
+          label="ชื่อ-นามสกุล"
+          name="fullName"
+          error={errors.fullName}
+          required
+          icon="👤"
+        >
           <Controller
             name="fullName"
             control={control}
             render={({ field }) => (
-              <input
+              <FormInput
                 {...field}
                 type="text"
                 placeholder="กรอกชื่อ-นามสกุล"
-                className={`w-full p-3 border rounded-lg transition-colors ${
-                  errors.fullName ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-500'
-                } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
+                error={errors.fullName}
               />
             )}
           />
-          {errors.fullName && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.fullName.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
         {/* Work Center Field */}
-        <div className="space-y-2">
-          <label htmlFor="workCenterId" className="block text-sm font-semibold text-gray-700">
-            🏢 จุดรวมงาน
-          </label>
+        <FormField
+          label="จุดรวมงาน"
+          name="workCenterId"
+          error={errors.workCenterId}
+          required
+          icon="🏢"
+        >
           <Controller
             name="workCenterId"
             control={control}
             render={({ field }) => (
-              <select
+              <FormSelect
                 {...field}
-                className={`w-full p-3 border rounded-lg transition-colors ${
-                  errors.workCenterId ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-500'
-                } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
+                options={workCenterOptions}
+                placeholder="เลือกจุดรวมงาน"
+                error={errors.workCenterId}
                 onChange={(e) => field.onChange(Number(e.target.value))}
-              >
-                <option value="">เลือกจุดรวมงาน</option>
-                {workCenters.map((wc) => (
-                  <option key={wc.id} value={wc.id}>{wc.name}</option>
-                ))}
-              </select>
+              />
             )}
           />
-          {errors.workCenterId && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.workCenterId.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
         {/* Branch Field */}
-        <div className="space-y-2">
-          <label htmlFor="branchId" className="block text-sm font-semibold text-gray-700">
-            🏪 สาขา
-          </label>
+        <FormField
+          label="สาขา"
+          name="branchId"
+          error={errors.branchId}
+          required
+          icon="🏪"
+        >
           <Controller
             name="branchId"
             control={control}
             render={({ field }) => (
-              <select
+              <FormSelect
                 {...field}
-                className={`w-full p-3 border rounded-lg transition-colors ${
-                  errors.branchId ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-500'
-                } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
+                options={branchOptions}
+                placeholder={!selectedWorkCenter ? "กรุณาเลือกจุดรวมงานก่อน" : "เลือกสาขา"}
+                error={errors.branchId}
                 disabled={!selectedWorkCenter}
                 onChange={(e) => field.onChange(Number(e.target.value))}
-              >
-                <option value="">
-                  {!selectedWorkCenter ? "กรุณาเลือกจุดรวมงานก่อน" : "เลือกสาขา"}
-                </option>
-                {branches.map((branch) => (
-                  <option key={branch.id} value={branch.id}>
-                    {branch.shortName} - {branch.fullName}
-                  </option>
-                ))}
-              </select>
+              />
             )}
           />
-          {errors.branchId && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.branchId.message}
-            </p>
-          )}
           {isLoading && selectedWorkCenter && (
             <p className="text-sm text-blue-600 flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-2"></div>
               กำลังโหลดรายชื่อสาขา...
             </p>
           )}
-        </div>
+        </FormField>
 
         {/* Role Field */}
-        <div className="space-y-2">
-          <label htmlFor="role" className="block text-sm font-semibold text-gray-700">
-            👑 บทบาท
-          </label>
+        <FormField
+          label="บทบาท"
+          name="role"
+          error={errors.role}
+          required
+          icon="👑"
+        >
           <Controller
             name="role"
             control={control}
             render={({ field }) => (
-              <select
+              <FormSelect
                 {...field}
-                className={`w-full p-3 border rounded-lg transition-colors ${
-                  errors.role ? 'border-red-300 bg-red-50' : 'border-gray-300 focus:border-blue-500'
-                } focus:ring-2 focus:ring-blue-200 focus:outline-none`}
-              >
-                <option value="">เลือกบทบาท</option>
-                {ROLE_OPTIONS.map((role) => (
-                  <option key={role.value} value={role.value}>
-                    {role.label}
-                  </option>
-                ))}
-              </select>
+                options={ROLE_OPTIONS}
+                placeholder="เลือกบทบาท"
+                error={errors.role}
+              />
             )}
           />
-          {errors.role && (
-            <p className="text-sm text-red-600 flex items-center">
-              <span className="mr-1">⚠️</span>
-              {errors.role.message}
-            </p>
-          )}
-        </div>
+        </FormField>
 
         {/* Submit Button */}
         <div className="pt-6">
-          <button
+          <FormButton
             type="submit"
-            className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-200 ${
-              isSubmitting || !isValid || employeeIdCheck.exists || employeeIdCheck.isChecking
-                ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 hover:shadow-lg transform hover:scale-[1.02]"
-            } focus:outline-none focus:ring-4 focus:ring-blue-200`}
-            disabled={isSubmitting || !isValid || employeeIdCheck.exists || employeeIdCheck.isChecking}
+            variant="primary"
+            size="lg"
+            isLoading={isSubmitting || employeeIdCheck.isChecking}
+            disabled={!isValid || employeeIdCheck.exists}
+            className="w-full"
+            icon={
+              employeeIdCheck.isChecking ? undefined :
+              employeeIdCheck.exists ? "❌" :
+              isSubmitting ? undefined : "✨"
+            }
           >
-            {isSubmitting ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                กำลังสร้างผู้ใช้...
-              </span>
-            ) : employeeIdCheck.isChecking ? (
-              <span className="flex items-center justify-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-white mr-2"></div>
-                กำลังตรวจสอบรหัสพนักงาน...
-              </span>
-            ) : employeeIdCheck.exists ? (
-              <span className="flex items-center justify-center">
-                <span className="mr-2">❌</span>
-                รหัสพนักงานซ้ำ - ไม่สามารถสร้างได้
-              </span>
-            ) : (
-              <span className="flex items-center justify-center">
-                <span className="mr-2">✨</span>
-                สร้างผู้ใช้
-              </span>
-            )}
-          </button>
+            {employeeIdCheck.exists 
+              ? "รหัสพนักงานซ้ำ - ไม่สามารถสร้างได้"
+              : "สร้างผู้ใช้"
+            }
+          </FormButton>
         </div>
 
         {/* Error Message */}

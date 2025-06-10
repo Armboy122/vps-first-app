@@ -46,7 +46,7 @@ const truncateText = (text: string | null, maxLength: number = 20) => {
   return text.length > maxLength ? `${text.substring(0, maxLength)}...` : text;
 };
 
-// คอมโพเนนต์สำหรับแสดงข้อความพร้อม tooltip เมื่อข้อความยาวเกินไป
+// Fixed TextWithTooltip with mouse position tracking
 const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; maxLength?: number }) => {
   const [showTooltip, setShowTooltip] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
@@ -54,11 +54,12 @@ const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; m
   if (!text) return <span className="text-gray-400">-</span>;
   
   const shouldTruncate = text.length > maxLength;
-  const displayText = shouldTruncate ? `${text.substring(0, maxLength)}...` : text;
   
   if (!shouldTruncate) {
-    return <span>{displayText}</span>;
+    return <span>{text}</span>;
   }
+  
+  const displayText = `${text.substring(0, maxLength)}...`;
   
   const handleMouseEnter = (e: React.MouseEvent) => {
     setMousePos({ x: e.clientX, y: e.clientY });
@@ -72,16 +73,17 @@ const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; m
   return (
     <div className="relative inline-block w-full">
       <span 
-        className="cursor-pointer border-b border-dotted border-gray-400 transition-colors duration-200 hover:text-blue-600"
+        className="cursor-help border-b border-dotted border-gray-400 transition-colors duration-200 hover:text-pea-600"
         onMouseEnter={handleMouseEnter}
         onMouseMove={handleMouseMove}
         onMouseLeave={() => setShowTooltip(false)}
+        title={text} // Fallback native tooltip
       >
         {displayText}
       </span>
       {showTooltip && (
         <div 
-          className="fixed z-[9999] bg-gray-800 text-white text-sm px-3 py-2 rounded-md shadow-lg pointer-events-none max-w-xs break-words"
+          className="fixed z-[9999] bg-gray-900 text-white text-xs px-3 py-2 rounded-md shadow-lg pointer-events-none max-w-sm break-words"
           style={{
             left: `${mousePos.x + 10}px`,
             top: `${mousePos.y - 40}px`,
@@ -96,52 +98,72 @@ const TextWithTooltip = memo(({ text, maxLength = 20 }: { text: string | null; m
 
 TextWithTooltip.displayName = 'TextWithTooltip';
 
-// คอมโพเนนต์สำหรับแสดงสถานะด้วยสีและรูปแบบที่สวยงาม
+// Pre-calculate commonly used styles
+const getRowClassName = (omsStatus: string, statusRequest: string, outageDate: Date) => {
+  const today = getThailandDateAtMidnight();
+  const diffTime = outageDate.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  
+  let className = "border-b border-gray-200 hover:bg-gray-50 transition-colors duration-150";
+  
+  if (omsStatus === "PROCESSED" && statusRequest === "CONFIRM") {
+    className += " bg-gray-100";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 5 && diffDays >= 0) {
+    className += " bg-red-50 border-red-200";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 7 && diffDays > 0) {
+    className += " bg-yellow-50 border-yellow-200";
+  } else if (statusRequest !== "CANCELLED" && diffDays <= 15 && diffDays > 0) {
+    className += " bg-green-50 border-green-200";
+  }
+  
+  return className;
+};
+
+// Optimized StatusBadge with PEA theme
 const StatusBadge = memo(({ status, type }: { status: string; type: "oms" | "request" }) => {
-  let bgColor = "bg-gray-200";
-  let textColor = "text-gray-800";
+  let colorClasses = "";
   let label = status;
   
   if (type === "oms") {
     switch (status) {
       case "NOT_ADDED":
-        bgColor = "bg-yellow-100";
-        textColor = "text-yellow-800";
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         label = "ยังไม่ดำเนินการ";
         break;
       case "PROCESSED":
-        bgColor = "bg-green-100";
-        textColor = "text-green-800";
+        colorClasses = "bg-pea-100 text-pea-800 border border-pea-300";
         label = "ดำเนินการแล้ว";
         break;
       case "CANCELLED":
-        bgColor = "bg-red-100";
-        textColor = "text-red-800";
+        colorClasses = "bg-red-100 text-red-700 border border-red-300";
         label = "ยกเลิก";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         break;
     }
   } else {
     switch (status) {
       case "CONFIRM":
-        bgColor = "bg-blue-100";
-        textColor = "text-blue-800";
+        colorClasses = "bg-emerald-100 text-emerald-800 border border-emerald-300";
         label = "อนุมัติดับไฟ";
         break;
       case "NOT":
-        bgColor = "bg-orange-100";
-        textColor = "text-orange-800";
+        colorClasses = "bg-amber-100 text-amber-800 border border-amber-300";
         label = "รออนุมัติ";
         break;
       case "CANCELLED":
-        bgColor = "bg-red-100";
-        textColor = "text-red-800";
+        colorClasses = "bg-red-100 text-red-700 border border-red-300";
         label = "ยกเลิก";
+        break;
+      default:
+        colorClasses = "bg-gray-100 text-gray-700 border border-gray-300";
         break;
     }
   }
   
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium transition-all duration-200 ${colorClasses}`}>
       {label}
     </span>
   );
@@ -208,11 +230,11 @@ export const TableRow = memo(({
     request.statusRequest
   );
 
-  // กำหนดคลาสสำหรับ cell ที่มีข้อมูลยาว
-  const cellClass = "py-3 px-2 overflow-hidden align-middle";
+  // กำหนดคลาสสำหรับ cell ที่มีข้อมูลยาว - PEA Theme
+  const cellClass = "py-4 px-3 overflow-hidden align-middle";
   const fixedWidthCell = "min-w-[120px] max-w-[180px]";
-  const selectClass = "border border-gray-300 rounded-md px-2 py-1 w-full text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500";
-  const transformerClass = "font-medium text-gray-900";
+  const selectClass = "border border-pea-300 rounded-md px-2 py-1 w-full text-sm focus:outline-none focus:ring-2 focus:ring-pea-500 focus:border-pea-500 transition-all duration-200";
+  const transformerClass = "font-semibold text-pea-800";
   const dateClass = "font-medium text-gray-700 whitespace-nowrap";
 
   // ฟังก์ชันสำหรับจัดรูปแบบวันที่แบบไทย
@@ -238,7 +260,7 @@ export const TableRow = memo(({
   }, [handleEditStatusRequest, request.id]);
 
   return (
-    <tr className={`hover:bg-gray-50 transition-colors ${bgColor} border-b border-gray-200`}>
+    <tr className={`hover:shadow-md transition-all duration-200 ${bgColor}`}>
       {!isViewer && (
         <td className="py-3 px-2 align-middle">
           <input

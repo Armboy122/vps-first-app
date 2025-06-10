@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
 import Navbar from "@/components/Navbar";
+import { LogViewer, LogViewerShortcut } from "@/components/dev/LogViewer";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -35,6 +36,10 @@ export default function RootLayout({
           <footer className="bg-gray-800 text-white text-center py-4">
             <p>&copy; 2024 ระบบจัดการคำขอดับไฟ. All rights reserved.</p>
           </footer>
+          
+          {/* Development Tools */}
+          <LogViewer />
+          <LogViewerShortcut />
         </Providers>
       </body>
     </html>
