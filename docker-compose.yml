@@ -35,6 +35,8 @@ services:
       - "3000:3000"
     environment:
       DATABASE_URL: "postgresql://sa:1234@db:5432/PeaTransformer?schema=public"
+      NEXTAUTH_SECRET: "armoby122"
+      NEXT_PUBLIC_GENERATE_PDF: "https://script.google.com/macros/s/AKfycbzMlQp7F8jI9v3nN1PSkV_laJ8BY66vLAheexB120jO5o7n8O8X0otZlHGCenOESvN61Q/exec"
     networks:
       - mynetwork
     depends_on:
