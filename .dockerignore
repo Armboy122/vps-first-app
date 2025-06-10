@@ -1,4 +1,9 @@
-# Dependencies (ยกเว้น production dependencies ใน final stage)
+# Git และ version control
+.git
+.gitignore
+.gitattributes
+
+# Dependencies (ยกเว้น final image)
 node_modules
 .pnp
 .pnp.js
@@ -12,29 +17,23 @@ out
 build
 dist
 
-# Git
-.git
-.gitignore
-
-# Docker
-Dockerfile
+# Docker files
+Dockerfile*
 .dockerignore
-docker-compose.yml
-docker-compose.yaml
+docker-compose*.yml
+docker-compose*.yaml
 
 # Environment files
-.env
-.env*.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env*
+!.env.example
 
-# Logs
+# Logs และ debug files
 logs
 *.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lerna-debug.log*
 
 # OS generated files
 .DS_Store
@@ -47,23 +46,60 @@ Thumbs.db
 
 # Development และ testing files
 *.test.js
-*.spec.js
+*.test.ts
+*.spec.js  
+*.spec.ts
 __tests__
 coverage
 .nyc_output
+jest.config.*
+cypress
+.cypress
 
-# Scripts
+# Cache directories
+.cache
+.parcel-cache
+.npm
+.yarn-cache
+.next/cache
+
+# Scripts และ automation
 *.sh
 !docker-entrypoint.sh
+.github
+scripts
 
 # Editor directories and files
 .idea
 .vscode
 *.swp
 *~
+.vim
+.emacs*
 
-# Cache directories  
-.cache
-.parcel-cache
-.npm
-.yarn-cache
+# Documentation
+*.md
+!README.md
+docs
+
+# Backup files
+*.backup
+*.bak
+*.tmp
+
+# Large files ที่ไม่จำเป็น
+*.zip
+*.tar
+*.tar.gz
+*.rar
+
+# Development config files
+.eslintrc*
+.prettierrc*
+.editorconfig
+tsconfig.json
+!next.config.*
+
+# Performance monitoring
+.vercel
+.netlify
