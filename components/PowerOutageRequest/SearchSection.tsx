@@ -61,12 +61,15 @@ export const SearchSection = memo(({
         }
       } else {
         setBranches([]);
-        setBranchFilter("");
+        // ใช้ setTimeout เพื่อหลีกเลี่ยง infinite loop
+        if (branchFilter) {
+          setTimeout(() => setBranchFilter(""), 0);
+        }
       }
     };
 
     loadBranches();
-  }, [workCenterFilter, setBranchFilter]);
+  }, [workCenterFilter, branchFilter, setBranchFilter]);
 
   const handleClearSearch = useCallback(() => {
     setSearchTerm("");

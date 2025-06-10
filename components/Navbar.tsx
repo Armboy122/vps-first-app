@@ -15,7 +15,7 @@ const Navbar = () => {
 
   const navItems = [
     { label: "หน้าแรก", path: "/power-outage-requests" },
-    { label: "DashBord", path: "/" },
+    // { label: "DashBord", path: "/" },
     // แสดงเมนู Profile เฉพาะกรณีที่ไม่ใช่ viewer
     ...(!isViewer ? [{ label: "Profile", path: "/user" }] : []),
     ...(session?.user.role === "ADMIN"
