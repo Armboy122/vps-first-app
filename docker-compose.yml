@@ -29,7 +29,7 @@ services:
     logging: *default-logging
 
   nextjs-app:
-    image: armboy/vps-first-app:290425
+    image: armboy/vps-first-app:latest
     container_name: nextjs-app
     ports:
       - "3000:3000"
@@ -37,6 +37,7 @@ services:
       DATABASE_URL: "postgresql://sa:1234@db:5432/PeaTransformer?schema=public"
       NEXTAUTH_SECRET: "armoby122"
       NEXT_PUBLIC_GENERATE_PDF: "https://script.google.com/macros/s/AKfycbzMlQp7F8jI9v3nN1PSkV_laJ8BY66vLAheexB120jO5o7n8O8X0otZlHGCenOESvN61Q/exec"
+      NEXTAUTH_URL: "https://peas3.shop"
     networks:
       - mynetwork
     depends_on:
@@ -44,17 +45,16 @@ services:
         condition: service_healthy
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
-      interval: 30s
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health',{timeout:3000}).then(r=>r.ok||process.exit(1)).catch(()=>process.exit(1))"]
+      interval: 20s
       timeout: 5s
-      retries: 5
-      start_period: 60s
+      retries: 3
+      start_period: 20s
+    # 🚀 เร็วมาก! เฉพาะ Prisma migrate ก่อน start (Prisma generate ทำใน build time แล้ว)
     entrypoint: >
       sh -c "
-      sleep 10;
-      npx prisma generate;
       npx prisma migrate deploy --schema=./prisma/schema.prisma;
-      npm start;
+      dumb-init node server.js;
       "
     logging: *default-logging
 
