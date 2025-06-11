@@ -332,17 +332,27 @@ export class PowerOutageRequestService {
       if (a.statusRequest === 'CONFIRM' && b.statusRequest === 'CONFIRM') {
         // ถ้าทั้งคู่ยังไม่ถึงวันที่ outageDate
         if (aOutageDate >= today && bOutageDate >= today) {
-          return aOutageDate.getTime() - bOutageDate.getTime(); // เรียงจากใกล้ไปไกล
+          // เรียงตามวันที่ก่อน
+          const dateDiff = aOutageDate.getTime() - bOutageDate.getTime();
+          if (dateDiff !== 0) return dateDiff; // เรียงจากใกล้ไปไกล
+          
+          // ถ้าวันที่เท่ากัน ให้เรียงตามเวลา startTime
+          return a.startTime.getTime() - b.startTime.getTime();
         }
         // ถ้าทั้งคู่ผ่านวันที่ outageDate ไปแล้ว
         if (aOutageDate < today && bOutageDate < today) {
-          return bOutageDate.getTime() - aOutageDate.getTime(); // เรียงจากไกลไปใกล้
+          // เรียงตามวันที่ก่อน
+          const dateDiff = bOutageDate.getTime() - aOutageDate.getTime();
+          if (dateDiff !== 0) return dateDiff; // เรียงจากไกลไปใกล้
+          
+          // ถ้าวันที่เท่ากัน ให้เรียงตามเวลา startTime
+          return b.startTime.getTime() - a.startTime.getTime();
         }
         // ถ้าอันหนึ่งยังไม่ถึง และอีกอันผ่านไปแล้ว
         return aOutageDate >= today ? -1 : 1; // อันที่ยังไม่ถึงอยู่ก่อน
       }
 
-      // สำหรับรายการที่ไม่ใช่ CONFIRM
+      // สำหรับรายการที่ไม่ใช่ CONFIRM - เรียงตาม createdAt เหมือนเดิม
       return b.createdAt.getTime() - a.createdAt.getTime(); // เรียงตาม createdAt จากใหม่ไปเก่า
     });
   }
