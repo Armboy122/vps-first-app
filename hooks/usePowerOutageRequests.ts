@@ -42,7 +42,7 @@ interface PaginationOptions {
   itemsPerPage: number;
 }
 
-export const usePowerOutageRequests = () => {
+export const usePowerOutageRequests = (userWorkCenterId?: number, isAdmin?: boolean, isViewer?: boolean) => {
   // State
   const [requests, setRequests] = useState<PowerOutageRequest[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,7 +74,14 @@ export const usePowerOutageRequests = () => {
     try {
       setLoading(true);
       setError(null);
-      const result = await getPowerOutageRequests();
+      
+      // Apply workCenter filter for USER role only
+      const queryFilters: any = {};
+      if (userWorkCenterId && !(isAdmin || isViewer)) {
+        queryFilters.workCenterId = userWorkCenterId;
+      }
+      
+      const result = await getPowerOutageRequests(1, 1000, queryFilters);
       
       // Handle the new pagination structure
       const dataArray = Array.isArray(result) ? result : result.data;
@@ -97,7 +104,7 @@ export const usePowerOutageRequests = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userWorkCenterId, isAdmin, isViewer]);
 
   // Filter functions
   const createDateFilter = useCallback((startDate: string, endDate: string) => {

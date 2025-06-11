@@ -85,7 +85,7 @@ export default function PowerOutageRequestList() {
     loadRequests,
     displayRange,
     getRowBackgroundColor
-  } = usePowerOutageRequests();
+  } = usePowerOutageRequests(userWorkCenterId, isAdmin, isViewer);
 
   // Local state for UI only
   const [editingRequest, setEditingRequest] = useState<PowerOutageRequest | null>(null);
