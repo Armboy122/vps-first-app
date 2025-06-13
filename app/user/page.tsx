@@ -58,10 +58,19 @@ export default function User() {
   const [branches, setBranches] = useState<Branch[]>([]);
   const [isLoadingBranches, setIsLoadingBranches] = useState(false);
 
-  // Load initial data
-  useEffect(() => {
-    loadUserProfile();
-    loadWorkCenters();
+  // Load branches
+  const loadBranches = useCallback(async (workCenterId: number) => {
+    if (!workCenterId) return;
+    
+    try {
+      setIsLoadingBranches(true);
+      const branchData = await getBranches(workCenterId);
+      setBranches(branchData);
+    } catch (error) {
+      console.error('Failed to load branches:', error);
+    } finally {
+      setIsLoadingBranches(false);
+    }
   }, []);
 
   // Load user profile
@@ -83,7 +92,7 @@ export default function User() {
     } finally {
       setIsLoadingProfile(false);
     }
-  }, []);
+  }, [loadBranches]);
 
   // Load work centers
   const loadWorkCenters = useCallback(async () => {
@@ -95,20 +104,11 @@ export default function User() {
     }
   }, []);
 
-  // Load branches
-  const loadBranches = useCallback(async (workCenterId: number) => {
-    if (!workCenterId) return;
-    
-    try {
-      setIsLoadingBranches(true);
-      const branchData = await getBranches(workCenterId);
-      setBranches(branchData);
-    } catch (error) {
-      console.error('Failed to load branches:', error);
-    } finally {
-      setIsLoadingBranches(false);
-    }
-  }, []);
+  // Load initial data
+  useEffect(() => {
+    loadUserProfile();
+    loadWorkCenters();
+  }, [loadUserProfile, loadWorkCenters]);
 
   // Handle work center change
   useEffect(() => {
