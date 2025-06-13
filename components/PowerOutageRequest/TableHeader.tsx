@@ -6,7 +6,6 @@ interface TableHeaderProps {
   setSelectAll: (value: boolean) => void;
   isAdmin: boolean;
   isViewer: boolean;
-  isSupervisor: boolean;
 }
 
 export const TableHeader = memo(({
@@ -14,7 +13,6 @@ export const TableHeader = memo(({
   setSelectAll,
   isAdmin,
   isViewer,
-  isSupervisor,
 }: TableHeaderProps) => {
   const handleSelectAllChange = useCallback(() => {
     setSelectAll(!selectAll);
@@ -64,7 +62,7 @@ export const TableHeader = memo(({
         <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
           ผู้สร้างคำขอ
         </th>
-        {!isViewer && !isSupervisor && (
+        {!isViewer && (
           <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             การดำเนินการ
           </th>
