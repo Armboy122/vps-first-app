@@ -144,7 +144,7 @@ export default function PowerOutageRequestForm({
     setValue("outageDate", selectedDate);
   };
 
-  const validateDateAndTime = useCallback((data: PowerOutageRequestInput): boolean => {
+  const validateDateAndTime = (data: PowerOutageRequestInput): boolean => {
     const outageDate = dayjs(data.outageDate);
     const minDate = dayjs(minSelectableDate);
     const startTime = dayjs(`${data.outageDate} ${data.startTime}`);
@@ -162,7 +162,7 @@ export default function PowerOutageRequestForm({
   
     setTimeError(null);
     return true;
-  }, [minSelectableDate, setTimeError]);
+  };
 
   const onSubmit = useCallback(
     async (data: PowerOutageRequestInput) => {
@@ -190,7 +190,7 @@ export default function PowerOutageRequestForm({
         });
       }
     },
-    [reset, router, validateDateAndTime]
+    [reset, router]
   );
 
   const onAddToList = useCallback(
@@ -204,7 +204,7 @@ export default function PowerOutageRequestForm({
       });
       reset();
     },
-    [reset, validateDateAndTime]
+    [reset]
   );
 
   const removeFromList = (index: number) => {
