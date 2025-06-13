@@ -10,11 +10,6 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "ระบบจัดการคำขอดับไฟ",
   description: "ระบบจัดการคำขอดับไฟสำหรับการไฟฟ้าส่วนภูมิภาค",
-  icons: {
-    icon: "/image.png",
-    shortcut: "/image.png",
-    apple: "/image.png",
-  },
 };
 
 export default function RootLayout({
