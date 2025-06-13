@@ -24,9 +24,14 @@ export const RequestList: React.FC<RequestListProps> = ({
     <div className="mt-8 p-6 bg-gray-50 border-t border-gray-200 rounded-lg">
       {/* หัวข้อและปุ่มล้างทั้งหมด */}
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-gray-800">
-          รายการคำขอที่รอการบันทึก ({requests.length} รายการ)
-        </h3>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800">
+            รายการคำขอที่รอการบันทึก ({requests.length} รายการ)
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">
+            📅 เรียงตามวันที่และเวลาเริ่มต้นอัตโนมัติ
+          </p>
+        </div>
         <FormButton
           variant="danger"
           size="sm"
@@ -77,22 +82,40 @@ interface RequestCardProps {
 }
 
 const RequestCard: React.FC<RequestCardProps> = ({ request, index, onRemove }) => {
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('th-TH', {
+      weekday: 'short',
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <div className="bg-white p-4 rounded-md shadow-sm border border-gray-200">
       <div className="flex justify-between items-start">
+        {/* หมายเลขลำดับ */}
+        <div className="flex-shrink-0 mr-3">
+          <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold">
+            {index + 1}
+          </div>
+        </div>
+        
         <div className="flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
             <div>
               <span className="font-medium text-gray-600">หม้อแปลง:</span>{" "}
-              <span className="text-gray-900">{request.transformerNumber}</span>
+              <span className="text-gray-900 font-medium">{request.transformerNumber}</span>
             </div>
             <div>
               <span className="font-medium text-gray-600">วันที่:</span>{" "}
-              <span className="text-gray-900">{request.outageDate}</span>
+              <span className="text-gray-900 font-medium">{formatDate(request.outageDate)}</span>
             </div>
             <div>
               <span className="font-medium text-gray-600">เวลา:</span>{" "}
-              <span className="text-gray-900">{request.startTime} - {request.endTime}</span>
+              <span className="text-gray-900 font-medium">
+                {request.startTime} - {request.endTime}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-600">สถานที่:</span>{" "}

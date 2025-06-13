@@ -4,20 +4,44 @@ import { z } from 'zod'
 
 export const PowerOutageRequestSchema = z.object({
   outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
-  startTime: z.string().min(1, "กรุณาระบุเวลาเริ่มต้น"),
-  endTime: z.string().min(1, "กรุณาระบุเวลาสิ้นสุด"),
-  workCenterId: z.string().min(1, "กรุณาเลือกศูนย์งาน"),
+  startTime: z.string()
+    .min(1, "กรุณาระบุเวลาเริ่มต้น")
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "รูปแบบเวลาไม่ถูกต้อง"),
+  endTime: z.string()
+    .min(1, "กรุณาระบุเวลาสิ้นสุด")
+    .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "รูปแบบเวลาไม่ถูกต้อง"),
+  workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงาน"),
   branchId: z.string().min(1, "กรุณาเลือกสาขา"),
   transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),
   area: z.string().nullable(),
 }).refine((data) => {
-  // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้น
-  const startTime = new Date(`${data.outageDate}T${data.startTime}`);
-  const endTime = new Date(`${data.outageDate}T${data.endTime}`);
-  return endTime > startTime;
+  // ตรวจสอบเวลาทำการ (06:00 - 20:00)
+  const [startHour, startMin] = data.startTime.split(':').map(Number);
+  const [endHour, endMin] = data.endTime.split(':').map(Number);
+  
+  const startTimeInMinutes = startHour * 60 + startMin;
+  const endTimeInMinutes = endHour * 60 + endMin;
+  
+  // เวลาทำการ 06:00 - 20:00
+  const workingStart = 6 * 60; // 06:00
+  const workingEnd = 20 * 60;   // 20:00
+  
+  return startTimeInMinutes >= workingStart && endTimeInMinutes <= workingEnd;
 }, {
-  message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้น",
+  message: "เวลาต้องอยู่ในช่วงเวลาทำการ 06:00 - 20:00 น.",
+  path: ["startTime"],
+}).refine((data) => {
+  // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที
+  const [startHour, startMin] = data.startTime.split(':').map(Number);
+  const [endHour, endMin] = data.endTime.split(':').map(Number);
+  
+  const startTimeInMinutes = startHour * 60 + startMin;
+  const endTimeInMinutes = endHour * 60 + endMin;
+  
+  return endTimeInMinutes > startTimeInMinutes + 29; // อย่างน้อย 30 นาที
+}, {
+  message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที",
   path: ["endTime"],
 });
 
@@ -26,7 +50,7 @@ export const PowerOutageRequestUpdateSchema = z.object({
   outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
   startTime: z.string().min(1, "กรุณาระบุเวลาเริ่มต้น"),
   endTime: z.string().min(1, "กรุณาระบุเวลาสิ้นสุด"),
-  workCenterId: z.string().min(1, "กรุณาเลือกศูนย์งาน"),
+  workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงาน"),
   branchId: z.string().min(1, "กรุณาเลือกสาขา"),
   transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),

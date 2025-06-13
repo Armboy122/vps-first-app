@@ -13,18 +13,19 @@ interface FormSelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> 
   placeholder?: string;
 }
 
-export const FormSelect: React.FC<FormSelectProps> = ({
+export const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(({
   error,
   options,
   placeholder = "เลือกตัวเลือก",
   className = '',
   ...props
-}) => {
+}, ref) => {
   const baseClasses = "w-full p-3 border rounded-lg transition-colors focus:ring-2 focus:ring-blue-200 focus:outline-none";
   const errorClasses = error ? "border-red-300 bg-red-50" : "border-gray-300 focus:border-blue-500";
   
   return (
     <select
+      ref={ref}
       {...props}
       className={`${baseClasses} ${errorClasses} ${className}`}
     >
@@ -36,4 +37,6 @@ export const FormSelect: React.FC<FormSelectProps> = ({
       ))}
     </select>
   );
-};
+});
+
+FormSelect.displayName = 'FormSelect';

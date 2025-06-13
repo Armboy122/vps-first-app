@@ -187,13 +187,13 @@ export default function PrintAnnouncement(){
                             {authInfo.isAdmin && (
                                 <>
                                     <div>
-                                        <label htmlFor="workCenterId" className="block mb-2">ศูนย์งาน:</label>
+                                        <label htmlFor="workCenterId" className="block mb-2">จุดรวมงาน:</label>
                                         <select
                                             id="workCenterId"
                                             {...register('workCenterId')}
                                             className="w-full p-2 border rounded"
                                         >
-                                            <option value="">เลือกศูนย์งาน</option>
+                                            <option value="">เลือกจุดรวมงาน</option>
                                             {workCenters.map(wc => (
                                             <option key={wc.id} value={wc.id}>{wc.name}</option>
                                             ))}

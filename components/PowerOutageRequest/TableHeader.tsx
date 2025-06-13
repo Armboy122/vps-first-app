@@ -42,7 +42,7 @@ export const TableHeader = memo(({
         {(isAdmin || isViewer) && (
           <>
             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              ศูนย์งาน
+              จุดรวมงาน
             </th>
             <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               สาขา

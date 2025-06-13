@@ -61,11 +61,30 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>((set, get) =
   // การจัดการคำขอ
   addRequest: (request) => {
     const { requests } = get();
+    const newRequests = [...requests, request];
+    
+    // Sort by outageDate first, then by startTime
+    newRequests.sort((a, b) => {
+      // เปรียบเทียบวันที่ก่อน
+      const dateA = new Date(a.outageDate);
+      const dateB = new Date(b.outageDate);
+      
+      if (dateA.getTime() !== dateB.getTime()) {
+        return dateA.getTime() - dateB.getTime();
+      }
+      
+      // ถ้าวันที่เหมือนกัน ให้เปรียบเทียบเวลาเริ่มต้น
+      const timeA = a.startTime || '00:00';
+      const timeB = b.startTime || '00:00';
+      
+      return timeA.localeCompare(timeB);
+    });
+    
     set({ 
-      requests: [...requests, request],
+      requests: newRequests,
       submitStatus: {
         success: true,
-        message: 'คำขอถูกเพิ่มเข้าสู่รายการแล้ว'
+        message: 'คำขอถูกเพิ่มเข้าสู่รายการแล้ว (เรียงตามวันที่และเวลา)'
       }
     });
   },

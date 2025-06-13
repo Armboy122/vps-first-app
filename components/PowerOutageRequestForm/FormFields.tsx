@@ -1,8 +1,8 @@
 "use client";
 import React from "react";
-import { Control, FieldErrors, UseFormRegister } from "react-hook-form";
+import { Control, FieldErrors, UseFormRegister, Controller } from "react-hook-form";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
-import { FormField, FormInput, FormSelect, FormTimePicker } from "@/components/forms";
+import { FormField, FormInput, FormSelect, SimpleTimePicker } from "@/components/forms";
 import dayjs from "dayjs";
 
 interface WorkCenter {
@@ -34,6 +34,9 @@ interface FormFieldsProps {
   watchedOutageDate: string;
   daysFromToday: number | null;
   timeError: string | null;
+  branchesLoading?: boolean;
+  watchedStartTime?: string;
+  watchedEndTime?: string;
   onDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onTransformerSearch: (searchTerm: string) => void;
   onTransformerSelect: (transformer: Transformer) => void;
@@ -52,6 +55,9 @@ export const FormFields: React.FC<FormFieldsProps> = ({
   watchedOutageDate,
   daysFromToday,
   timeError,
+  branchesLoading,
+  watchedStartTime,
+  watchedEndTime,
   onDateChange,
   onTransformerSearch,
   onTransformerSelect,
@@ -113,12 +119,16 @@ export const FormFields: React.FC<FormFieldsProps> = ({
         required
         icon="🕐"
       >
-        <FormTimePicker
+        <SimpleTimePicker
           name="startTime"
           control={control}
-          label="เวลาเริ่มต้น"
           error={errors.startTime}
+          minTime="06:00"
+          maxTime="19:30"
         />
+        <p className="text-xs text-gray-500 mt-1">
+          ⏰ เวลาทำการ: 06:00 - 19:30 น. (ทุก 10 นาที)
+        </p>
       </FormField>
 
       {/* เวลาสิ้นสุด */}
@@ -129,28 +139,44 @@ export const FormFields: React.FC<FormFieldsProps> = ({
         required
         icon="🕐"
       >
-        <FormTimePicker
+        <SimpleTimePicker
           name="endTime"
           control={control}
-          label="เวลาสิ้นสุด"
           error={errors.endTime}
+          minTime={watchedStartTime || "06:30"}
+          maxTime="20:00"
         />
+        {watchedStartTime && watchedEndTime && watchedEndTime <= watchedStartTime && (
+          <p className="text-xs text-red-600 mt-1">
+            ⚠️ เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น
+          </p>
+        )}
+        <p className="text-xs text-gray-500 mt-1">
+          ⏰ ต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที
+        </p>
       </FormField>
 
-      {/* ศูนย์งาน (สำหรับ Admin เท่านั้น) */}
+      {/* จุดรวมงาน (สำหรับ Admin เท่านั้น) */}
       {role === "ADMIN" && (
         <FormField
-          label="ศูนย์งาน"
+          label="จุดรวมงาน"
           name="workCenterId"
           error={errors.workCenterId}
           required
           icon="🏢"
         >
-          <FormSelect
-            {...register("workCenterId")}
-            options={workCenterOptions}
-            placeholder="เลือกศูนย์งาน"
-            error={errors.workCenterId}
+          <Controller
+            name="workCenterId"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                {...field}
+                options={workCenterOptions}
+                placeholder="เลือกจุดรวมงาน"
+                error={errors.workCenterId}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
           />
         </FormField>
       )}
@@ -164,12 +190,25 @@ export const FormFields: React.FC<FormFieldsProps> = ({
           required
           icon="🏪"
         >
-          <FormSelect
-            {...register("branchId")}
-            options={branchOptions}
-            placeholder="เลือกสาขา"
-            error={errors.branchId}
-            disabled={!watchWorkCenterId}
+          <Controller
+            name="branchId"
+            control={control}
+            render={({ field }) => (
+              <FormSelect
+                {...field}
+                options={branchOptions}
+                placeholder={
+                  !watchWorkCenterId 
+                    ? "กรุณาเลือกจุดรวมงานก่อน" 
+                    : branchesLoading 
+                      ? "กำลังโหลดสาขา..." 
+                      : "เลือกสาขา"
+                }
+                error={errors.branchId}
+                disabled={!watchWorkCenterId || branchesLoading}
+                onChange={(e) => field.onChange(e.target.value)}
+              />
+            )}
           />
         </FormField>
       )}

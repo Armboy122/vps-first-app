@@ -194,12 +194,15 @@ export const usePowerOutageFormLogic = ({
           success: true
         });
         
+        // รีเซ็ตฟอร์มและรายการคำขอ
+        reset();
         resetStore();
+        
         setSubmitStatus({
           success: true,
           message: result.message || `บันทึกคำขอสำเร็จทั้งหมด ${result.successCount} รายการ`,
         });
-        reset();
+        
         setTimeout(() => router.back(), 1500);
       } else {
         const errorMessage = result.validationErrors?.length 

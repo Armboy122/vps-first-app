@@ -17,6 +17,8 @@ import { FormButton } from "@/components/forms";
 import { FormFields } from "./PowerOutageRequestForm/FormFields";
 import { RequestList } from "./PowerOutageRequestForm/RequestList";
 import { StatusMessages } from "./PowerOutageRequestForm/StatusMessages";
+import { ExcelImport } from "./PowerOutageRequestForm/ExcelImport";
+import { ExcelImportGuide } from "./PowerOutageRequestForm/ExcelImportGuide";
 
 // Hooks และ State Management
 import { usePowerOutageFormLogic } from "@/hooks/usePowerOutageFormLogic";
@@ -42,10 +44,7 @@ interface PowerOutageRequestFormProps {
   branch?: string;
 }
 
-/**
- * ฟอร์มสำหรับสร้างคำขอดับไฟ
- * รองรับการบันทึกเดี่ยวและแบบรวมหลายรายการ
- */
+
 export default function PowerOutageRequestForm({
   workCenters: initialWorkCenters,
   role,
@@ -104,6 +103,17 @@ export default function PowerOutageRequestForm({
   // =============================================
   const watchWorkCenterId = watch("workCenterId");
   const watchedOutageDate = watch("outageDate");
+  const watchedStartTime = watch("startTime");
+  const watchedEndTime = watch("endTime");
+
+  // =============================================
+  // Reset branchId when workCenterId changes
+  // =============================================
+  React.useEffect(() => {
+    if (role === "ADMIN" && watchWorkCenterId) {
+      setValue("branchId", ""); // Reset branch when work center changes
+    }
+  }, [watchWorkCenterId, setValue, role]);
 
   // =============================================
   // Data Fetching (React Query)
@@ -163,16 +173,19 @@ export default function PowerOutageRequestForm({
   };
 
   // =============================================
-  // Loading State
+  // Excel Import Handler
   // =============================================
-  if (branchesLoading && watchWorkCenterId) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
-        <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
-      </div>
-    );
-  }
+  const handleImportData = (importedData: PowerOutageRequestInput[]) => {
+    logUserAction('excel_data_imported', {
+      count: importedData.length,
+      hasExistingRequests: requests.length > 0
+    });
+    
+    // เพิ่มข้อมูลที่นำเข้าจาก Excel เข้าในรายการคำขอ
+    importedData.forEach(data => {
+      addRequest(data);
+    });
+  };
 
   // =============================================
   // Render
@@ -196,6 +209,9 @@ export default function PowerOutageRequestForm({
             watchedOutageDate={watchedOutageDate}
             daysFromToday={daysFromToday}
             timeError={timeError}
+            branchesLoading={branchesLoading}
+            watchedStartTime={watchedStartTime}
+            watchedEndTime={watchedEndTime}
             onDateChange={handleDateChange}
             onTransformerSearch={handleTransformerSearch}
             onTransformerSelect={onTransformerSelect}
@@ -232,6 +248,32 @@ export default function PowerOutageRequestForm({
           watchedOutageDate={watchedOutageDate}
           minSelectableDate={minSelectableDate}
         />
+
+        {/* คู่มือการใช้งาน Excel Import */}
+        <ExcelImportGuide role={role} />
+
+        {/* นำเข้าข้อมูลจาก Excel */}
+        <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">
+              📊 นำเข้าข้อมูลจากไฟล์ Excel
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              เพิ่มหลายรายการพร้อมกันจากไฟล์ Excel เพื่อประหยัดเวลา
+            </p>
+          </div>
+          <div className="p-6">
+            <ExcelImport
+              role={role}
+              workCenters={workCenters}
+              onImportData={handleImportData}
+              userWorkCenterId={workCenterId}
+              userBranch={branch}
+              existingRequests={requests}
+              onClearExistingRequests={clearAllRequests}
+            />
+          </div>
+        </div>
 
         {/* รายการคำขอที่รอการบันทึก */}
         <RequestList

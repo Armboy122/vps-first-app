@@ -190,7 +190,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
                 <div>
                   <p className="text-sm text-gray-500 flex items-center">
                     <FontAwesomeIcon icon={faBuilding} className="mr-1" />
-                    ศูนย์งาน
+                    จุดรวมงาน
                   </p>
                   <p className="text-gray-800 font-medium">{request.workCenter.name}</p>
                 </div>

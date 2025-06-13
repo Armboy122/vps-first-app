@@ -5,8 +5,8 @@ import { getThailandDateAtMidnight, getDaysDifference, isDateInFuture } from '@/
 import { cacheOMSStatusByWorkCenter, cacheOMSStatusDistribution, clearOMSCache } from '@/lib/cache-utils'
 
 /**
- * ดึงข้อมูลการกระจายสถานะ OMS ตามศูนย์งาน พร้อมกับแคชข้อมูลไว้
- * @returns ข้อมูลการกระจายสถานะ OMS ตามศูนย์งาน
+ * ดึงข้อมูลการกระจายสถานะ OMS ตามจุดรวมงาน พร้อมกับแคชข้อมูลไว้
+ * @returns ข้อมูลการกระจายสถานะ OMS ตามจุดรวมงาน
  */
 export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(async () => {
   const today = getThailandDateAtMidnight();
@@ -64,8 +64,8 @@ export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(a
 });
 
 /**
- * ดึงข้อมูลสถานะ OMS ตามศูนย์งาน พร้อมกับแคชข้อมูลไว้
- * @returns ข้อมูลสถานะ OMS ตามศูนย์งาน
+ * ดึงข้อมูลสถานะ OMS ตามจุดรวมงาน พร้อมกับแคชข้อมูลไว้
+ * @returns ข้อมูลสถานะ OMS ตามจุดรวมงาน
  */
 export const getOMSStatusByWorkCenter = cacheOMSStatusByWorkCenter(async () => {
   const omsStatusByWorkCenter = await prisma.workCenter.findMany({

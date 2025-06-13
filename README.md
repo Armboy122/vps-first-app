@@ -56,7 +56,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 
 ฟังก์ชันหลักสำหรับการแคชข้อมูล:
 - `cacheData()` - ฟังก์ชันพื้นฐานสำหรับแคชข้อมูลทั่วไป
-- `cacheOMSStatusByWorkCenter()` - แคชข้อมูลสถานะ OMS ตามศูนย์งาน
+- `cacheOMSStatusByWorkCenter()` - แคชข้อมูลสถานะ OMS ตามจุดรวมงาน
 - `cacheOMSStatusDistribution()` - แคชข้อมูลการกระจายสถานะ OMS
 - `clearCacheByPath()` - ล้างแคชตามพาธ
 - `clearCacheByTag()` - ล้างแคชตามแท็ก
