@@ -90,34 +90,6 @@ const SECURITY_LIMITS = {
   MIN_UPLOAD_INTERVAL: 15000, // เพิ่มเป็น 15 วินาทีสำหรับข้อมูลจำนวนมาก
 };
 
-// CSV Parser function - ย้ายมาไว้นอก component
-const parseCSVLine = (line: string): string[] => {
-  const result: string[] = [];
-  let current = '';
-  let inQuotes = false;
-  
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    
-    if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        current += '"';
-        i++; // skip next quote
-      } else {
-        inQuotes = !inQuotes;
-      }
-    } else if (char === ',' && !inQuotes) {
-      result.push(current.trim());
-      current = '';
-    } else {
-      current += char;
-    }
-  }
-  
-  result.push(current.trim());
-  return result;
-};
-
 // ---------- Context สำหรับการจัดการพารามิเตอร์การค้นหา ---------- //
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -425,6 +397,33 @@ const CSVUploadComponent = () => {
     return { isValid: true };
   }, []);
 
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        result.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    result.push(current.trim());
+    return result;
+  };
+
   const handleFileUpload = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -613,7 +612,7 @@ const CSVUploadComponent = () => {
       setIsUploading(false);
       setUploadProgress({ show: false, message: '' });
     }
-  }, [uploadMutation, lastUploadTime, validateFileContent]);
+  }, [uploadMutation, lastUploadTime, validateFileContent, parseCSVLine]);
 
   const isRateLimited = Date.now() - lastUploadTime < SECURITY_LIMITS.MIN_UPLOAD_INTERVAL;
 
