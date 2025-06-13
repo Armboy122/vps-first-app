@@ -118,9 +118,24 @@ export default function PrintAnnouncement(){
                 setIsLoading(false);
                 return;
             }
+            
+            // เรียงลำดับข้อมูลตามวันที่และเวลาจากน้อยไปมาก
+            const sortedRes = res.sort((a, b) => {
+                // เรียงตามวันที่ก่อน
+                const dateA = new Date(a.outageDate);
+                const dateB = new Date(b.outageDate);
+                if (dateA.getTime() !== dateB.getTime()) {
+                    return dateA.getTime() - dateB.getTime();
+                }
+                // ถ้าวันที่เท่ากันให้เรียงตามเวลาเริ่มต้น
+                const timeA = new Date(a.startTime);
+                const timeB = new Date(b.startTime);
+                return timeA.getTime() - timeB.getTime();
+            });
+            
             let peaNo = ''
             let tel = "-"
-            res.forEach((val,i)=>{
+            sortedRes.forEach((val,i)=>{
                 const regex = /(\d{2}-\d{6})/
                 const d = val.transformerNumber.match(regex)
                 tel = val.branch.phoneNumber?val.branch.phoneNumber:"-"
@@ -128,8 +143,8 @@ export default function PrintAnnouncement(){
             })
             const obj = {
                 peaNo,
-                name: res[0].branch.fullName,
-                cutoffDate: getCutoffDate(res[0].outageDate),
+                name: sortedRes[0].branch.fullName,
+                cutoffDate: getCutoffDate(sortedRes[0].outageDate),
                 annouceDate: getAnnounceDate(),
                 tel
             }
