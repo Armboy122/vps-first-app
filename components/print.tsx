@@ -1,14 +1,17 @@
-'use client'
-import { getBranches, getWorkCenters } from '@/app/api/action/getWorkCentersAndBranches';
-import { getDataforPrintAnnouncement } from '@/app/api/action/printAnnoucement';
-import { GetAnnoucementRequest, GetAnnoucementRequestInput } from '@/lib/validations/powerOutageRequest';
-import { faPrint } from '@fortawesome/free-solid-svg-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { Branch } from '@prisma/client';
-import { useSession } from 'next-auth/react';
-import { useEffect, useState } from 'react';
-import { useForm } from 'react-hook-form';
+"use client";
+
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { useSession } from "next-auth/react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faPrint } from "@fortawesome/free-solid-svg-icons";
+import { Branch } from "@prisma/client";
+
+import { getBranches, getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
+import { getDataforPrintAnnouncement } from "@/app/api/action/printAnnoucement";
+import { generatePdf } from "@/app/api/action/generatePdf";
+import { GetAnnoucementRequest, GetAnnoucementRequestInput } from "@/lib/validations/powerOutageRequest";
 import { getThailandDate } from "@/lib/date-utils";
 
 interface WorkCenter {
@@ -16,9 +19,9 @@ interface WorkCenter {
     name: string;
   }
 
-const getCutoffDate = (date : Date) => {
-    const dayOfWeek = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'][date.getDay()];
-    return `${dayOfWeek}ที่ ${date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' })}`;
+const getCutoffDate = (date: Date) => {
+    const dayOfWeek = ["อาทิตย์", "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์"][date.getDay()];
+    return `${dayOfWeek}ที่ ${date.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" })}`;
 };
 
 const getCutoffTime = (startTime:Date, endTime:Date) => {
@@ -29,14 +32,14 @@ const getCutoffTime = (startTime:Date, endTime:Date) => {
 
 const setFormattedTime = (time:Date) => {
     const currentDate = time;
-    const hours = currentDate.getHours().toString().padStart(2, '0');
-    const minutes = currentDate.getMinutes().toString().padStart(2, '0');
+    const hours = currentDate.getHours().toString().padStart(2, "0");
+    const minutes = currentDate.getMinutes().toString().padStart(2, "0");
     return `${hours}:${minutes}`;
 };
 
 const getAnnounceDate = () => {
     const date = getThailandDate();
-    return date.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
+    return date.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 };
 
 export default function PrintAnnouncement(){
@@ -80,26 +83,29 @@ export default function PrintAnnouncement(){
         resolver: zodResolver(GetAnnoucementRequest)
     });
 
-    const watchWorkCenterId = watch('workCenterId');
+    const watchWorkCenterId = watch("workCenterId");
 
     const loadBranches = async (workCenterId: number) => {
         const branchData = await getBranches(workCenterId);
         setBranches(branchData);
     };
 
-    useEffect(() => {
-        if (watchWorkCenterId) {
-          loadBranches(Number(watchWorkCenterId));
+    const handleWorkCenterChange = (workCenterId: string) => {
+        if (workCenterId) {
+            loadBranches(Number(workCenterId));
+        } else {
+            setBranches([]);
         }
-    }, [watchWorkCenterId]);
+    };
 
-    useEffect(()=>{
-        const setWC = async()=>{
-            const res = await getWorkCenters()
-            setWorkCenters(res)
-        }
-        setWC()
-    },[])
+    // Load work centers on mount
+    useEffect(() => {
+        const loadWorkCenters = async () => {
+            const res = await getWorkCenters();
+            setWorkCenters(res);
+        };
+        loadWorkCenters();
+    }, []);
     
     const onSubmit = async (data: GetAnnoucementRequestInput) => {
         setIsLoading(true);
@@ -114,7 +120,7 @@ export default function PrintAnnouncement(){
     
             const res = await getDataforPrintAnnouncement(submitData)
             if(res.length == 0){
-                setError('การไฟฟ้าที่คุณเลือกไม่มีการดับไฟในวันดังกล่าว');
+                setError("การไฟฟ้าที่คุณเลือกไม่มีการดับไฟในวันดังกล่าว");
                 setIsLoading(false);
                 return;
             }
@@ -133,7 +139,7 @@ export default function PrintAnnouncement(){
                 return timeA.getTime() - timeB.getTime();
             });
             
-            let peaNo = ''
+            let peaNo = ""
             let tel = "-"
             sortedRes.forEach((val,i)=>{
                 const regex = /(\d{2}-\d{6})/
@@ -141,26 +147,25 @@ export default function PrintAnnouncement(){
                 tel = val.branch.phoneNumber?val.branch.phoneNumber:"-"
                 peaNo = peaNo+`${(i+1).toFixed(0)}. หมายเลขหม้อแปลง ${d?d[0]:"-"} บริเวณ ${val.area} ${getCutoffTime(val.startTime,val.endTime)} \n`
             })
-            const obj = {
+            const pdfData = {
                 peaNo,
                 name: sortedRes[0].branch.fullName,
                 cutoffDate: getCutoffDate(sortedRes[0].outageDate),
                 annouceDate: getAnnounceDate(),
                 tel
             }
-            const resPDF = await fetch(process.env.NEXT_PUBLIC_GENERATE_PDF as string,{
-                method: "POST",
-                body: JSON.stringify(obj)
-            });
-            const { msg, data: pdfData } = await resPDF.json();
-            if (msg === "success") {
-                setPdfBase64(pdfData);
+            
+            // ใช้ server action แทนการเรียก fetch โดยตรง
+            const pdfResult = await generatePdf(pdfData);
+            
+            if (pdfResult.success && pdfResult.message === "success") {
+                setPdfBase64(pdfResult.data);
             } else {
-                throw new Error(msg || 'ไม่สามารถสร้าง PDF ได้');
+                throw new Error(pdfResult.message || "ไม่สามารถสร้าง PDF ได้");
             }
         } catch (error) {
-            console.error('เกิดข้อผิดพลาด:', error);
-            setError('เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่อีกครั้ง');
+            console.error("เกิดข้อผิดพลาด:", error);
+            setError("เกิดข้อผิดพลาดในการดึงข้อมูล กรุณาลองใหม่อีกครั้ง");
         } finally {
             setIsLoading(false);
         }
@@ -194,7 +199,7 @@ export default function PrintAnnouncement(){
                                 <input
                                     type="date"
                                     id="outageDate"
-                                    {...register('outageDate')}
+                                    {...register("outageDate")}
                                     className="w-full p-2 border rounded"
                                 />
                                 {errors.outageDate && <p className="text-red-500">{errors.outageDate.message}</p>}
@@ -205,7 +210,9 @@ export default function PrintAnnouncement(){
                                         <label htmlFor="workCenterId" className="block mb-2">จุดรวมงาน:</label>
                                         <select
                                             id="workCenterId"
-                                            {...register('workCenterId')}
+                                            {...register("workCenterId", {
+                                                onChange: (e) => handleWorkCenterChange(e.target.value)
+                                            })}
                                             className="w-full p-2 border rounded"
                                         >
                                             <option value="">เลือกจุดรวมงาน</option>
@@ -219,7 +226,7 @@ export default function PrintAnnouncement(){
                                         <label htmlFor="branchId" className="block mb-2">สาขา:</label>
                                         <select
                                             id="branchId"
-                                            {...register('branchId')}
+                                            {...register("branchId")}
                                             className="w-full p-2 border rounded"
                                         >
                                             <option value="">เลือกสาขา</option>
@@ -231,8 +238,8 @@ export default function PrintAnnouncement(){
                             )}
                             {!authInfo.isAdmin && (
                                 <>
-                                    <input type="hidden" {...register('workCenterId')} value={authInfo.userWorkCenterId} />
-                                    <input type="hidden" {...register('branchId')} value={authInfo.userbranchID} />
+                                    <input type="hidden" {...register("workCenterId")} value={authInfo.userWorkCenterId} />
+                                    <input type="hidden" {...register("branchId")} value={authInfo.userbranchID} />
                                 </>
                             )}
                             <div className='mt-3 flex flex-row gap-3'>
