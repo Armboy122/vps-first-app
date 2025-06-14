@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { debounce } from "lodash";
 import { useAdminContext } from "../../context/AdminContext";
@@ -10,15 +10,33 @@ export function UserSearchBar() {
   const [searchInput, setSearchInput] = useState(searchParams.search);
 
   // Fetch work centers for filter
-  const { data: workCenters = [] } = useQuery({
+  const { data: workCenters = [], isLoading: workCentersLoading, error: workCentersError } = useQuery({
     queryKey: ["workCenters"],
-    queryFn: getWorkCenters,
+    queryFn: async () => {
+      try {
+        const result = await getWorkCenters();
+        return result;
+      } catch (error) {
+        console.error("❌ Error fetching work centers:", {
+          error,
+          message: error instanceof Error ? error.message : 'Unknown error',
+        });
+        throw error;
+      }
+    },
     staleTime: 10 * 60 * 1000, // 10 minutes
+    retry: (failureCount, error) => {
+      if (failureCount > 0) {
+        console.error(`🔄 Retry attempt ${failureCount + 1}/3 for work centers:`, error);
+      }
+      return failureCount < 2;
+    },
+    retryDelay: 1000,
   });
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((searchTerm: string) => {
+  const debouncedSearch = useMemo(
+    () => debounce((searchTerm: string) => {
       updateSearchParams({ search: searchTerm });
     }, 500),
     [updateSearchParams],
@@ -78,15 +96,28 @@ export function UserSearchBar() {
             id="workCenter-filter"
             value={searchParams.workCenterId || ""}
             onChange={(e) => handleWorkCenterChange(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={workCentersLoading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
-            <option value="">ทุกจุดรวมงาน</option>
-            {workCenters.map((wc: WorkCenter) => (
+            <option value="">
+              {workCentersLoading 
+                ? "กำลังโหลด..." 
+                : workCentersError 
+                  ? "เกิดข้อผิดพลาด" 
+                  : "ทุกจุดรวมงาน"
+              }
+            </option>
+            {!workCentersLoading && !workCentersError && workCenters.map((wc: WorkCenter) => (
               <option key={wc.id} value={wc.id.toString()}>
                 {wc.name}
               </option>
             ))}
           </select>
+          {workCentersError && (
+            <p className="text-xs text-red-600 mt-1">
+              ไม่สามารถโหลดข้อมูลจุดรวมงานได้
+            </p>
+          )}
         </div>
 
         {/* Clear Filters Button */}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { debounce } from "lodash";
 import { useAdminContext } from "../../context/AdminContext";
 
@@ -7,8 +7,8 @@ export function TransformerSearchBar() {
   const [searchInput, setSearchInput] = useState(transformerSearchParams.search);
 
   // Debounced search function
-  const debouncedSearch = useCallback(
-    debounce((searchTerm: string) => {
+  const debouncedSearch = useMemo(
+    () => debounce((searchTerm: string) => {
       updateTransformerSearchParams({ search: searchTerm });
     }, 500),
     [updateTransformerSearchParams],

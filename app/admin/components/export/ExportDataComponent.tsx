@@ -24,85 +24,112 @@ export function ExportDataComponent() {
 
   // Handle input change
   const handleInputChange = (field: keyof ExportOptions, value: string) => {
-    setExportOptions(prev => ({ ...prev, [field]: value }));
+    setExportOptions((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Format time to HH:MM
+  const formatTime = (timeString: string | Date): string => {
+    try {
+      const date = new Date(timeString);
+      return date.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      });
+    } catch (error) {
+      return timeString.toString();
+    }
   };
 
   // Export data
   const handleExport = async () => {
     setIsExporting(true);
-    
+
     try {
       // Prepare filter parameters
       const filters: any = {};
-      
+
       if (exportOptions.workCenterId) {
         filters.workCenterId = parseInt(exportOptions.workCenterId);
       }
-      
+
       if (exportOptions.dateFrom) {
         filters.dateFrom = exportOptions.dateFrom;
       }
-      
+
       if (exportOptions.dateTo) {
         filters.dateTo = exportOptions.dateTo;
       }
 
       // Fetch power outage requests
-      const data = await getPowerOutageRequests(filters);
-      
-      if (!data || data.length === 0) {
+      const response = await getPowerOutageRequests(1, 10000, filters);
+
+      if (!response.data || response.data.length === 0) {
         alert("ไม่พบข้อมูลที่ตรงกับเงื่อนไขที่เลือก");
         return;
       }
 
       // Prepare data for export
-      const exportData = data.map((request: any) => ({
-        "วันที่ขอตัดไฟ": new Date(request.outageDate).toLocaleDateString("th-TH"),
-        "เวลาเริ่ม": request.startTime,
-        "เวลาสิ้นสุด": request.endTime,
-        "หมายเลขหม้อแปลง": request.transformerNumber,
+      const exportData = response.data.map((request: any) => ({
+        วันที่ขอตัดไฟ: new Date(request.outageDate).toLocaleDateString("th-TH"),
+        เวลาเริ่ม: formatTime(request.startTime),
+        เวลาสิ้นสุด: formatTime(request.endTime),
+        หมายเลขหม้อแปลง: request.transformerNumber,
         "รายละเอียด GIS": request.gisDetails,
-        "จุดรวมงาน": request.user?.workCenter?.name || "",
-        "สาขา": request.user?.branch?.fullName || "",
-        "ผู้ยื่นคำขอ": request.user?.fullName || "",
-        "รหัสพนักงาน": request.user?.employeeId || "",
-        "สถานะ": request.status === "PENDING" ? "รอดำเนินการ" : 
-                 request.status === "APPROVED" ? "อนุมัติ" : "ปฏิเสธ",
-        "วันที่ส่งคำขอ": new Date(request.createdAt).toLocaleDateString("th-TH"),
+        จุดรวมงาน: request.workCenter.name,
+        สาขา: request.branch.shortName,
+        ผู้ยื่นคำขอ: request.createdBy.fullName,
+        รหัสพนักงาน: request.createdBy.employeeId || "-",
+        สถานะคำขอOMS: request.omsStatus === "NOT_ADDED" ? "ยังไม่ส่งเข้าระบบ" : request.omsStatus === "PROCESSED" ? "ดำเนินการแล้ว" : "ยกเลิก",
+        วันที่ส่งคำขอ: new Date(request.createdAt).toLocaleDateString("th-TH"),
       }));
+
+      console.log("exportData", exportData);
 
       // Generate CSV content
       const headers = [
-        "วันที่ขอตัดไฟ", "เวลาเริ่ม", "เวลาสิ้นสุด", "หมายเลขหม้อแปลง",
-        "รายละเอียด GIS", "จุดรวมงาน", "สาขา", "ผู้ยื่นคำขอ", 
-        "รหัสพนักงาน", "สถานะ", "วันที่ส่งคำขอ"
+        "วันที่ขอตัดไฟ",
+        "เวลาเริ่ม",
+        "เวลาสิ้นสุด",
+        "หมายเลขหม้อแปลง",
+        "รายละเอียด GIS",
+        "จุดรวมงาน",
+        "สาขา",
+        "ผู้ยื่นคำขอ",
+        "รหัสพนักงาน",
+        "สถานะคำขอOMS",
+        "วันที่ส่งคำขอ",
       ];
-      
+
       const csvContent = generateCSVContent(exportData, headers);
-      
+
       // Create and download file
-      const blob = new Blob(["\uFEFF" + csvContent], { 
-        type: "text/csv;charset=utf-8;" 
+      const blob = new Blob(["\uFEFF" + csvContent], {
+        type: "text/csv;charset=utf-8;",
       });
-      
+
       const link = document.createElement("a");
       const url = URL.createObjectURL(blob);
       link.setAttribute("href", url);
-      
+
       // Generate filename
       const dateStr = new Date().toISOString().split("T")[0];
-      const workCenterName = exportOptions.workCenterId 
-        ? workCenters.find(wc => wc.id.toString() === exportOptions.workCenterId)?.name || "ทั้งหมด"
+      const workCenterName = exportOptions.workCenterId
+        ? workCenters.find(
+            (wc) => wc.id.toString() === exportOptions.workCenterId
+          )?.name || "ทั้งหมด"
         : "ทั้งหมด";
-      
-      link.setAttribute("download", `คำขอตัดไฟ_${workCenterName}_${dateStr}.csv`);
+
+      link.setAttribute(
+        "download",
+        `คำขอตัดไฟ_${workCenterName}_${dateStr}.csv`
+      );
       link.style.visibility = "hidden";
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       alert(`ส่งออกข้อมูลสำเร็จ! (${exportData.length} รายการ)`);
-      
     } catch (error) {
       console.error("Export error:", error);
       alert("เกิดข้อผิดพลาดในการส่งออกข้อมูล");
@@ -130,13 +157,18 @@ export function ExportDataComponent() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Work Center Filter */}
           <div>
-            <label htmlFor="workCenter" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="workCenter"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               จุดรวมงาน
             </label>
             <select
               id="workCenter"
               value={exportOptions.workCenterId}
-              onChange={(e) => handleInputChange("workCenterId", e.target.value)}
+              onChange={(e) =>
+                handleInputChange("workCenterId", e.target.value)
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">ทุกจุดรวมงาน</option>
@@ -150,7 +182,10 @@ export function ExportDataComponent() {
 
           {/* Date From */}
           <div>
-            <label htmlFor="dateFrom" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="dateFrom"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               วันที่เริ่มต้น
             </label>
             <input
@@ -164,7 +199,10 @@ export function ExportDataComponent() {
 
           {/* Date To */}
           <div>
-            <label htmlFor="dateTo" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="dateTo"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               วันที่สิ้นสุด
             </label>
             <input
@@ -178,17 +216,24 @@ export function ExportDataComponent() {
 
           {/* Format */}
           <div>
-            <label htmlFor="format" className="block text-sm font-medium text-gray-700 mb-2">
+            <label
+              htmlFor="format"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
               รูปแบบไฟล์
             </label>
             <select
               id="format"
               value={exportOptions.format}
-              onChange={(e) => handleInputChange("format", e.target.value as "csv" | "xlsx")}
+              onChange={(e) =>
+                handleInputChange("format", e.target.value as "csv" | "xlsx")
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="csv">CSV (.csv)</option>
-              <option value="xlsx" disabled>Excel (.xlsx) - เร็วๆนี้</option>
+              <option value="xlsx" disabled>
+                Excel (.xlsx) - เร็วๆนี้
+              </option>
             </select>
           </div>
         </div>
@@ -213,7 +258,9 @@ export function ExportDataComponent() {
 
         {/* Info */}
         <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="text-blue-800 text-sm font-medium mb-1">ข้อมูลที่จะส่งออก:</h4>
+          <h4 className="text-blue-800 text-sm font-medium mb-1">
+            ข้อมูลที่จะส่งออก:
+          </h4>
           <ul className="text-blue-700 text-xs space-y-1">
             <li>• วันที่และเวลาขอตัดไฟ</li>
             <li>• ข้อมูลหม้อแปลงและ GIS</li>

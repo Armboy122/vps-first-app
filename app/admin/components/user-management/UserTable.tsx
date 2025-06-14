@@ -17,14 +17,20 @@ interface UsersResponse {
 export function UserTable() {
   const { searchParams, updateSearchParams } = useAdminContext();
 
-  // Fetch users with React Query
+  // Fetch users with React Query - use stable key structure
   const {
     data,
     isLoading,
     error,
     refetch,
   } = useQuery({
-    queryKey: ["users", searchParams],
+    queryKey: [
+      "users", 
+      searchParams.page, 
+      searchParams.limit, 
+      searchParams.search, 
+      searchParams.workCenterId
+    ],
     queryFn: () =>
       getUsers(
         searchParams.page,
@@ -34,6 +40,10 @@ export function UserTable() {
       ),
     staleTime: 5 * 60 * 1000, // 5 minutes
     retry: 2,
+    // ป้องกัน refetch ที่ไม่จำเป็น
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+    refetchOnReconnect: true,
   });
 
   // Handle page size change

@@ -8,16 +8,26 @@ export async function getWorkCenters() {
         id: true,
         name: true,
       },
+      orderBy: {
+        name: 'asc',
+      },
     });
 
-    // แม็ปเป็น plain objects ใหม่เพื่อความชัดเจน
-    return workCenters.map((center) => ({
-      id: center.id,
-      name: center.name,
+    // Serialize ข้อมูลให้แน่ใจว่าส่งผ่าน network ได้
+    const result = workCenters.map((center) => ({
+      id: Number(center.id),
+      name: String(center.name),
     }));
+    
+    return result;
   } catch (error) {
-    console.error("มีปัญหาการดึงข้อมูลจุดรวมงาน:", error);
-    throw new Error("Failed to fetch work centers");
+    console.error("❌ Error in getWorkCenters server action:", {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      error,
+    });
+    
+    throw new Error(`Failed to fetch work centers: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }
 

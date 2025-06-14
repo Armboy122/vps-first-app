@@ -44,12 +44,20 @@ export function AdminProvider({ children }: AdminProviderProps) {
   // ฟังก์ชันสำหรับอัปเดตพารามิเตอร์การค้นหาผู้ใช้
   const updateSearchParams = useCallback(
     (newParams: Partial<UserSearchParams>) => {
-      setSearchParams((prev) => ({
-        ...prev,
-        ...newParams,
-        // รีเซ็ตหน้าเป็น 1 เมื่อมีการค้นหาใหม่
-        page: newParams.search !== undefined || newParams.workCenterId !== undefined ? 1 : prev.page,
-      }));
+      setSearchParams((prev) => {
+        const updatedParams = { ...prev, ...newParams };
+        
+        // รีเซ็ตหน้าเป็น 1 เฉพาะเมื่อมีการเปลี่ยน search หรือ workCenterId (ไม่ใช่ page)
+        if (
+          (newParams.search !== undefined && newParams.search !== prev.search) ||
+          (newParams.workCenterId !== undefined && newParams.workCenterId !== prev.workCenterId) ||
+          (newParams.limit !== undefined && newParams.limit !== prev.limit)
+        ) {
+          updatedParams.page = 1;
+        }
+        
+        return updatedParams;
+      });
     },
     [],
   );

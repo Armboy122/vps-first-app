@@ -50,19 +50,30 @@ export async function getUsers(
   page = 1,
   pageSize = 10,
   search = "",
-  workCenterId = "",
+  workCenterId?: string,
 ) {
   const skip = (page - 1) * pageSize;
+  
   try {
-    const [users, totalCount] = await Promise.all([
+    // สร้าง where condition
+    const whereCondition: any = {};
+    
+    // เพิ่มเงื่อนไขการค้นหา
+    if (search) {
+      whereCondition.OR = [
+        { employeeId: { contains: search, mode: "insensitive" } },
+        { fullName: { contains: search, mode: "insensitive" } },
+      ];
+    }
+    
+    // เพิ่มเงื่อนไขการกรองตาม workCenter
+    if (workCenterId && workCenterId !== "") {
+      whereCondition.workCenterId = parseInt(workCenterId);
+    }
+
+    const [users, totalUsers] = await Promise.all([
       prisma.user.findMany({
-        where: {
-          OR: [
-            { employeeId: { contains: search, mode: "insensitive" } },
-            { fullName: { contains: search, mode: "insensitive" } },
-          ],
-          workCenterId: workCenterId ? parseInt(workCenterId) : undefined,
-        },
+        where: whereCondition,
         select: {
           id: true,
           fullName: true,
@@ -81,22 +92,21 @@ export async function getUsers(
         },
         skip,
         take: pageSize,
+        orderBy: { id: 'asc' },
       }),
       prisma.user.count({
-        where: {
-          OR: [
-            { employeeId: { contains: search, mode: "insensitive" } },
-            { fullName: { contains: search, mode: "insensitive" } },
-          ],
-          workCenterId: workCenterId ? parseInt(workCenterId) : undefined,
-        },
+        where: whereCondition,
       }),
     ]);
 
-    return { users, totalCount, totalPages: Math.ceil(totalCount / pageSize) };
+    return { 
+      users, 
+      totalUsers, 
+      totalPages: Math.ceil(totalUsers / pageSize) 
+    };
   } catch (error) {
     console.error("Failed to fetch users:", error);
-    return { users: [], totalCount: 0, totalPages: 0 };
+    return { users: [], totalUsers: 0, totalPages: 0 };
   }
 }
 

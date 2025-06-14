@@ -11,7 +11,7 @@ import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 // Types
 export interface PowerOutageRequestWithRelations extends PowerOutageRequest {
-  createdBy: Pick<User, "fullName">;
+  createdBy: Pick<User, "fullName" | "employeeId">;
   workCenter: Pick<WorkCenter, "name" | "id">;
   branch: Pick<Branch, "shortName">;
 }
@@ -93,7 +93,7 @@ export class PowerOutageRequestService {
       prisma.powerOutageRequest.findMany({
         where,
         include: {
-          createdBy: { select: { fullName: true } },
+          createdBy: { select: { fullName: true, employeeId: true } },
           workCenter: { select: { name: true, id: true } },
           branch: { select: { shortName: true } },
         },
@@ -134,7 +134,7 @@ export class PowerOutageRequestService {
     return await prisma.powerOutageRequest.findUnique({
       where: { id },
       include: {
-        createdBy: { select: { fullName: true } },
+        createdBy: { select: { fullName: true, employeeId: true } },
         workCenter: { select: { name: true, id: true } },
         branch: { select: { shortName: true } },
       },

@@ -122,9 +122,13 @@ export async function getPowerOutageRequests(
   },
 ) {
   try {
+    // Ensure page and limit are numbers and have valid values
+    const validPage = Math.max(1, Number(page) || 1);
+    const validLimit = Math.max(1, Math.min(10000, Number(limit) || 50));
+    
     // ใช้ service layer สำหรับ pagination
     const result = await PowerOutageRequestService.getPaginatedRequests(
-      { page, limit },
+      { page: validPage, limit: validLimit },
       filters,
     );
 
