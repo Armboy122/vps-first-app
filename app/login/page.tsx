@@ -1,32 +1,32 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { useState, useEffect } from "react";
+import { signIn, useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function LoginPage() {
-  const [employeeId, setEmployeeId] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [employeeId, setEmployeeId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const router = useRouter();
   const { data: session, status } = useSession();
 
   useEffect(() => {
-    if (status === 'authenticated') {
-      window.location.href = '/power-outage-requests';
+    if (status === "authenticated") {
+      window.location.href = "/power-outage-requests";
     }
   }, [status]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setIsLoading(true);
 
     try {
-      const result = await signIn('credentials', {
+      const result = await signIn("credentials", {
         redirect: false,
         employeeId,
         password,
@@ -34,22 +34,22 @@ export default function LoginPage() {
       });
 
       if (result?.error) {
-        setError('รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง');
+        setError("รหัสพนักงานหรือรหัสผ่านไม่ถูกต้อง");
       } else {
-        router.push('/power-outage-requests');
+        router.push("/power-outage-requests");
       }
     } catch (error) {
-      setError('เกิดข้อผิดพลาด โปรดลองอีกครั้ง');
+      setError("เกิดข้อผิดพลาด โปรดลองอีกครั้ง");
     } finally {
       setIsLoading(false);
     }
   };
 
-  if (status === 'loading') {
+  if (status === "loading") {
     return <div>กำลังโหลด...</div>;
   }
 
-  if (status === 'authenticated') {
+  if (status === "authenticated") {
     return null; // หรือแสดงข้อความว่ากำลัง redirect
   }
 
@@ -123,7 +123,7 @@ export default function LoginPage() {
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
               disabled={isLoading}
             >
-              {isLoading ? 'กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+              {isLoading ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
             </button>
           </div>
         </form>

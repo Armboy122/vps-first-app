@@ -1,8 +1,10 @@
-"use client"
-import { useState, useEffect, useCallback } from 'react';
-import { useSession } from 'next-auth/react';
-import { changePassword, updateUserProfile, getCurrentUser } from '../api/action/User';
-import { getWorkCenters, getBranches } from '../api/action/getWorkCentersAndBranches';
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useSession } from "next-auth/react";
+
+import { changePassword, updateUserProfile, getCurrentUser } from "../api/action/User";
+import { getWorkCenters, getBranches } from "../api/action/getWorkCentersAndBranches";
 
 interface WorkCenter {
   id: number;
@@ -67,7 +69,7 @@ export default function User() {
       const branchData = await getBranches(workCenterId);
       setBranches(branchData);
     } catch (error) {
-      console.error('Failed to load branches:', error);
+      console.error("Failed to load branches:", error);
     } finally {
       setIsLoadingBranches(false);
     }
@@ -88,7 +90,7 @@ export default function User() {
         loadBranches(result.user.workCenter.id);
       }
     } catch (error) {
-      console.error('Failed to load user profile:', error);
+      console.error("Failed to load user profile:", error);
     } finally {
       setIsLoadingProfile(false);
     }
@@ -100,29 +102,33 @@ export default function User() {
       const centers = await getWorkCenters();
       setWorkCenters(centers);
     } catch (error) {
-      console.error('Failed to load work centers:', error);
+      console.error("Failed to load work centers:", error);
     }
   }, []);
 
   // Load initial data
   useEffect(() => {
-    loadUserProfile();
-    loadWorkCenters();
+    const initializeData = async () => {
+      await loadUserProfile();
+      await loadWorkCenters();
+    };
+    initializeData();
   }, [loadUserProfile, loadWorkCenters]);
 
   // Handle work center change
-  useEffect(() => {
-    if (selectedWorkCenterId && selectedWorkCenterId !== userProfile?.workCenter.id) {
-      loadBranches(selectedWorkCenterId);
+  const handleWorkCenterChange = (workCenterId: number) => {
+    setSelectedWorkCenterId(workCenterId);
+    if (workCenterId && workCenterId !== userProfile?.workCenter.id) {
+      loadBranches(workCenterId);
       setSelectedBranchId(0); // Reset branch selection
     }
-  }, [selectedWorkCenterId, userProfile?.workCenter.id, loadBranches]);
+  };
 
   // Show message
-  const showMessage = (msg: string, type: 'success' | 'error' | 'info' = 'info') => {
+  const showMessage = (msg: string, type: "success" | "error" | "info" = "info") => {
     setMessage(msg);
     setMessageType(type);
-    setTimeout(() => setMessage(''), 5000);
+    setTimeout(() => setMessage(""), 5000);
   };
 
   const handleProfileUpdate = async (e: React.FormEvent) => {
@@ -139,16 +145,16 @@ export default function User() {
       });
       
       if (result.success) {
-        showMessage('อัปเดตโปรไฟล์สำเร็จ', 'success');
+        showMessage("อัปเดตโปรไฟล์สำเร็จ", "success");
         // Reload profile data
         await loadUserProfile();
         // Update session
         await update();
       } else {
-        showMessage(result.error || 'ไม่สามารถอัปเดตโปรไฟล์ได้', 'error');
+        showMessage(result.error || "ไม่สามารถอัปเดตโปรไฟล์ได้", "error");
       }
     } catch (error) {
-      showMessage('เกิดข้อผิดพลาดในการอัปเดตโปรไฟล์', 'error');
+      showMessage("เกิดข้อผิดพลาดในการอัปเดตโปรไฟล์", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -158,12 +164,12 @@ export default function User() {
     e.preventDefault();
     
     if (newPassword !== confirmPassword) {
-      showMessage('รหัสผ่านใหม่ไม่ตรงกัน', 'error');
+      showMessage("รหัสผ่านใหม่ไม่ตรงกัน", "error");
       return;
     }
     
     if (newPassword.length < 6) {
-      showMessage('รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร', 'error');
+      showMessage("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร", "error");
       return;
     }
     
@@ -172,15 +178,15 @@ export default function User() {
     try {
       const result = await changePassword(currentPassword, newPassword);
       if (result.success) {
-        showMessage('เปลี่ยนรหัสผ่านสำเร็จ', 'success');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        showMessage("เปลี่ยนรหัสผ่านสำเร็จ", "success");
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
       } else {
-        showMessage(result.error || 'ไม่สามารถเปลี่ยนรหัสผ่านได้', 'error');
+        showMessage(result.error || "ไม่สามารถเปลี่ยนรหัสผ่านได้", "error");
       }
     } catch (error) {
-      showMessage('เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน', 'error');
+      showMessage("เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -206,17 +212,17 @@ export default function User() {
         {/* Message Alert */}
         {message && (
           <div className={`mb-6 p-4 rounded-xl border-l-4 ${
-            messageType === 'success' 
-              ? 'bg-green-50 border-green-500 text-green-700' 
-              : messageType === 'error'
-              ? 'bg-red-50 border-red-500 text-red-700'
-              : 'bg-blue-50 border-blue-500 text-blue-700'
+            messageType === "success" 
+              ? "bg-green-50 border-green-500 text-green-700" 
+              : messageType === "error"
+              ? "bg-red-50 border-red-500 text-red-700"
+              : "bg-blue-50 border-blue-500 text-blue-700"
           } shadow-sm`}>
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                {messageType === 'success' && <span className="text-xl">✅</span>}
-                {messageType === 'error' && <span className="text-xl">❌</span>}
-                {messageType === 'info' && <span className="text-xl">ℹ️</span>}
+                {messageType === "success" && <span className="text-xl">✅</span>}
+                {messageType === "error" && <span className="text-xl">❌</span>}
+                {messageType === "info" && <span className="text-xl">ℹ️</span>}
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium">{message}</p>
@@ -236,10 +242,10 @@ export default function User() {
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-gray-800 mb-1">
-                  {isLoadingProfile ? 'กำลังโหลด...' : userProfile?.fullName || 'ไม่ระบุชื่อ'}
+                  {isLoadingProfile ? "กำลังโหลด..." : userProfile?.fullName || "ไม่ระบุชื่อ"}
                 </h2>
                 <p className="text-gray-600 text-sm">
-                  รหัสพนักงาน: {userProfile?.employeeId || '-'}
+                  รหัสพนักงาน: {userProfile?.employeeId || "-"}
                 </p>
               </div>
 
@@ -267,19 +273,19 @@ export default function User() {
                       บทบาท
                     </h3>
                     <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                      userProfile.role === 'ADMIN' 
-                        ? 'bg-red-100 text-red-800' 
-                        : userProfile.role === 'MANAGER'
-                        ? 'bg-orange-100 text-orange-800'
-                        : userProfile.role === 'SUPERVISOR'
-                        ? 'bg-yellow-100 text-yellow-800'
-                        : 'bg-blue-100 text-blue-800'
+                      userProfile.role === "ADMIN" 
+                        ? "bg-red-100 text-red-800" 
+                        : userProfile.role === "MANAGER"
+                        ? "bg-orange-100 text-orange-800"
+                        : userProfile.role === "SUPERVISOR"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-blue-100 text-blue-800"
                     }`}>
-                      {userProfile.role === 'ADMIN' && 'ผู้ดูแลระบบ'}
-                      {userProfile.role === 'MANAGER' && 'ผู้บริหาร'}
-                      {userProfile.role === 'SUPERVISOR' && 'หัวหน้างาน'}
-                      {userProfile.role === 'USER' && 'พนักงาน'}
-                      {userProfile.role === 'VIEWER' && 'ผู้ดู'}
+                      {userProfile.role === "ADMIN" && "ผู้ดูแลระบบ"}
+                      {userProfile.role === "MANAGER" && "ผู้บริหาร"}
+                      {userProfile.role === "SUPERVISOR" && "หัวหน้างาน"}
+                      {userProfile.role === "USER" && "พนักงาน"}
+                      {userProfile.role === "VIEWER" && "ผู้ดู"}
                     </span>
                   </div>
                 </div>
@@ -324,7 +330,7 @@ export default function User() {
                   </label>
                   <select
                     value={selectedWorkCenterId}
-                    onChange={(e) => setSelectedWorkCenterId(Number(e.target.value))}
+                    onChange={(e) => handleWorkCenterChange(Number(e.target.value))}
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
                     required
                   >
@@ -350,7 +356,7 @@ export default function User() {
                     disabled={!selectedWorkCenterId || isLoadingBranches}
                   >
                     <option value={0}>
-                      {isLoadingBranches ? 'กำลังโหลด...' : 'เลือกสาขา'}
+                      {isLoadingBranches ? "กำลังโหลด..." : "เลือกสาขา"}
                     </option>
                     {branches.map((branch) => (
                       <option key={branch.id} value={branch.id}>
@@ -372,7 +378,7 @@ export default function User() {
                         กำลังอัปเดต...
                       </div>
                     ) : (
-                      'อัปเดตโปรไฟล์'
+                      "อัปเดตโปรไฟล์"
                     )}
                   </button>
                 </div>
@@ -452,7 +458,7 @@ export default function User() {
                         กำลังเปลี่ยน...
                       </div>
                     ) : (
-                      'เปลี่ยนรหัสผ่าน'
+                      "เปลี่ยนรหัสผ่าน"
                     )}
                   </button>
                 </div>
