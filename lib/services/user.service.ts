@@ -35,9 +35,9 @@ export class UserService {
     return await prisma.user.findMany({
       include: {
         workCenter: true,
-        branch: true
+        branch: true,
       },
-      orderBy: { fullName: 'asc' }
+      orderBy: { fullName: "asc" },
     });
   }
 
@@ -49,21 +49,23 @@ export class UserService {
       where: { id },
       include: {
         workCenter: true,
-        branch: true
-      }
+        branch: true,
+      },
     });
   }
 
   /**
    * ดึง User ตาม employeeId
    */
-  static async getUserByEmployeeId(employeeId: string): Promise<UserWithRelations | null> {
+  static async getUserByEmployeeId(
+    employeeId: string,
+  ): Promise<UserWithRelations | null> {
     return await prisma.user.findUnique({
       where: { employeeId },
       include: {
         workCenter: true,
-        branch: true
-      }
+        branch: true,
+      },
     });
   }
 
@@ -72,7 +74,7 @@ export class UserService {
    */
   static async createUser(data: CreateUserData): Promise<User> {
     return await prisma.user.create({
-      data
+      data,
     });
   }
 
@@ -82,7 +84,7 @@ export class UserService {
   static async updateUser(id: number, data: UpdateUserData): Promise<User> {
     return await prisma.user.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -91,14 +93,17 @@ export class UserService {
    */
   static async deleteUser(id: number): Promise<void> {
     await prisma.user.delete({
-      where: { id }
+      where: { id },
     });
   }
 
   /**
    * ตรวจสอบว่า employeeId มีอยู่แล้วหรือไม่
    */
-  static async employeeIdExists(employeeId: string, excludeId?: number): Promise<boolean> {
+  static async employeeIdExists(
+    employeeId: string,
+    excludeId?: number,
+  ): Promise<boolean> {
     const where: any = { employeeId };
     if (excludeId) {
       where.id = { not: excludeId };
@@ -111,28 +116,32 @@ export class UserService {
   /**
    * ดึงรายการ User ตาม WorkCenter
    */
-  static async getUsersByWorkCenter(workCenterId: number): Promise<UserWithRelations[]> {
+  static async getUsersByWorkCenter(
+    workCenterId: number,
+  ): Promise<UserWithRelations[]> {
     return await prisma.user.findMany({
       where: { workCenterId },
       include: {
         workCenter: true,
-        branch: true
+        branch: true,
       },
-      orderBy: { fullName: 'asc' }
+      orderBy: { fullName: "asc" },
     });
   }
 
   /**
    * ดึงรายการ User ตาม Branch
    */
-  static async getUsersByBranch(branchId: number): Promise<UserWithRelations[]> {
+  static async getUsersByBranch(
+    branchId: number,
+  ): Promise<UserWithRelations[]> {
     return await prisma.user.findMany({
       where: { branchId },
       include: {
         workCenter: true,
-        branch: true
+        branch: true,
       },
-      orderBy: { fullName: 'asc' }
+      orderBy: { fullName: "asc" },
     });
   }
 
@@ -144,9 +153,9 @@ export class UserService {
       where: { role },
       include: {
         workCenter: true,
-        branch: true
+        branch: true,
       },
-      orderBy: { fullName: 'asc' }
+      orderBy: { fullName: "asc" },
     });
   }
 
@@ -155,10 +164,10 @@ export class UserService {
    */
   static canAccessWorkCenter(user: User, targetWorkCenterId: number): boolean {
     // Admin และ Viewer สามารถเข้าถึงทุก WorkCenter
-    if (user.role === 'ADMIN' || user.role === 'VIEWER') {
+    if (user.role === "ADMIN" || user.role === "VIEWER") {
       return true;
     }
-    
+
     // อื่นๆ สามารถเข้าถึงเฉพาะ WorkCenter ของตัวเอง
     return user.workCenterId === targetWorkCenterId;
   }
@@ -166,20 +175,24 @@ export class UserService {
   /**
    * ตรวจสอบสิทธิ์การแก้ไข
    */
-  static canEditRequest(user: User, requestCreatorId: number, requestStatus: string): boolean {
+  static canEditRequest(
+    user: User,
+    requestCreatorId: number,
+    requestStatus: string,
+  ): boolean {
     // Admin สามารถแก้ไขได้ทุกอย่าง
-    if (user.role === 'ADMIN') {
+    if (user.role === "ADMIN") {
       return true;
     }
 
     // Viewer ไม่สามารถแก้ไขได้
-    if (user.role === 'VIEWER') {
+    if (user.role === "VIEWER") {
       return false;
     }
 
     // USER สามารถแก้ไขได้เฉพาะของตัวเองและยังไม่ได้รับการอนุมัติ
-    if (user.role === 'USER') {
-      return user.id === requestCreatorId && requestStatus === 'NOT';
+    if (user.role === "USER") {
+      return user.id === requestCreatorId && requestStatus === "NOT";
     }
 
     return false;
@@ -189,13 +202,17 @@ export class UserService {
    * ตรวจสอบสิทธิ์การอัปเดต OMS Status
    */
   static canUpdateOMSStatus(user: User): boolean {
-    return user.role === 'ADMIN' || user.role === 'SUPERVISOR';
+    return user.role === "ADMIN" || user.role === "SUPERVISOR";
   }
 
   /**
    * ตรวจสอบสิทธิ์การอัปเดต Request Status
    */
   static canUpdateRequestStatus(user: User): boolean {
-    return user.role === 'ADMIN' || user.role === 'MANAGER' || user.role === 'SUPERVISOR';
+    return (
+      user.role === "ADMIN" ||
+      user.role === "MANAGER" ||
+      user.role === "SUPERVISOR"
+    );
   }
 }

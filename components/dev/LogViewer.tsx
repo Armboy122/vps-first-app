@@ -1,6 +1,6 @@
 "use client";
-import React, { useState, useEffect } from 'react';
-import { logger } from '@/lib/utils/logger';
+import React, { useState, useEffect } from "react";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * Component สำหรับ debug - ดู logs ที่เก็บใน localStorage
@@ -9,8 +9,8 @@ import { logger } from '@/lib/utils/logger';
 export const LogViewer: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([]);
   const [isVisible, setIsVisible] = useState(false);
-  const [filter, setFilter] = useState<string>('');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [filter, setFilter] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   // โหลด logs จาก localStorage
   const loadLogs = () => {
@@ -26,32 +26,43 @@ export const LogViewer: React.FC = () => {
   }, []);
 
   // กรอง logs ตามการค้นหาและ category
-  const filteredLogs = logs.filter(log => {
-    const matchesSearch = filter === '' || 
+  const filteredLogs = logs.filter((log) => {
+    const matchesSearch =
+      filter === "" ||
       log.action.toLowerCase().includes(filter.toLowerCase()) ||
-      log.details && JSON.stringify(log.details).toLowerCase().includes(filter.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'all' || log.category === selectedCategory;
-    
+      (log.details &&
+        JSON.stringify(log.details)
+          .toLowerCase()
+          .includes(filter.toLowerCase()));
+
+    const matchesCategory =
+      selectedCategory === "all" || log.category === selectedCategory;
+
     return matchesSearch && matchesCategory;
   });
 
   // สีสำหรับแต่ละ log level
   const getLevelColor = (level: string) => {
     switch (level) {
-      case 'debug': return 'text-gray-600';
-      case 'info': return 'text-blue-600';
-      case 'warn': return 'text-yellow-600';
-      case 'error': return 'text-red-600';
-      case 'audit': return 'text-green-600';
-      default: return 'text-gray-600';
+      case "debug":
+        return "text-gray-600";
+      case "info":
+        return "text-blue-600";
+      case "warn":
+        return "text-yellow-600";
+      case "error":
+        return "text-red-600";
+      case "audit":
+        return "text-green-600";
+      default:
+        return "text-gray-600";
     }
   };
 
   // Categories ที่มีใน logs
-  const categories = Array.from(new Set(logs.map(log => log.category)));
+  const categories = Array.from(new Set(logs.map((log) => log.category)));
 
-  if (process.env.NODE_ENV !== 'development') {
+  if (process.env.NODE_ENV !== "development") {
     return null; // ไม่แสดงใน production
   }
 
@@ -74,14 +85,18 @@ export const LogViewer: React.FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full h-5/6 flex flex-col">
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b">
-              <h2 className="text-xl font-bold">📊 Application Logs ({logs.length})</h2>
+              <h2 className="text-xl font-bold">
+                📊 Application Logs ({logs.length})
+              </h2>
               <div className="flex space-x-2">
                 <button
                   onClick={() => {
                     const dataStr = logger.exportLogs();
-                    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                    const dataBlob = new Blob([dataStr], {
+                      type: "application/json",
+                    });
                     const url = URL.createObjectURL(dataBlob);
-                    const link = document.createElement('a');
+                    const link = document.createElement("a");
                     link.href = url;
                     link.download = `app-logs-${new Date().toISOString().slice(0, 10)}.json`;
                     link.click();
@@ -123,8 +138,10 @@ export const LogViewer: React.FC = () => {
                 className="px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="all">ทั้งหมด</option>
-                {categories.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
+                {categories.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
                 ))}
               </select>
               <button
@@ -144,10 +161,15 @@ export const LogViewer: React.FC = () => {
               ) : (
                 <div className="space-y-2">
                   {filteredLogs.map((log, index) => (
-                    <div key={index} className="border rounded p-3 bg-gray-50 hover:bg-gray-100">
+                    <div
+                      key={index}
+                      className="border rounded p-3 bg-gray-50 hover:bg-gray-100"
+                    >
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center space-x-2">
-                          <span className={`text-sm font-mono ${getLevelColor(log.level)}`}>
+                          <span
+                            className={`text-sm font-mono ${getLevelColor(log.level)}`}
+                          >
                             {log.level.toUpperCase()}
                           </span>
                           <span className="text-sm bg-gray-200 px-2 py-1 rounded">
@@ -156,19 +178,23 @@ export const LogViewer: React.FC = () => {
                           <span className="font-medium">{log.action}</span>
                         </div>
                         <span className="text-xs text-gray-500">
-                          {new Date(log.timestamp).toLocaleString('th-TH')}
+                          {new Date(log.timestamp).toLocaleString("th-TH")}
                         </span>
                       </div>
-                      
+
                       <div className="text-sm text-gray-600 grid grid-cols-2 gap-2">
                         {log.userId && (
-                          <div><strong>User:</strong> {log.userId} ({log.userRole})</div>
+                          <div>
+                            <strong>User:</strong> {log.userId} ({log.userRole})
+                          </div>
                         )}
                         {log.page && (
-                          <div><strong>Page:</strong> {log.page}</div>
+                          <div>
+                            <strong>Page:</strong> {log.page}
+                          </div>
                         )}
                       </div>
-                      
+
                       {log.details && (
                         <details className="mt-2">
                           <summary className="cursor-pointer text-sm text-blue-600 hover:text-blue-800">
@@ -196,17 +222,17 @@ export const LogViewerShortcut: React.FC = () => {
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
       // Ctrl + Shift + L เพื่อเปิด log viewer
-      if (event.ctrlKey && event.shiftKey && event.key === 'L') {
+      if (event.ctrlKey && event.shiftKey && event.key === "L") {
         event.preventDefault();
-        
+
         // สร้าง event เพื่อเปิด log viewer
-        const toggleEvent = new CustomEvent('toggleLogViewer');
+        const toggleEvent = new CustomEvent("toggleLogViewer");
         window.dispatchEvent(toggleEvent);
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    window.addEventListener("keydown", handleKeyPress);
+    return () => window.removeEventListener("keydown", handleKeyPress);
   }, []);
 
   return null;

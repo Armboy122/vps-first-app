@@ -1,5 +1,13 @@
-import { format, formatDistance, addDays, differenceInDays, isAfter, isBefore, isEqual } from 'date-fns';
-import { th } from 'date-fns/locale';
+import {
+  format,
+  formatDistance,
+  addDays,
+  differenceInDays,
+  isAfter,
+  isBefore,
+  isEqual,
+} from "date-fns";
+import { th } from "date-fns/locale";
 
 /**
  * ไฟล์ utility สำหรับจัดการวันและเวลาในแอปพลิเคชัน
@@ -12,7 +20,9 @@ import { th } from 'date-fns/locale';
  */
 export function getThailandDate(): Date {
   // สร้างวันที่ในไทม์โซน UTC+7 อย่างชัดเจน
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Bangkok' }));
+  return new Date(
+    new Date().toLocaleString("en-US", { timeZone: "Asia/Bangkok" }),
+  );
 }
 
 /**
@@ -51,8 +61,11 @@ export function isDateInFuture(date: Date): boolean {
  * @param timeString เวลาในรูปแบบ HH:mm
  * @returns string ISO string ที่รวมวันที่และเวลาพร้อมไทม์โซน UTC+7
  */
-export function createThailandDateTime(date: Date | string, timeString: string): Date {
-  const dateStr = typeof date === 'string' ? date : format(date, 'yyyy-MM-dd');
+export function createThailandDateTime(
+  date: Date | string,
+  timeString: string,
+): Date {
+  const dateStr = typeof date === "string" ? date : format(date, "yyyy-MM-dd");
   return new Date(`${dateStr}T${timeString}:00+07:00`);
 }
 
@@ -62,7 +75,7 @@ export function createThailandDateTime(date: Date | string, timeString: string):
  * @returns string วันที่ในรูปแบบไทย เช่น "1 มกราคม 2567"
  */
 export function formatToThaiDate(date: Date): string {
-  return format(date, 'd MMMM yyyy', { locale: th });
+  return format(date, "d MMMM yyyy", { locale: th });
 }
 
 /**
@@ -71,5 +84,5 @@ export function formatToThaiDate(date: Date): string {
  * @returns string วันในสัปดาห์ภาษาไทย เช่น "วันจันทร์ที่ 1 มกราคม 2567"
  */
 export function formatToThaiDayAndDate(date: Date): string {
-  return format(date, 'eeee ที่ d MMMM yyyy', { locale: th });
-} 
+  return format(date, "eeee ที่ d MMMM yyyy", { locale: th });
+}

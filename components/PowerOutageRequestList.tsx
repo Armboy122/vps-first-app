@@ -7,7 +7,11 @@ import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import { useLogger } from "@/hooks/useLogger";
-import { logUserAction, logFormInteraction, logError } from "@/lib/utils/logger";
+import {
+  logUserAction,
+  logFormInteraction,
+  logError,
+} from "@/lib/utils/logger";
 
 // Import custom hook
 import { usePowerOutageRequests } from "@/hooks/usePowerOutageRequests";
@@ -49,7 +53,6 @@ interface WorkCenter {
   name: string;
 }
 
-
 export default function PowerOutageRequestList() {
   // Authentication & Logging
   const {
@@ -61,7 +64,7 @@ export default function PowerOutageRequestList() {
     userWorkCenterId,
     isLoading: authLoading,
   } = useAuth();
-  
+
   useLogger(); // Auto-setup logging for this component
 
   // Use custom hook for data management
@@ -84,11 +87,12 @@ export default function PowerOutageRequestList() {
     handleDelete,
     loadRequests,
     displayRange,
-    getRowBackgroundColor
+    getRowBackgroundColor,
   } = usePowerOutageRequests(userWorkCenterId, isAdmin, isViewer);
 
   // Local state for UI only
-  const [editingRequest, setEditingRequest] = useState<PowerOutageRequest | null>(null);
+  const [editingRequest, setEditingRequest] =
+    useState<PowerOutageRequest | null>(null);
   const [selectedRequests, setSelectedRequests] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
@@ -99,12 +103,12 @@ export default function PowerOutageRequestList() {
     const checkIfMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
-    
+
     checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
+    window.addEventListener("resize", checkIfMobile);
+
     return () => {
-      window.removeEventListener('resize', checkIfMobile);
+      window.removeEventListener("resize", checkIfMobile);
     };
   }, []);
 
@@ -126,48 +130,55 @@ export default function PowerOutageRequestList() {
 
   // UI handlers
   const handleEdit = (request: PowerOutageRequest) => {
-    logUserAction('power_outage_request_edit_clicked', {
+    logUserAction("power_outage_request_edit_clicked", {
       requestId: request.id,
       transformerNumber: request.transformerNumber,
       outageDate: request.outageDate,
       currentStatus: request.statusRequest,
-      omsStatus: request.omsStatus
+      omsStatus: request.omsStatus,
     });
     setEditingRequest(request);
   };
 
   const handleUpdate = async (data: PowerOutageRequestInput) => {
     if (!editingRequest) {
-      logError('power_outage_request_update_failed', 'No request is currently being edited');
+      logError(
+        "power_outage_request_update_failed",
+        "No request is currently being edited",
+      );
       return;
     }
 
-    logFormInteraction('power_outage_request_update_started', {
+    logFormInteraction("power_outage_request_update_started", {
       requestId: editingRequest.id,
-      changes: data
+      changes: data,
     });
 
     try {
       const result = await updatePowerOutageRequest(editingRequest.id, data);
       if (result.success) {
-        logUserAction('power_outage_request_updated', {
+        logUserAction("power_outage_request_updated", {
           requestId: editingRequest.id,
           updatedData: data,
-          success: true
+          success: true,
         });
         setEditingRequest(null);
         await loadRequests();
       } else {
-        logError('power_outage_request_update_failed', result.error || 'Unknown error', {
-          requestId: editingRequest.id,
-          data
-        });
+        logError(
+          "power_outage_request_update_failed",
+          result.error || "Unknown error",
+          {
+            requestId: editingRequest.id,
+            data,
+          },
+        );
         console.error("เกิดข้อผิดพลาดในการอัปเดตคำขอดับไฟ:", result.error);
       }
     } catch (error) {
-      logError('power_outage_request_update_error', error as Error, {
+      logError("power_outage_request_update_error", error as Error, {
         requestId: editingRequest.id,
-        data
+        data,
       });
       console.error("Error updating power outage request:", error);
     }
@@ -179,22 +190,22 @@ export default function PowerOutageRequestList() {
 
   // Delete handler using hook method
   const handleDeleteConfirm = async (id: number) => {
-    const request = requests.find(r => r.id === id);
-    
-    logUserAction('power_outage_request_delete_confirm_shown', {
+    const request = requests.find((r) => r.id === id);
+
+    logUserAction("power_outage_request_delete_confirm_shown", {
       requestId: id,
-      transformerNumber: request?.transformerNumber
+      transformerNumber: request?.transformerNumber,
     });
-    
+
     if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?")) {
-      logUserAction('power_outage_request_delete_confirmed', {
+      logUserAction("power_outage_request_delete_confirmed", {
         requestId: id,
-        transformerNumber: request?.transformerNumber
+        transformerNumber: request?.transformerNumber,
       });
       await handleDelete(id);
     } else {
-      logUserAction('power_outage_request_delete_cancelled', {
-        requestId: id
+      logUserAction("power_outage_request_delete_cancelled", {
+        requestId: id,
       });
     }
   };
@@ -203,146 +214,150 @@ export default function PowerOutageRequestList() {
   const handleSelectAll = () => {
     const newSelectAll = !selectAll;
     setSelectAll(newSelectAll);
-    
+
     if (newSelectAll) {
       const selectedIds = requests.map((request) => request.id);
       setSelectedRequests(selectedIds);
-      logUserAction('power_outage_requests_select_all', {
+      logUserAction("power_outage_requests_select_all", {
         selectedCount: selectedIds.length,
-        requestIds: selectedIds
+        requestIds: selectedIds,
       });
     } else {
       setSelectedRequests([]);
-      logUserAction('power_outage_requests_deselect_all', {
-        previousCount: requests.length
+      logUserAction("power_outage_requests_deselect_all", {
+        previousCount: requests.length,
       });
     }
   };
 
   const handleSelectRequest = (id: number) => {
     const isCurrentlySelected = selectedRequests.includes(id);
-    const newSelectedRequests = isCurrentlySelected 
+    const newSelectedRequests = isCurrentlySelected
       ? selectedRequests.filter((reqId) => reqId !== id)
       : [...selectedRequests, id];
-      
+
     setSelectedRequests(newSelectedRequests);
-    
-    logUserAction('power_outage_request_selection_changed', {
+
+    logUserAction("power_outage_request_selection_changed", {
       requestId: id,
-      action: isCurrentlySelected ? 'deselected' : 'selected',
-      totalSelected: newSelectedRequests.length
+      action: isCurrentlySelected ? "deselected" : "selected",
+      totalSelected: newSelectedRequests.length,
     });
-    
+
     // ตรวจสอบว่าทุกรายการถูกเลือกหรือไม่
     setSelectAll(
-      requests.every((request) => newSelectedRequests.includes(request.id))
+      requests.every((request) => newSelectedRequests.includes(request.id)),
     );
   };
 
   // Bulk operations
   const handleBulkStatusChange = async (newStatus: Request) => {
-    logUserAction('bulk_status_change_confirm_shown', {
+    logUserAction("bulk_status_change_confirm_shown", {
       newStatus,
       selectedCount: selectedRequests.length,
-      requestIds: selectedRequests
+      requestIds: selectedRequests,
     });
-    
+
     if (
       window.confirm(
-        `คุณแน่ใจหรือไม่ที่จะเปลี่ยนสถานะของรายการที่เลือกเป็น ${newStatus}?`
+        `คุณแน่ใจหรือไม่ที่จะเปลี่ยนสถานะของรายการที่เลือกเป็น ${newStatus}?`,
       )
     ) {
-      logUserAction('bulk_status_change_confirmed', {
+      logUserAction("bulk_status_change_confirmed", {
         newStatus,
         selectedCount: selectedRequests.length,
-        requestIds: selectedRequests
+        requestIds: selectedRequests,
       });
-      
+
       try {
         for (const id of selectedRequests) {
           await handleUpdateStatus(id, newStatus);
         }
-        
-        logUserAction('bulk_status_change_completed', {
+
+        logUserAction("bulk_status_change_completed", {
           newStatus,
           processedCount: selectedRequests.length,
-          success: true
+          success: true,
         });
-        
+
         setSelectedRequests([]);
       } catch (error) {
-        logError('bulk_status_change_failed', error as Error, {
+        logError("bulk_status_change_failed", error as Error, {
           newStatus,
           selectedCount: selectedRequests.length,
-          requestIds: selectedRequests
+          requestIds: selectedRequests,
         });
         console.error("Error updating multiple requests:", error);
       }
     } else {
-      logUserAction('bulk_status_change_cancelled', {
+      logUserAction("bulk_status_change_cancelled", {
         newStatus,
-        selectedCount: selectedRequests.length
+        selectedCount: selectedRequests.length,
       });
     }
   };
 
   // Status update handlers using hook methods
   const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
-    const request = requests.find(r => r.id === id);
-    
-    logUserAction('oms_status_change_started', {
+    const request = requests.find((r) => r.id === id);
+
+    logUserAction("oms_status_change_started", {
       requestId: id,
       transformerNumber: request?.transformerNumber,
       oldStatus: request?.omsStatus,
-      newStatus
+      newStatus,
     });
-    
+
     const result = await handleUpdateOMS(id, newStatus);
     if (result.success) {
-      logUserAction('oms_status_updated', {
+      logUserAction("oms_status_updated", {
         requestId: id,
         transformerNumber: request?.transformerNumber,
         oldStatus: request?.omsStatus,
         newStatus,
-        success: true
+        success: true,
       });
     } else {
-      logError('oms_status_update_failed', result.error || 'Unknown error', {
+      logError("oms_status_update_failed", result.error || "Unknown error", {
         requestId: id,
         transformerNumber: request?.transformerNumber,
         oldStatus: request?.omsStatus,
-        newStatus
+        newStatus,
       });
       console.error(`Failed to update OMS Status: ${result.error}`);
     }
   };
 
   const handleEditStatusRequest = async (id: number, newStatus: Request) => {
-    const request = requests.find(r => r.id === id);
-    
-    logUserAction('request_status_change_started', {
+    const request = requests.find((r) => r.id === id);
+
+    logUserAction("request_status_change_started", {
       requestId: id,
       transformerNumber: request?.transformerNumber,
       oldStatus: request?.statusRequest,
-      newStatus
+      newStatus,
     });
-    
+
     const result = await handleUpdateStatus(id, newStatus);
     if (result.success) {
-      logUserAction('request_status_updated', {
+      logUserAction("request_status_updated", {
         requestId: id,
         transformerNumber: request?.transformerNumber,
         oldStatus: request?.statusRequest,
         newStatus,
-        success: true
+        success: true,
       });
     } else {
-      logError('request_status_update_failed', result.error || 'Unknown error', {
-        requestId: id,
-        transformerNumber: request?.transformerNumber,
-        oldStatus: request?.statusRequest,
-        newStatus
-      });
+      logError(
+        "request_status_update_failed",
+        result.error || "Unknown error",
+        {
+          requestId: id,
+          transformerNumber: request?.transformerNumber,
+          oldStatus: request?.statusRequest,
+          newStatus,
+        },
+      );
       console.error(`Failed to update Status Request: ${result.error}`);
     }
   };
@@ -367,44 +382,48 @@ export default function PowerOutageRequestList() {
     <div className="container mx-auto px-4 py-6">
       {/* Search Section */}
       <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
-        <SearchSection 
+        <SearchSection
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
           startDate={filters.startDate}
-          setStartDate={(value) => updateFilter('startDate', value)}
+          setStartDate={(value) => updateFilter("startDate", value)}
           endDate={filters.endDate}
-          setEndDate={(value) => updateFilter('endDate', value)}
+          setEndDate={(value) => updateFilter("endDate", value)}
           workCenterFilter={filters.workCenterFilter}
-          setWorkCenterFilter={(value) => updateFilter('workCenterFilter', value)}
+          setWorkCenterFilter={(value) =>
+            updateFilter("workCenterFilter", value)
+          }
           workCenters={workCenters}
           isAdmin={isAdmin}
           isViewer={isViewer}
           branchFilter={filters.branchFilter}
-          setBranchFilter={(value) => updateFilter('branchFilter', value)}
+          setBranchFilter={(value) => updateFilter("branchFilter", value)}
         />
       </div>
-      
+
       {/* Filter Section */}
-      <FilterSection 
+      <FilterSection
         statusFilter={filters.statusFilter}
-        setStatusFilter={(value) => updateFilter('statusFilter', value)}
+        setStatusFilter={(value) => updateFilter("statusFilter", value)}
         omsStatusFilter={filters.omsStatusFilter}
-        setOmsStatusFilter={(value) => updateFilter('omsStatusFilter', value)}
+        setOmsStatusFilter={(value) => updateFilter("omsStatusFilter", value)}
         showPastOutageDates={filters.showPastOutageDates}
-        setShowPastOutageDates={(value) => updateFilter('showPastOutageDates', value)}
+        setShowPastOutageDates={(value) =>
+          updateFilter("showPastOutageDates", value)
+        }
       />
-      
+
       {/* OMS Status Summary - แสดงเฉพาะ admin และ viewer เท่านั้น */}
-      {(isAdmin || isViewer) && 
-        <OMSStatusSummary 
-          requests={allRequests} 
+      {(isAdmin || isViewer) && (
+        <OMSStatusSummary
+          requests={allRequests}
           filteredRequests={allRequests}
           showFilteredSummary={true} // ให้แสดงตามการกรอง
         />
-      }
-      
+      )}
+
       {/* Bulk Actions Section */}
-      <BulkActions 
+      <BulkActions
         isUser={isUser}
         isAdmin={isAdmin}
         isViewer={isViewer}
@@ -412,7 +431,7 @@ export default function PowerOutageRequestList() {
         requests={allRequests}
         handleBulkStatusChange={handleBulkStatusChange}
       />
-      
+
       {/* Mobile or Desktop View Based on Screen Size */}
       {isMobile ? (
         // Mobile View
@@ -439,7 +458,7 @@ export default function PowerOutageRequestList() {
         // Desktop View
         <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200">
           <table className="min-w-full bg-white">
-            <TableHeader 
+            <TableHeader
               selectAll={selectAll}
               setSelectAll={handleSelectAll}
               isAdmin={isAdmin}
@@ -468,7 +487,7 @@ export default function PowerOutageRequestList() {
           </table>
         </div>
       )}
-      
+
       {/* Pagination Controls */}
       <PaginationControls
         currentPage={currentPage}
@@ -478,7 +497,9 @@ export default function PowerOutageRequestList() {
         displayStart={displayRange.start}
         displayEnd={displayRange.end}
         onPageChange={paginate}
-        onItemsPerPageChange={(newItemsPerPage) => updatePagination({ itemsPerPage: newItemsPerPage })}
+        onItemsPerPageChange={(newItemsPerPage) =>
+          updatePagination({ itemsPerPage: newItemsPerPage })
+        }
       />
 
       {/* Edit Modal */}

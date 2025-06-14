@@ -1,12 +1,19 @@
 import prisma from "@/lib/prisma";
-import { OMSStatus, Request, PowerOutageRequest, User, WorkCenter, Branch } from "@prisma/client";
+import {
+  OMSStatus,
+  Request,
+  PowerOutageRequest,
+  User,
+  WorkCenter,
+  Branch,
+} from "@prisma/client";
 import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
 // Types
 export interface PowerOutageRequestWithRelations extends PowerOutageRequest {
-  createdBy: Pick<User, 'fullName'>;
-  workCenter: Pick<WorkCenter, 'name' | 'id'>;
-  branch: Pick<Branch, 'shortName'>;
+  createdBy: Pick<User, "fullName">;
+  workCenter: Pick<WorkCenter, "name" | "id">;
+  branch: Pick<Branch, "shortName">;
 }
 
 export interface PowerOutageRequestFilters {
@@ -55,7 +62,7 @@ export class PowerOutageRequestService {
    */
   static async getPaginatedRequests(
     pagination: PaginationOptions,
-    filters?: PowerOutageRequestFilters
+    filters?: PowerOutageRequestFilters,
   ): Promise<PaginatedResult<PowerOutageRequestWithRelations>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
@@ -90,11 +97,11 @@ export class PowerOutageRequestService {
           workCenter: { select: { name: true, id: true } },
           branch: { select: { shortName: true } },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
-      prisma.powerOutageRequest.count({ where })
+      prisma.powerOutageRequest.count({ where }),
     ]);
 
     return {
@@ -105,8 +112,8 @@ export class PowerOutageRequestService {
         total,
         totalPages: Math.ceil(total / limit),
         hasNext: page < Math.ceil(total / limit),
-        hasPrev: page > 1
-      }
+        hasPrev: page > 1,
+      },
     };
   }
 
@@ -121,7 +128,9 @@ export class PowerOutageRequestService {
   /**
    * ดึงคำขอดับไฟตาม ID
    */
-  static async getRequestById(id: number): Promise<PowerOutageRequestWithRelations | null> {
+  static async getRequestById(
+    id: number,
+  ): Promise<PowerOutageRequestWithRelations | null> {
     return await prisma.powerOutageRequest.findUnique({
       where: { id },
       include: {
@@ -135,7 +144,9 @@ export class PowerOutageRequestService {
   /**
    * สร้างคำขอดับไฟใหม่
    */
-  static async createRequest(data: CreatePowerOutageRequestData): Promise<PowerOutageRequest> {
+  static async createRequest(
+    data: CreatePowerOutageRequestData,
+  ): Promise<PowerOutageRequest> {
     return await prisma.powerOutageRequest.create({
       data: {
         ...data,
@@ -148,8 +159,10 @@ export class PowerOutageRequestService {
   /**
    * สร้างคำขอดับไฟหลายรายการพร้อมกัน
    */
-  static async createMultipleRequests(dataList: CreatePowerOutageRequestData[]): Promise<PowerOutageRequest[]> {
-    const requests = dataList.map(data => ({
+  static async createMultipleRequests(
+    dataList: CreatePowerOutageRequestData[],
+  ): Promise<PowerOutageRequest[]> {
+    const requests = dataList.map((data) => ({
       ...data,
       omsStatus: "NOT_ADDED" as const,
       statusRequest: "NOT" as const,
@@ -169,8 +182,8 @@ export class PowerOutageRequestService {
    * อัปเดตคำขอดับไฟ
    */
   static async updateRequest(
-    id: number, 
-    data: Partial<Pick<PowerOutageRequest, 'startTime' | 'endTime' | 'area'>>
+    id: number,
+    data: Partial<Pick<PowerOutageRequest, "startTime" | "endTime" | "area">>,
   ): Promise<PowerOutageRequest> {
     return await prisma.powerOutageRequest.update({
       where: { id },
@@ -182,9 +195,9 @@ export class PowerOutageRequestService {
    * อัปเดตสถานะ OMS
    */
   static async updateOMSStatus(
-    id: number, 
-    omsStatus: OMSStatus, 
-    updatedById: number
+    id: number,
+    omsStatus: OMSStatus,
+    updatedById: number,
   ): Promise<PowerOutageRequest> {
     return await prisma.powerOutageRequest.update({
       where: { id },
@@ -200,9 +213,9 @@ export class PowerOutageRequestService {
    * อัปเดตสถานะคำขอ
    */
   static async updateRequestStatus(
-    id: number, 
-    statusRequest: Request, 
-    updatedById: number
+    id: number,
+    statusRequest: Request,
+    updatedById: number,
   ): Promise<PowerOutageRequest> {
     return await prisma.powerOutageRequest.update({
       where: { id },
@@ -226,7 +239,10 @@ export class PowerOutageRequestService {
   /**
    * ตรวจสอบการขาดแคลนทรัพยากร (Business Logic)
    */
-  static validateOutageDate(outageDate: Date): { isValid: boolean; error?: string } {
+  static validateOutageDate(outageDate: Date): {
+    isValid: boolean;
+    error?: string;
+  } {
     const today = getThailandDateAtMidnight();
     const diffTime = outageDate.getTime() - today.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -234,7 +250,8 @@ export class PowerOutageRequestService {
     if (diffDays < 10) {
       return {
         isValid: false,
-        error: "ไม่สามารถสร้างคำขอดับไฟได้ เนื่องจากวันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน"
+        error:
+          "ไม่สามารถสร้างคำขอดับไฟได้ เนื่องจากวันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน",
       };
     }
 
@@ -245,9 +262,9 @@ export class PowerOutageRequestService {
    * คำนวณสีพื้นหลังตามวันที่และสถานะ (UI Logic) - รักษาเงื่อนไขเดิม
    */
   static getRowBackgroundColor(
-    omsStatus: string, 
-    statusRequest: string, 
-    outageDate: Date
+    omsStatus: string,
+    statusRequest: string,
+    outageDate: Date,
   ): string {
     const today = getThailandDateAtMidnight();
     const diffTime = outageDate.getTime() - today.getTime();
@@ -262,8 +279,9 @@ export class PowerOutageRequestService {
     if (statusRequest !== "CANCELLED") {
       // Critical - 5 days or less (Red)
       if (diffDays <= 5 && diffDays >= 0) return "bg-red-50 border-red-200";
-      // Warning - 6-7 days (Yellow) 
-      if (diffDays <= 7 && diffDays > 0) return "bg-yellow-50 border-yellow-200";
+      // Warning - 6-7 days (Yellow)
+      if (diffDays <= 7 && diffDays > 0)
+        return "bg-yellow-50 border-yellow-200";
       // Normal - 8-15 days (Green)
       if (diffDays <= 15 && diffDays > 0) return "bg-green-50 border-green-200";
     }
@@ -304,7 +322,9 @@ export class PowerOutageRequestService {
   /**
    * เรียงลำดับข้อมูลตามเงื่อนไขที่ซับซ้อน (Business Logic)
    */
-  static sortRequests(data: PowerOutageRequestWithRelations[]): PowerOutageRequestWithRelations[] {
+  static sortRequests(
+    data: PowerOutageRequestWithRelations[],
+  ): PowerOutageRequestWithRelations[] {
     const today = getThailandDateAtMidnight();
 
     return data.sort((a, b) => {
@@ -312,8 +332,10 @@ export class PowerOutageRequestService {
       const bOutageDate = new Date(b.outageDate);
 
       // ตรวจสอบสถานะ PROCESSED และ CONFIRM
-      const aIsProcessedAndConfirm = a.omsStatus === "PROCESSED" && a.statusRequest === "CONFIRM";
-      const bIsProcessedAndConfirm = b.omsStatus === "PROCESSED" && b.statusRequest === "CONFIRM";
+      const aIsProcessedAndConfirm =
+        a.omsStatus === "PROCESSED" && a.statusRequest === "CONFIRM";
+      const bIsProcessedAndConfirm =
+        b.omsStatus === "PROCESSED" && b.statusRequest === "CONFIRM";
 
       // ถ้าทั้งคู่เป็น PROCESSED และ CONFIRM ให้เรียงตาม createdAt
       if (aIsProcessedAndConfirm && bIsProcessedAndConfirm) {
@@ -325,17 +347,19 @@ export class PowerOutageRequestService {
       if (bIsProcessedAndConfirm) return -1;
 
       // เรียง CONFIRM ก่อน (ยกเว้น PROCESSED)
-      if (a.statusRequest === 'CONFIRM' && b.statusRequest !== 'CONFIRM') return -1;
-      if (a.statusRequest !== 'CONFIRM' && b.statusRequest === 'CONFIRM') return 1;
+      if (a.statusRequest === "CONFIRM" && b.statusRequest !== "CONFIRM")
+        return -1;
+      if (a.statusRequest !== "CONFIRM" && b.statusRequest === "CONFIRM")
+        return 1;
 
       // ถ้าทั้งคู่เป็น CONFIRM
-      if (a.statusRequest === 'CONFIRM' && b.statusRequest === 'CONFIRM') {
+      if (a.statusRequest === "CONFIRM" && b.statusRequest === "CONFIRM") {
         // ถ้าทั้งคู่ยังไม่ถึงวันที่ outageDate
         if (aOutageDate >= today && bOutageDate >= today) {
           // เรียงตามวันที่ก่อน
           const dateDiff = aOutageDate.getTime() - bOutageDate.getTime();
           if (dateDiff !== 0) return dateDiff; // เรียงจากใกล้ไปไกล
-          
+
           // ถ้าวันที่เท่ากัน ให้เรียงตามเวลา startTime
           return a.startTime.getTime() - b.startTime.getTime();
         }
@@ -344,7 +368,7 @@ export class PowerOutageRequestService {
           // เรียงตามวันที่ก่อน
           const dateDiff = bOutageDate.getTime() - aOutageDate.getTime();
           if (dateDiff !== 0) return dateDiff; // เรียงจากไกลไปใกล้
-          
+
           // ถ้าวันที่เท่ากัน ให้เรียงตามเวลา startTime
           return b.startTime.getTime() - a.startTime.getTime();
         }

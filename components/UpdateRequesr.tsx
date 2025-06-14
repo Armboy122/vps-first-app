@@ -1,19 +1,22 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { PowerOutageRequestSchema, PowerOutageRequestInput } from '@/lib/validations/powerOutageRequest';
-import { 
-  Dialog, 
-  DialogTitle, 
-  DialogContent, 
-  DialogActions, 
-  TextField, 
+import React from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import {
+  PowerOutageRequestSchema,
+  PowerOutageRequestInput,
+} from "@/lib/validations/powerOutageRequest";
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
   Button,
-  Stack
-} from '@mui/material';
-import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { FormField, FormTimePicker } from '@/components/forms';
+  Stack,
+} from "@mui/material";
+import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import { FormField, FormTimePicker } from "@/components/forms";
 
 interface UpdatePowerOutageRequestModalProps {
   initialData: PowerOutageRequestInput;
@@ -22,13 +25,15 @@ interface UpdatePowerOutageRequestModalProps {
   open: boolean;
 }
 
-const UpdatePowerOutageRequestModal: React.FC<UpdatePowerOutageRequestModalProps> = ({ 
-  initialData, 
-  onSubmit, 
-  onCancel, 
-  open 
-}) => {
-  const { control, handleSubmit, register, formState: { errors } } = useForm<PowerOutageRequestInput>({
+const UpdatePowerOutageRequestModal: React.FC<
+  UpdatePowerOutageRequestModalProps
+> = ({ initialData, onSubmit, onCancel, open }) => {
+  const {
+    control,
+    handleSubmit,
+    register,
+    formState: { errors },
+  } = useForm<PowerOutageRequestInput>({
     resolver: zodResolver(PowerOutageRequestSchema),
     defaultValues: initialData,
   });
@@ -78,6 +83,6 @@ const UpdatePowerOutageRequestModal: React.FC<UpdatePowerOutageRequestModalProps
       </Dialog>
     </LocalizationProvider>
   );
-}
+};
 
 export default UpdatePowerOutageRequestModal;

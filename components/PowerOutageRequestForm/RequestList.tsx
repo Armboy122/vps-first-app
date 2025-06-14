@@ -5,7 +5,11 @@ import { FormButton } from "@/components/forms";
 
 interface RequestListProps {
   requests: PowerOutageRequestInput[];
-  submitStatus: { success: boolean; message: string; isLoading?: boolean } | null;
+  submitStatus: {
+    success: boolean;
+    message: string;
+    isLoading?: boolean;
+  } | null;
   onRemoveFromList: (index: number) => void;
   onClearAllRequests: () => void;
   onSubmitAll: () => void;
@@ -41,7 +45,7 @@ export const RequestList: React.FC<RequestListProps> = ({
           ล้างทั้งหมด
         </FormButton>
       </div>
-      
+
       {/* รายการคำขอ */}
       <div className="space-y-3 max-h-60 overflow-y-auto">
         {requests.map((request, index) => (
@@ -53,7 +57,7 @@ export const RequestList: React.FC<RequestListProps> = ({
           />
         ))}
       </div>
-      
+
       {/* สรุปและปุ่มบันทึกทั้งหมด */}
       <div className="flex justify-between items-center mt-6">
         <div className="text-sm text-gray-600">
@@ -81,13 +85,17 @@ interface RequestCardProps {
   onRemove: (index: number) => void;
 }
 
-const RequestCard: React.FC<RequestCardProps> = ({ request, index, onRemove }) => {
+const RequestCard: React.FC<RequestCardProps> = ({
+  request,
+  index,
+  onRemove,
+}) => {
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('th-TH', {
-      weekday: 'short',
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("th-TH", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -100,16 +108,20 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, index, onRemove }) =
             {index + 1}
           </div>
         </div>
-        
+
         <div className="flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
             <div>
               <span className="font-medium text-gray-600">หม้อแปลง:</span>{" "}
-              <span className="text-gray-900 font-medium">{request.transformerNumber}</span>
+              <span className="text-gray-900 font-medium">
+                {request.transformerNumber}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-600">วันที่:</span>{" "}
-              <span className="text-gray-900 font-medium">{formatDate(request.outageDate)}</span>
+              <span className="text-gray-900 font-medium">
+                {formatDate(request.outageDate)}
+              </span>
             </div>
             <div>
               <span className="font-medium text-gray-600">เวลา:</span>{" "}
@@ -129,15 +141,25 @@ const RequestCard: React.FC<RequestCardProps> = ({ request, index, onRemove }) =
             )}
           </div>
         </div>
-        
+
         {/* ปุ่มลบ */}
         <button
           onClick={() => onRemove(index)}
           className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
           title="ลบรายการนี้"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
           </svg>
         </button>
       </div>

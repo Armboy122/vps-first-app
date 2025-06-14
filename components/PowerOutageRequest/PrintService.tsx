@@ -11,26 +11,26 @@ declare global {
 const FONT_SIZES = {
   // ขนาดพื้นฐาน
   base: 12,
-  
+
   // หัวเรื่อง
   mainTitle: 20,
   subTitle: 12,
   sectionTitle: 14,
   dateTitle: 13,
-  
+
   // ตาราง
   tableHeader: 12,
   tableContent: 12,
-  
+
   // รายละเอียด
   infoLabel: 12,
   infoContent: 12,
   summary: 10,
   note: 10,
   footer: 8,
-  
+
   // Watermark
-  watermark: 60
+  watermark: 60,
 };
 
 // CSS สำหรับการแสดงผลภาษาไทยที่ดี
@@ -75,10 +75,11 @@ const loadHtml2Pdf = (): Promise<void> => {
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+    const script = document.createElement("script");
+    script.src =
+      "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
     script.onload = () => resolve();
-    script.onerror = () => reject(new Error('Failed to load html2pdf.js'));
+    script.onerror = () => reject(new Error("Failed to load html2pdf.js"));
     document.head.appendChild(script);
   });
 };
@@ -86,7 +87,7 @@ const loadHtml2Pdf = (): Promise<void> => {
 // ฟังก์ชันสร้าง HTML content สำหรับ PDF
 const createPdfContent = (
   sortedDates: string[],
-  groupedRequests: Record<string, PowerOutageRequest[]>
+  groupedRequests: Record<string, PowerOutageRequest[]>,
 ) => {
   return `
     <div style="font-family: 'Noto Sans Thai', 'IBM Plex Sans Thai', 'Prompt', 'Sarabun', 'TH Sarabun New', sans-serif; position: relative; padding: 30px; font-size: ${FONT_SIZES.base}px; line-height: 1.5; ${THAI_FONT_CSS}">
@@ -116,19 +117,25 @@ const createPdfContent = (
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
               <td style="width: 200px; font-weight: 600; padding: 6px 0; font-size: ${FONT_SIZES.infoLabel}px; color: #333; ${THAI_FONT_CSS}">วันที่ออกรายงาน:</td>
-              <td style="border-bottom: 1px dotted #666; padding: 6px 12px; font-size: ${FONT_SIZES.infoContent}px; font-weight: 500; ${THAI_FONT_CSS}">${new Date().toLocaleDateString("th-TH", { 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}</td>
+              <td style="border-bottom: 1px dotted #666; padding: 6px 12px; font-size: ${FONT_SIZES.infoContent}px; font-weight: 500; ${THAI_FONT_CSS}">${new Date().toLocaleDateString(
+                "th-TH",
+                {
+                  year: "numeric",
+                  month: "long",
+                  day: "numeric",
+                },
+              )}</td>
             </tr>
             <tr>
               <td style="font-weight: 600; padding: 6px 0; font-size: ${FONT_SIZES.infoLabel}px; color: #333; ${THAI_FONT_CSS}">เวลาที่ออกรายงาน:</td>
-              <td style="border-bottom: 1px dotted #666; padding: 6px 12px; font-size: ${FONT_SIZES.infoContent}px; font-weight: 500; ${THAI_FONT_CSS}">${new Date().toLocaleTimeString("th-TH", {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit"
-              })} น.</td>
+              <td style="border-bottom: 1px dotted #666; padding: 6px 12px; font-size: ${FONT_SIZES.infoContent}px; font-weight: 500; ${THAI_FONT_CSS}">${new Date().toLocaleTimeString(
+                "th-TH",
+                {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                },
+              )} น.</td>
             </tr>
             <tr>
               <td style="font-weight: 600; padding: 6px 0; font-size: ${FONT_SIZES.infoLabel}px; color: #333; ${THAI_FONT_CSS}">จำนวนรายการทั้งหมด:</td>
@@ -151,11 +158,13 @@ const createPdfContent = (
               <!-- หัวข้อวันที่ -->
               <div style="background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); color: white; padding: 12px 20px; margin: 25px 0 15px 0; border-radius: 8px 8px 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                 <h4 style="margin: 0; font-size: ${FONT_SIZES.dateTitle}px; font-weight: 600; ${THAI_FONT_CSS}">
-                  📅 ${dateIndex + 1}. วันที่ ${new Date(date).toLocaleDateString("th-TH", {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric'
+                  📅 ${dateIndex + 1}. วันที่ ${new Date(
+                    date,
+                  ).toLocaleDateString("th-TH", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </h4>
               </div>
@@ -174,32 +183,42 @@ const createPdfContent = (
                   ${groupedRequests[date]
                     .map(
                       (request, index) => `
-                      <tr style="background-color: ${index % 2 === 0 ? '#ffffff' : '#f8f9fa'}; transition: background-color 0.2s;">
+                      <tr style="background-color: ${index % 2 === 0 ? "#ffffff" : "#f8f9fa"}; transition: background-color 0.2s;">
                         <td style="border: 1px solid #bdc3c7; padding: 10px 8px; text-align: center; font-size: ${FONT_SIZES.tableContent}px; font-weight: 600; vertical-align: top; color: #2c3e50; ${THAI_FONT_CSS}">
                           ${index + 1}
                         </td>
                         <td style="border: 1px solid #bdc3c7; padding: 10px 8px; text-align: center; font-size: ${FONT_SIZES.tableContent}px; vertical-align: top; color: #27ae60; font-weight: 500; ${THAI_FONT_CSS}">
-                          <div style="font-weight: 600;">${request.startTime.toLocaleTimeString("th-TH", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}</div>
+                          <div style="font-weight: 600;">${request.startTime.toLocaleTimeString(
+                            "th-TH",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}</div>
                           <div style="color: #7f8c8d; font-size: 12px;">ถึง</div>
-                          <div style="font-weight: 600;">${request.endTime.toLocaleTimeString("th-TH", {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}</div>
+                          <div style="font-weight: 600;">${request.endTime.toLocaleTimeString(
+                            "th-TH",
+                            {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            },
+                          )}</div>
                         </td>
                         <td style="border: 1px solid #bdc3c7; padding: 10px 8px; text-align: center; font-size: ${FONT_SIZES.tableContent}px; font-weight: 600; vertical-align: top; color: #8e44ad; ${THAI_FONT_CSS}">
                           ${request.transformerNumber}
                         </td>
                         <td style="border: 1px solid #bdc3c7; padding: 10px 12px; font-size: ${FONT_SIZES.tableContent}px; vertical-align: top; word-wrap: break-word; word-break: break-all; line-height: 1.5; color: #2c3e50; font-family: 'Noto Sans Thai', 'IBM Plex Sans Thai', 'Prompt', sans-serif; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; white-space: normal; overflow-wrap: break-word;">
-                          ${(request.area || 'ไม่ระบุพื้นที่').length > 120 ? 
-                            (request.area || 'ไม่ระบุพื้นที่').substring(0, 120) + '...' : 
-                            (request.area || 'ไม่ระบุพื้นที่')
+                          ${
+                            (request.area || "ไม่ระบุพื้นที่").length > 120
+                              ? (request.area || "ไม่ระบุพื้นที่").substring(
+                                  0,
+                                  120,
+                                ) + "..."
+                              : request.area || "ไม่ระบุพื้นที่"
                           }
                         </td>
                       </tr>
-                    `
+                    `,
                     )
                     .join("")}
                 </tbody>
@@ -212,7 +231,7 @@ const createPdfContent = (
                 </span>
               </div>
             </div>
-          `
+          `,
           )
           .join("")}
       </div>
@@ -264,7 +283,7 @@ const createPdfContent = (
 // ฟังก์ชันแสดง Preview Modal
 const showPdfPreview = (htmlContent: string, filename: string) => {
   // สร้าง modal overlay
-  const overlay = document.createElement('div');
+  const overlay = document.createElement("div");
   overlay.style.cssText = `
     position: fixed;
     top: 0;
@@ -279,7 +298,7 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
   `;
 
   // สร้าง modal content
-  const modal = document.createElement('div');
+  const modal = document.createElement("div");
   modal.style.cssText = `
     background: white;
     border-radius: 12px;
@@ -292,7 +311,7 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
   `;
 
   // สร้าง header
-  const header = document.createElement('div');
+  const header = document.createElement("div");
   header.style.cssText = `
     padding: 20px 25px;
     border-bottom: 1px solid #e5e7eb;
@@ -303,8 +322,8 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     border-radius: 12px 12px 0 0;
   `;
 
-  const title = document.createElement('h3');
-  title.textContent = 'ตัวอย่าง PDF - รายงานคำขอดับไฟ';
+  const title = document.createElement("h3");
+  title.textContent = "ตัวอย่าง PDF - รายงานคำขอดับไฟ";
   title.style.cssText = `
     margin: 0;
     font-size: 20px;
@@ -312,8 +331,8 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     color: #1f2937;
   `;
 
-  const closeBtn = document.createElement('button');
-  closeBtn.innerHTML = '✕';
+  const closeBtn = document.createElement("button");
+  closeBtn.innerHTML = "✕";
   closeBtn.style.cssText = `
     background: none;
     border: none;
@@ -324,14 +343,14 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     border-radius: 6px;
     transition: all 0.2s;
   `;
-  closeBtn.onmouseover = () => closeBtn.style.background = '#fee2e2';
-  closeBtn.onmouseout = () => closeBtn.style.background = 'none';
+  closeBtn.onmouseover = () => (closeBtn.style.background = "#fee2e2");
+  closeBtn.onmouseout = () => (closeBtn.style.background = "none");
 
   header.appendChild(title);
   header.appendChild(closeBtn);
 
   // สร้าง preview area
-  const previewArea = document.createElement('div');
+  const previewArea = document.createElement("div");
   previewArea.style.cssText = `
     flex: 1;
     overflow: auto;
@@ -339,7 +358,7 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     background: #f3f4f6;
   `;
 
-  const previewContent = document.createElement('div');
+  const previewContent = document.createElement("div");
   previewContent.style.cssText = `
     background: white;
     max-width: 210mm;
@@ -352,7 +371,7 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
   previewArea.appendChild(previewContent);
 
   // สร้าง footer buttons
-  const footer = document.createElement('div');
+  const footer = document.createElement("div");
   footer.style.cssText = `
     padding: 20px 25px;
     border-top: 1px solid #e5e7eb;
@@ -363,10 +382,8 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     border-radius: 0 0 12px 12px;
   `;
 
-
-
-  const printBtn = document.createElement('button');
-  printBtn.textContent = '🖨️ พิมพ์';
+  const printBtn = document.createElement("button");
+  printBtn.textContent = "🖨️ พิมพ์";
   printBtn.style.cssText = `
     background: #059669;
     color: white;
@@ -378,11 +395,11 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     cursor: pointer;
     transition: all 0.2s;
   `;
-  printBtn.onmouseover = () => printBtn.style.background = '#047857';
-  printBtn.onmouseout = () => printBtn.style.background = '#059669';
+  printBtn.onmouseover = () => (printBtn.style.background = "#047857");
+  printBtn.onmouseout = () => (printBtn.style.background = "#059669");
 
-  const cancelBtn = document.createElement('button');
-  cancelBtn.textContent = '❌ ปิด';
+  const cancelBtn = document.createElement("button");
+  cancelBtn.textContent = "❌ ปิด";
   cancelBtn.style.cssText = `
     background: #6b7280;
     color: white;
@@ -394,20 +411,18 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
     cursor: pointer;
     transition: all 0.2s;
   `;
-  cancelBtn.onmouseover = () => cancelBtn.style.background = '#4b5563';
-  cancelBtn.onmouseout = () => cancelBtn.style.background = '#6b7280';
+  cancelBtn.onmouseover = () => (cancelBtn.style.background = "#4b5563");
+  cancelBtn.onmouseout = () => (cancelBtn.style.background = "#6b7280");
 
   // Event handlers
   const closeModal = () => document.body.removeChild(overlay);
-  
+
   closeBtn.onclick = closeModal;
   cancelBtn.onclick = closeModal;
   overlay.onclick = (e) => e.target === overlay && closeModal();
 
-
-
   printBtn.onclick = () => {
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (printWindow) {
       printWindow.document.write(`
         <html>
@@ -449,7 +464,7 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
 
 export const printSelectedRequests = async (
   selectedRequests: number[],
-  requests: PowerOutageRequest[]
+  requests: PowerOutageRequest[],
 ) => {
   if (selectedRequests.length === 0) {
     alert("กรุณาเลือกรายการที่ต้องการพิมพ์");
@@ -461,54 +476,59 @@ export const printSelectedRequests = async (
     await loadHtml2Pdf();
 
     // จัดกลุ่มข้อมูลตามวันที่
-    const groupedRequests = selectedRequests.reduce((acc, id) => {
-      const request = requests.find((r) => r.id === id);
-      if (!request) return acc;
+    const groupedRequests = selectedRequests.reduce(
+      (acc, id) => {
+        const request = requests.find((r) => r.id === id);
+        if (!request) return acc;
 
-      const dateKey = request.outageDate.toISOString().split("T")[0];
-      if (!acc[dateKey]) {
-        acc[dateKey] = [];
-      }
-      acc[dateKey].push(request);
-      return acc;
-    }, {} as Record<string, PowerOutageRequest[]>);
+        const dateKey = request.outageDate.toISOString().split("T")[0];
+        if (!acc[dateKey]) {
+          acc[dateKey] = [];
+        }
+        acc[dateKey].push(request);
+        return acc;
+      },
+      {} as Record<string, PowerOutageRequest[]>,
+    );
 
     // เรียงลำดับวันที่จากเก่าไปใหม่
     const sortedDates = Object.keys(groupedRequests).sort(
-      (a, b) => new Date(a).getTime() - new Date(b).getTime()
+      (a, b) => new Date(a).getTime() - new Date(b).getTime(),
     );
 
     // เพิ่ม Google Fonts สำหรับภาษาไทย
-    const existingLink = document.querySelector('link[href*="fonts.googleapis.com"]');
+    const existingLink = document.querySelector(
+      'link[href*="fonts.googleapis.com"]',
+    );
     if (!existingLink) {
-      const link = document.createElement('link');
-      link.href = 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap';
-      link.rel = 'stylesheet';
-      link.crossOrigin = 'anonymous';
+      const link = document.createElement("link");
+      link.href =
+        "https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@300;400;500;600;700&family=IBM+Plex+Sans+Thai:wght@400;500;600;700&family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap";
+      link.rel = "stylesheet";
+      link.crossOrigin = "anonymous";
       document.head.appendChild(link);
 
       // รอให้ font โหลดเสร็จ - เพิ่มเวลาสำหรับ Thai fonts
-      await new Promise(resolve => setTimeout(resolve, 1200));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+
       // ตรวจสอบว่า font โหลดเสร็จแล้วหรือยัง
       try {
         await document.fonts.ready;
       } catch (error) {
-        console.warn('Font loading check failed, proceeding anyway');
+        console.warn("Font loading check failed, proceeding anyway");
       }
     }
 
     // สร้าง HTML content
     const htmlContent = createPdfContent(sortedDates, groupedRequests);
-    
+
     // สร้างชื่อไฟล์
-    const filename = `รายงานคำขอดับไฟ_${new Date().toLocaleDateString('th-TH').replace(/\//g, '-')}.pdf`;
+    const filename = `รายงานคำขอดับไฟ_${new Date().toLocaleDateString("th-TH").replace(/\//g, "-")}.pdf`;
 
     // แสดง preview modal
     showPdfPreview(htmlContent, filename);
-    
   } catch (error) {
-    console.error('Error generating PDF preview:', error);
-    alert('เกิดข้อผิดพลาดในการสร้างตัวอย่าง PDF กรุณาลองใหม่อีกครั้ง');
+    console.error("Error generating PDF preview:", error);
+    alert("เกิดข้อผิดพลาดในการสร้างตัวอย่าง PDF กรุณาลองใหม่อีกครั้ง");
   }
-}; 
+};

@@ -6,15 +6,15 @@ import { redirect } from "next/navigation";
 
 export default async function CreatePowerOutageRequestPage() {
   const session = await getServerSession(authOptions);
-  
+
   if (!session || !session.user) {
     redirect("/api/auth/signin");
   }
 
   const { role, branchId, workCenterId } = session.user;
-  
+
   let workCenters;
-  if (role === 'ADMIN') {
+  if (role === "ADMIN") {
     workCenters = await getWorkCenters();
   }
 
@@ -25,18 +25,20 @@ export default async function CreatePowerOutageRequestPage() {
       <div className="max-w-3xl mx-auto">
         <div className="bg-white shadow-lg rounded-lg overflow-hidden">
           <div className="px-6 py-4 bg-blue-600">
-            <h1 className="text-2xl font-bold text-white">สร้างคำขอดับไฟใหม่</h1>
+            <h1 className="text-2xl font-bold text-white">
+              สร้างคำขอดับไฟใหม่
+            </h1>
           </div>
           <div className="p-6">
-            <PowerOutageRequestForm 
+            <PowerOutageRequestForm
               role={role}
               workCenterId={String(workCenterId)}
               branch={String(branchId)}
-              workCenters={role === 'ADMIN' ? workCenters : undefined}
+              workCenters={role === "ADMIN" ? workCenters : undefined}
             />
           </div>
         </div>
-        {role === 'ADMIN' && (
+        {role === "ADMIN" && (
           <div className="mt-6 text-center">
             <p className="text-sm text-gray-600">
               คุณกำลังสร้างคำขอในฐานะผู้ดูแลระบบ

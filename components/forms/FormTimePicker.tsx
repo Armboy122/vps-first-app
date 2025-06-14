@@ -1,8 +1,8 @@
 "use client";
-import React from 'react';
-import { Controller, Control, FieldError } from 'react-hook-form';
-import { MobileTimePicker } from '@mui/x-date-pickers/MobileTimePicker';
-import dayjs from 'dayjs';
+import React from "react";
+import { Controller, Control, FieldError } from "react-hook-form";
+import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker";
+import dayjs from "dayjs";
 
 interface FormTimePickerProps {
   name: string;
@@ -17,7 +17,7 @@ export const FormTimePicker: React.FC<FormTimePickerProps> = ({
   control,
   label,
   error,
-  disabled = false
+  disabled = false,
 }) => {
   return (
     <Controller
@@ -39,7 +39,8 @@ export const FormTimePicker: React.FC<FormTimePickerProps> = ({
               variant: "outlined",
               error: !!error,
               helperText: error?.message,
-              className: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500",
+              className:
+                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500",
             },
           }}
         />

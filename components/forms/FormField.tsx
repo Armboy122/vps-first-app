@@ -1,6 +1,6 @@
 "use client";
-import React from 'react';
-import { FieldError } from 'react-hook-form';
+import React from "react";
+import { FieldError } from "react-hook-form";
 
 interface FormFieldProps {
   label: string;
@@ -23,7 +23,10 @@ export const FormField: React.FC<FormFieldProps> = ({
 }) => {
   return (
     <div className={`space-y-2 ${className}`}>
-      <label htmlFor={name} className="block text-sm font-semibold text-gray-700">
+      <label
+        htmlFor={name}
+        className="block text-sm font-semibold text-gray-700"
+      >
         {icon && <span className="mr-2">{icon}</span>}
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}

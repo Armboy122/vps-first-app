@@ -19,7 +19,7 @@ export class WorkCenterService {
    */
   static async getAllWorkCenters(): Promise<WorkCenter[]> {
     return await prisma.workCenter.findMany({
-      orderBy: { name: 'asc' }
+      orderBy: { name: "asc" },
     });
   }
 
@@ -30,10 +30,10 @@ export class WorkCenterService {
     return await prisma.workCenter.findMany({
       include: {
         branches: {
-          orderBy: { shortName: 'asc' }
-        }
+          orderBy: { shortName: "asc" },
+        },
       },
-      orderBy: { name: 'asc' }
+      orderBy: { name: "asc" },
     });
   }
 
@@ -42,17 +42,19 @@ export class WorkCenterService {
    */
   static async getWorkCenterById(id: number): Promise<WorkCenter | null> {
     return await prisma.workCenter.findUnique({
-      where: { id }
+      where: { id },
     });
   }
 
   /**
    * ดึงรายการ Branch ตาม WorkCenter ID
    */
-  static async getBranchesByWorkCenterId(workCenterId: number): Promise<Branch[]> {
+  static async getBranchesByWorkCenterId(
+    workCenterId: number,
+  ): Promise<Branch[]> {
     return await prisma.branch.findMany({
       where: { workCenterId },
-      orderBy: { shortName: 'asc' }
+      orderBy: { shortName: "asc" },
     });
   }
 
@@ -62,12 +64,9 @@ export class WorkCenterService {
   static async getAllBranches(): Promise<BranchWithWorkCenter[]> {
     return await prisma.branch.findMany({
       include: {
-        workCenter: true
+        workCenter: true,
       },
-      orderBy: [
-        { workCenter: { name: 'asc' } },
-        { shortName: 'asc' }
-      ]
+      orderBy: [{ workCenter: { name: "asc" } }, { shortName: "asc" }],
     });
   }
 
@@ -76,35 +75,45 @@ export class WorkCenterService {
    */
   static async getBranchById(id: number): Promise<Branch | null> {
     return await prisma.branch.findUnique({
-      where: { id }
+      where: { id },
     });
   }
 
   /**
    * สร้าง WorkCenter ใหม่
    */
-  static async createWorkCenter(data: Pick<WorkCenter, 'name'>): Promise<WorkCenter> {
+  static async createWorkCenter(
+    data: Pick<WorkCenter, "name">,
+  ): Promise<WorkCenter> {
     return await prisma.workCenter.create({
-      data
+      data,
     });
   }
 
   /**
    * สร้าง Branch ใหม่
    */
-  static async createBranch(data: Pick<Branch, 'workCenterId' | 'fullName' | 'shortName' | 'phoneNumber'>): Promise<Branch> {
+  static async createBranch(
+    data: Pick<
+      Branch,
+      "workCenterId" | "fullName" | "shortName" | "phoneNumber"
+    >,
+  ): Promise<Branch> {
     return await prisma.branch.create({
-      data
+      data,
     });
   }
 
   /**
    * อัปเดต WorkCenter
    */
-  static async updateWorkCenter(id: number, data: Partial<Pick<WorkCenter, 'name'>>): Promise<WorkCenter> {
+  static async updateWorkCenter(
+    id: number,
+    data: Partial<Pick<WorkCenter, "name">>,
+  ): Promise<WorkCenter> {
     return await prisma.workCenter.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -112,12 +121,12 @@ export class WorkCenterService {
    * อัปเดต Branch
    */
   static async updateBranch(
-    id: number, 
-    data: Partial<Pick<Branch, 'fullName' | 'shortName' | 'phoneNumber'>>
+    id: number,
+    data: Partial<Pick<Branch, "fullName" | "shortName" | "phoneNumber">>,
   ): Promise<Branch> {
     return await prisma.branch.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -126,7 +135,7 @@ export class WorkCenterService {
    */
   static async deleteWorkCenter(id: number): Promise<void> {
     await prisma.workCenter.delete({
-      where: { id }
+      where: { id },
     });
   }
 
@@ -135,7 +144,7 @@ export class WorkCenterService {
    */
   static async deleteBranch(id: number): Promise<void> {
     await prisma.branch.delete({
-      where: { id }
+      where: { id },
     });
   }
 
@@ -146,7 +155,7 @@ export class WorkCenterService {
     const [branchCount, userCount, requestCount] = await Promise.all([
       prisma.branch.count({ where: { workCenterId: id } }),
       prisma.user.count({ where: { workCenterId: id } }),
-      prisma.powerOutageRequest.count({ where: { workCenterId: id } })
+      prisma.powerOutageRequest.count({ where: { workCenterId: id } }),
     ]);
 
     return branchCount > 0 || userCount > 0 || requestCount > 0;
@@ -158,7 +167,7 @@ export class WorkCenterService {
   static async isBranchInUse(id: number): Promise<boolean> {
     const [userCount, requestCount] = await Promise.all([
       prisma.user.count({ where: { branchId: id } }),
-      prisma.powerOutageRequest.count({ where: { branchId: id } })
+      prisma.powerOutageRequest.count({ where: { branchId: id } }),
     ]);
 
     return userCount > 0 || requestCount > 0;

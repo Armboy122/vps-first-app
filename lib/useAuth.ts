@@ -10,8 +10,8 @@ interface AuthInfo {
   userWorkCenterId?: number;
   userWorkCenterName?: string;
   isLoading: boolean;
-  userbranch?:string;
-  userbranchID?:number;
+  userbranch?: string;
+  userbranchID?: number;
 }
 
 export function useAuth(): AuthInfo {

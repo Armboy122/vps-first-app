@@ -22,7 +22,7 @@ ChartJS.register(
   BarElement,
   Title,
   Tooltip,
-  Legend
+  Legend,
 );
 
 const OMSStatusStackedChart = () => {
@@ -37,7 +37,7 @@ const OMSStatusStackedChart = () => {
       setIsLoading(true);
       try {
         const data = await getOMSStatusByWorkCenter();
-        
+
         setChartData({
           labels: data.map((item) => item.name),
           datasets: [
@@ -74,11 +74,11 @@ const OMSStatusStackedChart = () => {
     fetchData();
   }, []);
 
-  const options: ChartOptions<'bar'> = {
+  const options: ChartOptions<"bar"> = {
     responsive: true,
     maintainAspectRatio: false,
     scales: {
-      x: { 
+      x: {
         stacked: true,
         grid: { display: false },
         ticks: {
@@ -87,7 +87,7 @@ const OMSStatusStackedChart = () => {
           minRotation: 45,
         },
       },
-      y: { 
+      y: {
         stacked: true,
         grid: { color: "rgba(0, 0, 0, 0.05)" },
         ticks: {
@@ -96,8 +96,8 @@ const OMSStatusStackedChart = () => {
         },
         title: {
           display: true,
-          text: 'จำนวนงาน',
-          font: { size: 14, weight: 'bold' },
+          text: "จำนวนงาน",
+          font: { size: 14, weight: "bold" },
         },
       },
     },
@@ -107,28 +107,28 @@ const OMSStatusStackedChart = () => {
         labels: {
           padding: 20,
           usePointStyle: true,
-          pointStyle: 'circle',
+          pointStyle: "circle",
           font: { size: 13 },
         },
       },
       title: {
         display: true,
-        text: 'สถานะงานตามจุดรวมงาน',
-        font: { size: 18, weight: 'bold' },
+        text: "สถานะงานตามจุดรวมงาน",
+        font: { size: 18, weight: "bold" },
         padding: { top: 10, bottom: 30 },
       },
       tooltip: {
-        backgroundColor: 'rgba(255, 255, 255, 0.9)',
-        titleColor: '#333',
-        bodyColor: '#666',
-        borderColor: '#ddd',
+        backgroundColor: "rgba(255, 255, 255, 0.9)",
+        titleColor: "#333",
+        bodyColor: "#666",
+        borderColor: "#ddd",
         borderWidth: 1,
         cornerRadius: 8,
         boxPadding: 6,
         usePointStyle: true,
         callbacks: {
-          label: function(context: any) {
-            const label = context.dataset.label || '';
+          label: function (context: any) {
+            const label = context.dataset.label || "";
             const value = context.parsed.y || 0;
             return `${label}: ${value} งาน`;
           },
@@ -137,7 +137,7 @@ const OMSStatusStackedChart = () => {
     },
     animation: {
       duration: 1000,
-      easing: 'easeOutQuad', // TypeScript will now check against the correct union
+      easing: "easeOutQuad", // TypeScript will now check against the correct union
     },
     layout: {
       padding: { top: 5, right: 16, bottom: 16, left: 8 },

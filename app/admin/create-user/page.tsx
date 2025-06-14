@@ -1,5 +1,5 @@
 import CreateUserForm from "@/components/CreateUserForm";
-import Link from 'next/link';
+import Link from "next/link";
 
 export default function CreateUserPage() {
   return (
@@ -19,7 +19,9 @@ export default function CreateUserPage() {
             <Link href="/admin">
               <button className="group bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-200">
                 <span className="flex items-center">
-                  <span className="mr-2 group-hover:-translate-x-1 transition-transform duration-200">←</span>
+                  <span className="mr-2 group-hover:-translate-x-1 transition-transform duration-200">
+                    ←
+                  </span>
                   กลับไปหน้า Admin
                 </span>
               </button>
@@ -36,7 +38,9 @@ export default function CreateUserPage() {
                 <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
                   1
                 </div>
-                <span className="ml-2 text-blue-600 font-medium">ข้อมูลพื้นฐาน</span>
+                <span className="ml-2 text-blue-600 font-medium">
+                  ข้อมูลพื้นฐาน
+                </span>
               </div>
               <div className="w-8 h-0.5 bg-gray-200"></div>
               <div className="flex items-center">
@@ -50,7 +54,9 @@ export default function CreateUserPage() {
                 <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
                   3
                 </div>
-                <span className="ml-2 text-blue-600 font-medium">สิทธิ์การใช้งาน</span>
+                <span className="ml-2 text-blue-600 font-medium">
+                  สิทธิ์การใช้งาน
+                </span>
               </div>
             </div>
           </div>

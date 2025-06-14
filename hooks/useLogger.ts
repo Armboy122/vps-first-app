@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
-import { logger } from '@/lib/utils/logger';
-import { useAuth } from '@/lib/useAuth';
-import { useSession } from 'next-auth/react';
-import { usePathname } from 'next/navigation';
+import { useEffect } from "react";
+import { logger } from "@/lib/utils/logger";
+import { useAuth } from "@/lib/useAuth";
+import { useSession } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 /**
  * Hook สำหรับตั้งค่า logger ให้ทำงานกับ user session
@@ -15,7 +15,7 @@ export const useLogger = () => {
 
   // ตั้งค่า user info เมื่อ login
   useEffect(() => {
-    if (status !== 'loading' && session?.user) {
+    if (status !== "loading" && session?.user) {
       logger.setUser(session.user.id, session.user.role);
     }
   }, [session, status]);

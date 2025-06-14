@@ -1,8 +1,18 @@
 "use client";
 import React from "react";
-import { Control, FieldErrors, UseFormRegister, Controller } from "react-hook-form";
+import {
+  Control,
+  FieldErrors,
+  UseFormRegister,
+  Controller,
+} from "react-hook-form";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
-import { FormField, FormInput, FormSelect, SimpleTimePicker } from "@/components/forms";
+import {
+  FormField,
+  FormInput,
+  FormSelect,
+  SimpleTimePicker,
+} from "@/components/forms";
 import dayjs from "dayjs";
 
 interface WorkCenter {
@@ -62,8 +72,12 @@ export const FormFields: React.FC<FormFieldsProps> = ({
   onTransformerSearch,
   onTransformerSelect,
 }) => {
-  const workCenterOptions = workCenters?.map(wc => ({ value: wc.id, label: wc.name })) || [];
-  const branchOptions = branches.map(branch => ({ value: branch.id, label: branch.shortName }));
+  const workCenterOptions =
+    workCenters?.map((wc) => ({ value: wc.id, label: wc.name })) || [];
+  const branchOptions = branches.map((branch) => ({
+    value: branch.id,
+    label: branch.shortName,
+  }));
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -80,30 +94,34 @@ export const FormFields: React.FC<FormFieldsProps> = ({
           min={minSelectableDate}
           {...register("outageDate")}
           onChange={onDateChange}
-          error={errors.outageDate || (timeError ? { message: timeError } as any : undefined)}
+          error={
+            errors.outageDate ||
+            (timeError ? ({ message: timeError } as any) : undefined)
+          }
         />
-        
+
         {/* แสดงข้อมูลเสริมเกี่ยวกับวันที่ */}
         <div className="mt-1 space-y-1">
           <p className="text-xs text-gray-500">
-            วันที่เร็วที่สุดที่สามารถเลือกได้: 
+            วันที่เร็วที่สุดที่สามารถเลือกได้:
             <span className="font-medium text-green-600">
-              {dayjs(minSelectableDate).format('DD/MM/YYYY')}
+              {dayjs(minSelectableDate).format("DD/MM/YYYY")}
             </span>
           </p>
-          
+
           {watchedOutageDate && (
-            <p className={`text-xs font-medium ${
-              daysFromToday !== null && daysFromToday > 10 
-                ? "text-green-600" 
-                : "text-red-600"
-            }`}>
+            <p
+              className={`text-xs font-medium ${
+                daysFromToday !== null && daysFromToday > 10
+                  ? "text-green-600"
+                  : "text-red-600"
+              }`}
+            >
               {daysFromToday !== null && (
                 <>
-                  {daysFromToday > 10 
-                    ? `✅ วันที่เลือก: ${dayjs(watchedOutageDate).format('DD/MM/YYYY')} (${daysFromToday} วันจากวันนี้)`
-                    : `❌ วันที่เลือกไม่ถูกต้อง: ${dayjs(watchedOutageDate).format('DD/MM/YYYY')} (เหลือเพียง ${daysFromToday} วัน)`
-                  }
+                  {daysFromToday > 10
+                    ? `✅ วันที่เลือก: ${dayjs(watchedOutageDate).format("DD/MM/YYYY")} (${daysFromToday} วันจากวันนี้)`
+                    : `❌ วันที่เลือกไม่ถูกต้อง: ${dayjs(watchedOutageDate).format("DD/MM/YYYY")} (เหลือเพียง ${daysFromToday} วัน)`}
                 </>
               )}
             </p>
@@ -146,11 +164,13 @@ export const FormFields: React.FC<FormFieldsProps> = ({
           minTime={watchedStartTime || "06:30"}
           maxTime="20:00"
         />
-        {watchedStartTime && watchedEndTime && watchedEndTime <= watchedStartTime && (
-          <p className="text-xs text-red-600 mt-1">
-            ⚠️ เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น
-          </p>
-        )}
+        {watchedStartTime &&
+          watchedEndTime &&
+          watchedEndTime <= watchedStartTime && (
+            <p className="text-xs text-red-600 mt-1">
+              ⚠️ เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้น
+            </p>
+          )}
         <p className="text-xs text-gray-500 mt-1">
           ⏰ ต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที
         </p>
@@ -198,10 +218,10 @@ export const FormFields: React.FC<FormFieldsProps> = ({
                 {...field}
                 options={branchOptions}
                 placeholder={
-                  !watchWorkCenterId 
-                    ? "กรุณาเลือกจุดรวมงานก่อน" 
-                    : branchesLoading 
-                      ? "กำลังโหลดสาขา..." 
+                  !watchWorkCenterId
+                    ? "กรุณาเลือกจุดรวมงานก่อน"
+                    : branchesLoading
+                      ? "กำลังโหลดสาขา..."
                       : "เลือกสาขา"
                 }
                 error={errors.branchId}
@@ -228,7 +248,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
           placeholder="ค้นหาหมายเลขหม้อแปลง"
           error={errors.transformerNumber}
         />
-        
+
         {/* รายการหม้อแปลงที่ค้นหาได้ */}
         {transformers.length > 0 && (
           <ul className="mt-2 border border-gray-200 rounded-md shadow-sm">
@@ -246,11 +266,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
       </FormField>
 
       {/* สถานที่ติดตั้ง (GIS) */}
-      <FormField
-        label="สถานที่ติดตั้ง (GIS)"
-        name="gisDetails"
-        icon="📍"
-      >
+      <FormField label="สถานที่ติดตั้ง (GIS)" name="gisDetails" icon="📍">
         <FormInput
           {...register("gisDetails")}
           readOnly
@@ -259,12 +275,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
       </FormField>
 
       {/* พื้นที่ไฟดับ */}
-      <FormField
-        label="พื้นที่ไฟดับ"
-        name="area"
-        error={errors.area}
-        icon="🌍"
-      >
+      <FormField label="พื้นที่ไฟดับ" name="area" error={errors.area} icon="🌍">
         <FormInput
           {...register("area")}
           placeholder="ระบุพื้นที่ไฟดับ"

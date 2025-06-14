@@ -36,7 +36,7 @@ export default function RootLayout({
           <footer className="bg-gray-800 text-white text-center py-4">
             <p>&copy; 2024 ระบบจัดการคำขอดับไฟ. All rights reserved.</p>
           </footer>
-          
+
           {/* Development Tools */}
           <LogViewer />
           <LogViewerShortcut />

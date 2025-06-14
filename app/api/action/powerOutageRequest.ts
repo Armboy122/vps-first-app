@@ -6,15 +6,15 @@ import {
   PowerOutageRequestUpdateSchema,
 } from "@/lib/validations/powerOutageRequest";
 import { getServerSession } from "next-auth";
-import { OMSStatus , Request } from '@prisma/client';
+import { OMSStatus, Request } from "@prisma/client";
 import { authOptions } from "@/authOption";
 import { createThailandDateTime } from "@/lib/date-utils";
 import { clearOMSCache } from "@/lib/cache-utils";
 import { z } from "zod";
-import { 
-  PowerOutageRequestService, 
-  TransformerService, 
-  UserService 
+import {
+  PowerOutageRequestService,
+  TransformerService,
+  UserService,
 } from "@/lib/services";
 import prisma from "@/lib/prisma";
 
@@ -41,8 +41,14 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
 
     // แปลงเวลาเป็น timezone ของไทย
     const outageDate = new Date(validatedData.outageDate);
-    const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
-    const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
+    const startTime = createThailandDateTime(
+      validatedData.outageDate,
+      validatedData.startTime,
+    );
+    const endTime = createThailandDateTime(
+      validatedData.outageDate,
+      validatedData.endTime,
+    );
 
     // ตรวจสอบวันที่ดับไฟ
     const validation = PowerOutageRequestService.validateOutageDate(outageDate);
@@ -69,18 +75,18 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
     return { success: true, data: result };
   } catch (error) {
     console.error("Failed to create power outage request:", error);
-    
+
     if (error instanceof z.ZodError) {
-      const errorMessages = error.errors.map(err => err.message).join(', ');
+      const errorMessages = error.errors.map((err) => err.message).join(", ");
       return { success: false, error: `ข้อมูลไม่ถูกต้อง: ${errorMessages}` };
     }
-    
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'P2002') {
+
+    if (error && typeof error === "object" && "code" in error) {
+      if (error.code === "P2002") {
         return { success: false, error: "ข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ" };
       }
     }
-    
+
     return { success: false, error: "เกิดข้อผิดพลาดในการสร้างคำขอดับไฟ" };
   }
 }
@@ -113,13 +119,13 @@ export async function getPowerOutageRequests(
     statusRequest?: Request;
     startDate?: Date;
     endDate?: Date;
-  }
+  },
 ) {
   try {
     // ใช้ service layer สำหรับ pagination
     const result = await PowerOutageRequestService.getPaginatedRequests(
       { page, limit },
-      filters
+      filters,
     );
 
     // ใช้ business logic สำหรับ sorting ที่ซับซ้อน
@@ -127,7 +133,7 @@ export async function getPowerOutageRequests(
 
     return {
       data: sortedData,
-      pagination: result.pagination
+      pagination: result.pagination,
     };
   } catch (error) {
     console.error("Failed to fetch power outage requests:", error);
@@ -151,7 +157,7 @@ export async function deletePowerOutageRequest(id: number) {
 
 export async function updatePowerOutageRequest(
   id: number,
-  data: PowerOutageRequestInput
+  data: PowerOutageRequestInput,
 ) {
   try {
     const validatedData = PowerOutageRequestUpdateSchema.pick({
@@ -162,8 +168,14 @@ export async function updatePowerOutageRequest(
     }).parse(data);
 
     // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
-    const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
-    const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
+    const startTime = createThailandDateTime(
+      validatedData.outageDate,
+      validatedData.startTime,
+    );
+    const endTime = createThailandDateTime(
+      validatedData.outageDate,
+      validatedData.endTime,
+    );
 
     if (isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
       throw new Error("Invalid time format");
@@ -193,7 +205,8 @@ export async function updatePowerOutageRequest(
     } else {
       return {
         success: false,
-        error: "An unknown error occurred while updating the power outage request",
+        error:
+          "An unknown error occurred while updating the power outage request",
       };
     }
   }
@@ -203,9 +216,9 @@ export async function updateOMS(id: number, omsStatus: OMSStatus) {
   const currentUser = await getCurrentUser();
   try {
     const updatedRequest = await PowerOutageRequestService.updateOMSStatus(
-      id, 
-      omsStatus, 
-      currentUser.id
+      id,
+      omsStatus,
+      currentUser.id,
     );
 
     // ล้างแคช OMS หลังจากอัปเดตสถานะ OMS
@@ -235,9 +248,9 @@ export async function updateStatusRequest(id: number, statusRequest: Request) {
   const currentUser = await getCurrentUser();
   try {
     const updatedRequest = await PowerOutageRequestService.updateRequestStatus(
-      id, 
-      statusRequest, 
-      currentUser.id
+      id,
+      statusRequest,
+      currentUser.id,
     );
 
     // ล้างแคช OMS หลังจากอัปเดตสถานะคำขอ
@@ -264,11 +277,17 @@ export async function updateStatusRequest(id: number, statusRequest: Request) {
 }
 
 // สร้างคำขอดับไฟหลายรายการพร้อมกัน (Batch Processing)
-export async function createMultiplePowerOutageRequests(dataList: PowerOutageRequestInput[]) {
+export async function createMultiplePowerOutageRequests(
+  dataList: PowerOutageRequestInput[],
+) {
   const currentUser = await getCurrentUser();
 
   try {
-    console.log("Creating multiple power outage requests:", dataList.length, "items");
+    console.log(
+      "Creating multiple power outage requests:",
+      dataList.length,
+      "items",
+    );
 
     // Validate ข้อมูลทั้งหมดก่อน
     const validatedDataList: Array<{
@@ -291,23 +310,30 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
     for (let i = 0; i < dataList.length; i++) {
       try {
         const validatedData = PowerOutageRequestSchema.parse(dataList[i]);
-        
+
         // ตรวจสอบวันที่สำหรับแต่ละรายการ
         const outageDate = new Date(validatedData.outageDate);
-        const validation = PowerOutageRequestService.validateOutageDate(outageDate);
-        
+        const validation =
+          PowerOutageRequestService.validateOutageDate(outageDate);
+
         if (!validation.isValid) {
           validationErrors.push({
             index: i + 1,
             error: validation.error!,
-            data: validatedData
+            data: validatedData,
           });
           continue;
         }
 
         // แปลงเวลาเป็น timezone ของไทย
-        const startTime = createThailandDateTime(validatedData.outageDate, validatedData.startTime);
-        const endTime = createThailandDateTime(validatedData.outageDate, validatedData.endTime);
+        const startTime = createThailandDateTime(
+          validatedData.outageDate,
+          validatedData.startTime,
+        );
+        const endTime = createThailandDateTime(
+          validatedData.outageDate,
+          validatedData.endTime,
+        );
 
         validatedDataList.push({
           outageDate,
@@ -322,17 +348,19 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
         });
       } catch (error) {
         if (error instanceof z.ZodError) {
-          const errorMessages = error.errors.map(err => err.message).join(', ');
+          const errorMessages = error.errors
+            .map((err) => err.message)
+            .join(", ");
           validationErrors.push({
             index: i + 1,
             error: `ข้อมูลไม่ถูกต้อง: ${errorMessages}`,
-            data: dataList[i]
+            data: dataList[i],
           });
         } else {
           validationErrors.push({
             index: i + 1,
             error: "เกิดข้อผิดพลาดในการตรวจสอบข้อมูล",
-            data: dataList[i]
+            data: dataList[i],
           });
         }
       }
@@ -345,14 +373,19 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
         error: "พบข้อผิดพลาดในการตรวจสอบข้อมูล",
         validationErrors,
         successCount: 0,
-        totalCount: dataList.length
+        totalCount: dataList.length,
       };
     }
 
     // ใช้ service layer สำหรับสร้างหลายรายการ
-    const results = await PowerOutageRequestService.createMultipleRequests(validatedDataList);
+    const results =
+      await PowerOutageRequestService.createMultipleRequests(validatedDataList);
 
-    console.log("Successfully created", results.length, "power outage requests");
+    console.log(
+      "Successfully created",
+      results.length,
+      "power outage requests",
+    );
 
     // ล้างแคช OMS หลังจากสร้างคำขอดับไฟ
     clearOMSCache();
@@ -362,29 +395,28 @@ export async function createMultiplePowerOutageRequests(dataList: PowerOutageReq
       data: results,
       successCount: results.length,
       totalCount: dataList.length,
-      message: `บันทึกคำขอดับไฟสำเร็จทั้งหมด ${results.length} รายการ`
+      message: `บันทึกคำขอดับไฟสำเร็จทั้งหมด ${results.length} รายการ`,
     };
-
   } catch (error) {
     console.error("Failed to create multiple power outage requests:", error);
-    
+
     // ตรวจสอบว่าเป็น Prisma error หรือไม่
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'P2002') {
-        return { 
-          success: false, 
+    if (error && typeof error === "object" && "code" in error) {
+      if (error.code === "P2002") {
+        return {
+          success: false,
           error: "พบข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ",
           successCount: 0,
-          totalCount: dataList.length
+          totalCount: dataList.length,
         };
       }
     }
-    
-    return { 
-      success: false, 
+
+    return {
+      success: false,
       error: "เกิดข้อผิดพลาดในการสร้างคำขอดับไฟ",
       successCount: 0,
-      totalCount: dataList.length
+      totalCount: dataList.length,
     };
   }
 }

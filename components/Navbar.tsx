@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import Image from 'next/image';
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useState } from "react";
@@ -9,7 +9,7 @@ const Navbar = () => {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
+
   // ตรวจสอบว่าเป็น viewer หรือไม่
   const isViewer = session?.user.role === "VIEWER";
 

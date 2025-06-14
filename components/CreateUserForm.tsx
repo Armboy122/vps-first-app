@@ -2,17 +2,20 @@
 
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createUser, checkEmployeeIdExists } from "../app/api/action/User";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { z } from "zod";
 import { CreateUserSchema } from "@/lib/validations/user";
-import {
-  getWorkCenters,
-  getBranches,
-} from "@/app/api/action/getWorkCentersAndBranches";
 import { useRouter } from "next/navigation";
-import { debounce } from "lodash";
-import { FormField, FormInput, FormSelect, FormButton } from "@/components/forms";
+import {
+  FormField,
+  FormInput,
+  FormSelect,
+  FormButton,
+} from "@/components/forms";
+import { useWorkCenters } from "@/hooks/queries/useWorkCenters";
+import { useBranches } from "@/hooks/queries/useBranches";
+import { useCreateUser, useCheckEmployeeId } from "@/hooks/queries/useUsers";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 
 type WorkCenter = {
   id: number;
@@ -33,25 +36,11 @@ const ROLE_OPTIONS = [
   { value: "SUPERVISOR", label: "พนักงาน EO" },
   { value: "MANAGER", label: "ผู้บริหารจุดรวมงาน" },
   { value: "ADMIN", label: "Admin" },
-  { value: "VIEWER", label: "กฟต.3" }
+  { value: "VIEWER", label: "กฟต.3" },
 ];
 
 export default function CreateUserForm() {
-  const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [branches, setBranches] = useState<Branch[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [employeeIdCheck, setEmployeeIdCheck] = useState<{
-    isChecking: boolean;
-    exists: boolean;
-    message: string;
-    error?: boolean;
-  }>({
-    isChecking: false,
-    exists: false,
-    message: ""
-  });
   const router = useRouter();
 
   const {
@@ -71,62 +60,24 @@ export default function CreateUserForm() {
       branchId: 0,
       role: "USER",
     },
-    mode: "onChange"
+    mode: "onChange",
   });
 
   const selectedWorkCenter = watch("workCenterId");
   const employeeId = watch("employeeId");
 
-  // Debounced function for employee ID check
-  const debouncedCheckEmployeeId = useMemo(
-    () => debounce(async (empId: string) => {
-      if (!empId || empId.length < 6) {
-        setEmployeeIdCheck({
-          isChecking: false,
-          exists: false,
-          message: ""
-        });
-        return;
-      }
+  // Debounced employee ID for checking
+  const debouncedEmployeeId = useDebouncedValue(employeeId, 800);
 
-      setEmployeeIdCheck(prev => ({ ...prev, isChecking: true }));
-      
-      try {
-        const result = await checkEmployeeIdExists(empId);
-        setEmployeeIdCheck({
-          isChecking: false,
-          exists: result.exists,
-          message: result.message,
-          error: result.error
-        });
-      } catch (error) {
-        setEmployeeIdCheck({
-          isChecking: false,
-          exists: false,
-          message: "เกิดข้อผิดพลาดในการตรวจสอบ",
-          error: true
-        });
-      }
-    }, 800),
-    []
+  // React Query hooks
+  const { data: workCenters = [], isLoading: workCentersLoading } =
+    useWorkCenters();
+  const { data: branches = [], isLoading: branchesLoading } = useBranches(
+    selectedWorkCenter ? Number(selectedWorkCenter) : null,
   );
-
-  // Check employee ID when it changes
-  useEffect(() => {
-    if (employeeId) {
-      debouncedCheckEmployeeId(employeeId);
-    } else {
-      setEmployeeIdCheck({
-        isChecking: false,
-        exists: false,
-        message: ""
-      });
-    }
-    
-    return () => {
-      debouncedCheckEmployeeId.cancel();
-    };
-  }, [employeeId, debouncedCheckEmployeeId]);
+  const createUserMutation = useCreateUser();
+  const { data: employeeIdCheckResult, isLoading: isCheckingEmployeeId } =
+    useCheckEmployeeId(debouncedEmployeeId);
 
   // Auto-update password to match employee ID
   useEffect(() => {
@@ -135,61 +86,32 @@ export default function CreateUserForm() {
     }
   }, [employeeId, setValue]);
 
+  // Reset branch when work center changes
   useEffect(() => {
-    const loadWorkCenters = async () => {
-      setIsLoading(true);
-      try {
-        const centers = await getWorkCenters();
-        setWorkCenters(centers);
-      } catch (err) {
-        setError("ไม่สามารถโหลดข้อมูลจุดรวมงานได้");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    loadWorkCenters();
-  }, []);
-
-  useEffect(() => {
-    const loadBranches = async () => {
-      if (selectedWorkCenter) {
-        setIsLoading(true);
-        try {
-          const branchList = await getBranches(Number(selectedWorkCenter));
-          setBranches(branchList);
-        } catch (err) {
-          setError("ไม่สามารถโหลดข้อมูลสาขาได้");
-        } finally {
-          setIsLoading(false);
-        }
-      } else {
-        setBranches([]);
-      }
+    if (selectedWorkCenter) {
       setValue("branchId", 0);
-    };
-    loadBranches();
+    }
   }, [selectedWorkCenter, setValue]);
 
   const onSubmit = async (data: FormData) => {
     setError("");
-    setIsSubmitting(true);
-    
+
     try {
-      const result = await createUser(data);
+      const result = await createUserMutation.mutateAsync(data);
       if (result.success) {
-        alert(`✅ สร้างผู้ใช้เรียบร้อยแล้ว!\n\nชื่อ: ${data.fullName}\nรหัสพนักงาน: ${data.employeeId}\nรหัสผ่าน: ${data.password}\n\nกำลังกลับสู่หน้ารายชื่อผู้ใช้...`);
+        alert(
+          `✅ สร้างผู้ใช้เรียบร้อยแล้ว!\n\nชื่อ: ${data.fullName}\nรหัสพนักงาน: ${data.employeeId}\nรหัสผ่าน: ${data.password}\n\nกำลังกลับสู่หน้ารายชื่อผู้ใช้...`,
+        );
         router.push("/admin");
       } else {
         setError(`ไม่สามารถสร้างผู้ใช้ได้: ${result.error}`);
       }
     } catch (err) {
       setError("เกิดข้อผิดพลาดในการสร้างผู้ใช้");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
-  if (isLoading && workCenters.length === 0) {
+  if (workCentersLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
@@ -198,8 +120,22 @@ export default function CreateUserForm() {
     );
   }
 
-  const workCenterOptions = workCenters.map(wc => ({ value: wc.id, label: wc.name }));
-  const branchOptions = branches.map(branch => ({ value: branch.id, label: `${branch.shortName} - ${branch.fullName}` }));
+  // Extract employee ID check data
+  const employeeIdCheck = {
+    isChecking: isCheckingEmployeeId,
+    exists: employeeIdCheckResult?.exists || false,
+    message: employeeIdCheckResult?.message || "",
+    error: employeeIdCheckResult?.error || false,
+  };
+
+  const workCenterOptions = workCenters.map((wc) => ({
+    value: wc.id,
+    label: wc.name,
+  }));
+  const branchOptions = branches.map((branch) => ({
+    value: branch.id,
+    label: branch.shortName,
+  }));
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -221,7 +157,12 @@ export default function CreateUserForm() {
                 type="text"
                 placeholder="กรอกรหัสพนักงาน 6 ตัวอักษร"
                 maxLength={10}
-                error={errors.employeeId || (employeeIdCheck.exists ? { message: employeeIdCheck.message } as any : undefined)}
+                error={
+                  errors.employeeId ||
+                  (employeeIdCheck.exists
+                    ? ({ message: employeeIdCheck.message } as any)
+                    : undefined)
+                }
                 icon={
                   employeeIdCheck.isChecking ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
@@ -234,21 +175,31 @@ export default function CreateUserForm() {
               />
             )}
           />
-          
+
           {/* Employee ID Check Status */}
           {!errors.employeeId && employeeIdCheck.message && (
-            <p className={`text-sm flex items-center ${
-              employeeIdCheck.exists || employeeIdCheck.error ? 'text-red-600' : 'text-green-600'
-            }`}>
+            <p
+              className={`text-sm flex items-center ${
+                employeeIdCheck.exists || employeeIdCheck.error
+                  ? "text-red-600"
+                  : "text-green-600"
+              }`}
+            >
               <span className="mr-1">
-                {employeeIdCheck.isChecking ? "🔍" : 
-                 employeeIdCheck.exists ? "❌" : 
-                 employeeIdCheck.error ? "⚠️" : "✅"}
+                {employeeIdCheck.isChecking
+                  ? "🔍"
+                  : employeeIdCheck.exists
+                    ? "❌"
+                    : employeeIdCheck.error
+                      ? "⚠️"
+                      : "✅"}
               </span>
-              {employeeIdCheck.isChecking ? "กำลังตรวจสอบ..." : employeeIdCheck.message}
+              {employeeIdCheck.isChecking
+                ? "กำลังตรวจสอบ..."
+                : employeeIdCheck.message}
             </p>
           )}
-          
+
           {/* Password Preview */}
           {employeeId && employeeId.length >= 6 && !employeeIdCheck.exists && (
             <p className="text-sm text-green-600 flex items-center">
@@ -276,12 +227,17 @@ export default function CreateUserForm() {
                 placeholder="รหัสผ่านจะถูกตั้งเป็นรหัสพนักงานอัตโนมัติ"
                 readOnly={employeeId ? employeeId.length >= 6 : false}
                 error={errors.password}
-                icon={employeeId && employeeId.length >= 6 ? <span className="text-green-500">🔒</span> : undefined}
+                icon={
+                  employeeId && employeeId.length >= 6 ? (
+                    <span className="text-green-500">🔒</span>
+                  ) : undefined
+                }
               />
             )}
           />
           <p className="text-xs text-gray-500">
-            💡 รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ ผู้ใช้สามารถเปลี่ยนได้ภายหลัง
+            💡 รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ
+            ผู้ใช้สามารถเปลี่ยนได้ภายหลัง
           </p>
         </FormField>
 
@@ -345,14 +301,16 @@ export default function CreateUserForm() {
               <FormSelect
                 {...field}
                 options={branchOptions}
-                placeholder={!selectedWorkCenter ? "กรุณาเลือกจุดรวมงานก่อน" : "เลือกสาขา"}
+                placeholder={
+                  !selectedWorkCenter ? "กรุณาเลือกจุดรวมงานก่อน" : "เลือกสาขา"
+                }
                 error={errors.branchId}
                 disabled={!selectedWorkCenter}
                 onChange={(e) => field.onChange(Number(e.target.value))}
               />
             )}
           />
-          {isLoading && selectedWorkCenter && (
+          {branchesLoading && selectedWorkCenter && (
             <p className="text-sm text-blue-600 flex items-center">
               <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-blue-600 mr-2"></div>
               กำลังโหลดรายชื่อสาขา...
@@ -388,19 +346,24 @@ export default function CreateUserForm() {
             type="submit"
             variant="primary"
             size="lg"
-            isLoading={isSubmitting || employeeIdCheck.isChecking}
+            isLoading={
+              createUserMutation.isPending || employeeIdCheck.isChecking
+            }
             disabled={!isValid || employeeIdCheck.exists}
             className="w-full"
             icon={
-              employeeIdCheck.isChecking ? undefined :
-              employeeIdCheck.exists ? "❌" :
-              isSubmitting ? undefined : "✨"
+              employeeIdCheck.isChecking
+                ? undefined
+                : employeeIdCheck.exists
+                  ? "❌"
+                  : createUserMutation.isPending
+                    ? undefined
+                    : "✨"
             }
           >
-            {employeeIdCheck.exists 
+            {employeeIdCheck.exists
               ? "รหัสพนักงานซ้ำ - ไม่สามารถสร้างได้"
-              : "สร้างผู้ใช้"
-            }
+              : "สร้างผู้ใช้"}
           </FormButton>
         </div>
 

@@ -1,10 +1,8 @@
-import PowerOutageRequestList from '@/components/PowerOutageRequestList';
-import PrintAnnouncement from '@/components/print';
-import { FaBolt } from 'react-icons/fa'; // ต้องติดตั้ง react-icons ก่อน
+import PowerOutageRequestList from "@/components/PowerOutageRequestList";
+import PrintAnnouncement from "@/components/print";
+import { FaBolt } from "react-icons/fa"; // ต้องติดตั้ง react-icons ก่อน
 
 export default function PowerOutageRequestPage() {
-
-  
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="container mx-auto px-4 py-8">
@@ -14,7 +12,6 @@ export default function PowerOutageRequestPage() {
               <FaBolt className="mr-3" />
               รายการคำขอดับไฟ
             </h2>
-
           </div>
           <div className="p-6">
             <PowerOutageRequestList />

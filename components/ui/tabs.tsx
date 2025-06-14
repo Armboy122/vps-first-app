@@ -10,7 +10,11 @@ export function Tabs({ defaultValue, className, ...props }: TabsProps) {
   const [activeTab, setActiveTab] = React.useState(defaultValue);
 
   return (
-    <div className={`${className || ""}`} {...props} data-active-tab={activeTab}>
+    <div
+      className={`${className || ""}`}
+      {...props}
+      data-active-tab={activeTab}
+    >
       {React.Children.map(props.children, (child) => {
         if (React.isValidElement(child)) {
           return React.cloneElement(child as React.ReactElement<any>, {
@@ -29,7 +33,13 @@ interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
   setActiveTab?: React.Dispatch<React.SetStateAction<string | undefined>>;
 }
 
-export function TabsList({ className, children, activeTab, setActiveTab, ...props }: TabsListProps) {
+export function TabsList({
+  className,
+  children,
+  activeTab,
+  setActiveTab,
+  ...props
+}: TabsListProps) {
   return (
     <div
       className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 ${
@@ -50,7 +60,8 @@ export function TabsList({ className, children, activeTab, setActiveTab, ...prop
   );
 }
 
-interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+interface TabsTriggerProps
+  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
   activeTab?: string;
   setActiveTab?: React.Dispatch<React.SetStateAction<string | undefined>>;
@@ -94,4 +105,4 @@ export function TabsContent({
   if (!isActive) return null;
 
   return <div className={`mt-2 ${className || ""}`} {...props} />;
-} 
+}

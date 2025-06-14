@@ -13,7 +13,11 @@ import {
   searchTransformers,
 } from "@/app/api/action/powerOutageRequest";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
-import { getMinSelectableDate, getDaysFromToday, validateDateAndTime } from "@/lib/utils/dateUtils";
+import {
+  getMinSelectableDate,
+  getDaysFromToday,
+  validateDateAndTime,
+} from "@/lib/utils/dateUtils";
 
 interface Branch {
   id: number;
@@ -38,9 +42,13 @@ interface UsePowerOutageFormProps {
   branch?: string;
 }
 
-export const usePowerOutageForm = ({ role, workCenterId, branch }: UsePowerOutageFormProps) => {
+export const usePowerOutageForm = ({
+  role,
+  workCenterId,
+  branch,
+}: UsePowerOutageFormProps) => {
   const router = useRouter();
-  
+
   // State
   const [branches, setBranches] = useState<Branch[]>([]);
   const [transformers, setTransformers] = useState<Transformer[]>([]);
@@ -57,10 +65,18 @@ export const usePowerOutageForm = ({ role, workCenterId, branch }: UsePowerOutag
     },
   });
 
-  const { register, handleSubmit, control, formState: { errors }, setValue, reset, watch } = form;
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    setValue,
+    reset,
+    watch,
+  } = form;
   const watchWorkCenterId = watch("workCenterId");
   const watchedOutageDate = watch("outageDate");
-  
+
   // Calculated values
   const minSelectableDate = getMinSelectableDate();
   const daysFromToday = getDaysFromToday(watchedOutageDate);
@@ -92,72 +108,94 @@ export const usePowerOutageForm = ({ role, workCenterId, branch }: UsePowerOutag
   }, []);
 
   // Select transformer from search results
-  const handleTransformerSelect = useCallback((transformer: Transformer) => {
-    setValue("transformerNumber", transformer.transformerNumber);
-    setValue("gisDetails", transformer.gisDetails);
-    setTransformers([]);
-  }, [setValue]);
+  const handleTransformerSelect = useCallback(
+    (transformer: Transformer) => {
+      setValue("transformerNumber", transformer.transformerNumber);
+      setValue("gisDetails", transformer.gisDetails);
+      setTransformers([]);
+    },
+    [setValue],
+  );
 
   // Handle date change with validation
-  const handleDateChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedDate = event.target.value;
-    const validation = validateDateAndTime(selectedDate, minSelectableDate);
-    
-    if (!validation.isValid) {
-      setTimeError(validation.error || "");
-    } else {
-      setTimeError(null);
-    }
-    
-    setValue("outageDate", selectedDate);
-  }, [setValue, minSelectableDate]);
+  const handleDateChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedDate = event.target.value;
+      const validation = validateDateAndTime(selectedDate, minSelectableDate);
+
+      if (!validation.isValid) {
+        setTimeError(validation.error || "");
+      } else {
+        setTimeError(null);
+      }
+
+      setValue("outageDate", selectedDate);
+    },
+    [setValue, minSelectableDate],
+  );
 
   // Submit single request
-  const onSubmit = useCallback(async (data: PowerOutageRequestInput) => {
-    const validation = validateDateAndTime(data.outageDate, minSelectableDate, data.startTime, data.endTime);
-    if (!validation.isValid) {
-      setTimeError(validation.error || "");
-      return;
-    }
+  const onSubmit = useCallback(
+    async (data: PowerOutageRequestInput) => {
+      const validation = validateDateAndTime(
+        data.outageDate,
+        minSelectableDate,
+        data.startTime,
+        data.endTime,
+      );
+      if (!validation.isValid) {
+        setTimeError(validation.error || "");
+        return;
+      }
 
-    try {
-      const result = await createPowerOutageRequest(data);
-      if (result.success) {
-        setSubmitStatus({
-          success: true,
-          message: "คำขอถูกบันทึกเรียบร้อยแล้ว",
-        });
-        reset();
-        router.push("/power-outage-requests");
-      } else {
+      try {
+        const result = await createPowerOutageRequest(data);
+        if (result.success) {
+          setSubmitStatus({
+            success: true,
+            message: "คำขอถูกบันทึกเรียบร้อยแล้ว",
+          });
+          reset();
+          router.push("/power-outage-requests");
+        } else {
+          setSubmitStatus({
+            success: false,
+            message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ",
+          });
+        }
+      } catch (error) {
         setSubmitStatus({
           success: false,
-          message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ",
+          message: "เกิดข้อผิดพลาดในการบันทึกคำขอ",
         });
       }
-    } catch (error) {
-      setSubmitStatus({
-        success: false,
-        message: "เกิดข้อผิดพลาดในการบันทึกคำขอ",
-      });
-    }
-  }, [reset, router, minSelectableDate]);
+    },
+    [reset, router, minSelectableDate],
+  );
 
   // Add to batch list
-  const onAddToList = useCallback((data: PowerOutageRequestInput) => {
-    const validation = validateDateAndTime(data.outageDate, minSelectableDate, data.startTime, data.endTime);
-    if (!validation.isValid) {
-      setTimeError(validation.error || "");
-      return;
-    }
+  const onAddToList = useCallback(
+    (data: PowerOutageRequestInput) => {
+      const validation = validateDateAndTime(
+        data.outageDate,
+        minSelectableDate,
+        data.startTime,
+        data.endTime,
+      );
+      if (!validation.isValid) {
+        setTimeError(validation.error || "");
+        return;
+      }
 
-    setRequests((prev) => [...prev, data]);
-    setSubmitStatus({
-      success: true,
-      message: "คำขอถูกเพิ่มเข้าสู่รายการแล้ว",
-    });
-    reset();
-  }, [reset, minSelectableDate]);
+      setRequests((prev) => [...prev, data]);
+      setSubmitStatus({
+        success: true,
+        message: "คำขอถูกเพิ่มเข้าสู่รายการแล้ว",
+      });
+      reset();
+    },
+    [reset, minSelectableDate],
+  );
 
   // Remove from batch list
   const removeFromList = useCallback((index: number) => {
@@ -195,20 +233,22 @@ export const usePowerOutageForm = ({ role, workCenterId, branch }: UsePowerOutag
       });
 
       const result = await createMultiplePowerOutageRequests(requests);
-      
+
       if (result.success) {
         setRequests([]);
         setSubmitStatus({
           success: true,
-          message: result.message || `บันทึกคำขอสำเร็จทั้งหมด ${result.successCount} รายการ`,
+          message:
+            result.message ||
+            `บันทึกคำขอสำเร็จทั้งหมด ${result.successCount} รายการ`,
         });
         reset();
         setTimeout(() => router.back(), 1500);
       } else {
-        const errorMessage = result.validationErrors?.length 
-          ? `พบข้อผิดพลาด ${result.validationErrors.length} รายการ:\n${result.validationErrors.map(err => `รายการที่ ${err.index}: ${err.error}`).join('\n')}`
+        const errorMessage = result.validationErrors?.length
+          ? `พบข้อผิดพลาด ${result.validationErrors.length} รายการ:\n${result.validationErrors.map((err) => `รายการที่ ${err.index}: ${err.error}`).join("\n")}`
           : result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ";
-        
+
         setSubmitStatus({
           success: false,
           message: errorMessage,
@@ -240,20 +280,20 @@ export const usePowerOutageForm = ({ role, workCenterId, branch }: UsePowerOutag
   return {
     // Form
     form: { register, handleSubmit, control, errors, setValue, reset, watch },
-    
+
     // State
     branches,
     transformers,
     requests,
     submitStatus,
     timeError,
-    
+
     // Calculated values
     minSelectableDate,
     daysFromToday,
     isDateValid,
     watchedOutageDate,
-    
+
     // Actions
     handleTransformerSearch,
     handleTransformerSelect,

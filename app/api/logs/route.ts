@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * API endpoint สำหรับรับ log entries จาก frontend
@@ -7,27 +7,25 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function POST(request: NextRequest) {
   try {
     const logEntry = await request.json();
-    
+
     // ใน development ให้ log ไปยัง console
-    if (process.env.NODE_ENV === 'development') {
-      console.log('📊 Frontend Log:', JSON.stringify(logEntry, null, 2));
+    if (process.env.NODE_ENV === "development") {
+      console.log("📊 Frontend Log:", JSON.stringify(logEntry, null, 2));
     }
-    
+
     // ใน production ควรส่งไปยัง logging service
-    if (process.env.NODE_ENV === 'production') {
+    if (process.env.NODE_ENV === "production") {
       // ตัวอย่าง: ส่งไปยัง external logging service
       // await sendToLoggingService(logEntry);
-      
       // หรือบันทึกลง database
       // await saveLogToDatabase(logEntry);
-      
       // หรือส่งไปยัง file system
       // await appendToLogFile(logEntry);
     }
-    
+
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error processing log entry:', error);
+    console.error("Error processing log entry:", error);
     // ไม่ควร return error เพราะจะทำให้ frontend application หยุดทำงาน
     return NextResponse.json({ success: false }, { status: 200 });
   }
@@ -46,7 +44,7 @@ export async function POST(request: NextRequest) {
 //     },
 //     body: JSON.stringify(logEntry)
 //   });
-//   
+//
 //   if (!response.ok) {
 //     console.error('Failed to send log to external service:', response.statusText);
 //   }

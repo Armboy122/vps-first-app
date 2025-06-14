@@ -40,7 +40,8 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
   isUser,
   userWorkCenterId,
 }) => {
-  const canEdit = isAdmin || (isUser && request.workCenter.id === userWorkCenterId);
+  const canEdit =
+    isAdmin || (isUser && request.workCenter.id === userWorkCenterId);
 
   if (!canEdit) {
     return null;
@@ -64,4 +65,4 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
       </button>
     </div>
   );
-}; 
+};

@@ -44,7 +44,6 @@ interface PowerOutageRequestFormProps {
   branch?: string;
 }
 
-
 export default function PowerOutageRequestForm({
   workCenters: initialWorkCenters,
   role,
@@ -52,20 +51,20 @@ export default function PowerOutageRequestForm({
   branch,
 }: PowerOutageRequestFormProps) {
   const router = useRouter();
-  
+
   // Setup logging
   useLogger();
-  
+
   // Log form initialization
   React.useEffect(() => {
-    logFormInteraction('power_outage_form_opened', {
+    logFormInteraction("power_outage_form_opened", {
       role,
       workCenterId,
       branch,
-      hasInitialWorkCenters: !!initialWorkCenters?.length
+      hasInitialWorkCenters: !!initialWorkCenters?.length,
     });
   }, [role, workCenterId, branch, initialWorkCenters]);
-  
+
   // =============================================
   // State Management (Zustand Store)
   // =============================================
@@ -96,7 +95,15 @@ export default function PowerOutageRequestForm({
     },
   });
 
-  const { register, handleSubmit, control, formState: { errors }, setValue, reset, watch } = form;
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors },
+    setValue,
+    reset,
+    watch,
+  } = form;
 
   // =============================================
   // Watch Values
@@ -120,7 +127,7 @@ export default function PowerOutageRequestForm({
   // =============================================
   const { data: workCenters = initialWorkCenters || [] } = useWorkCenters();
   const { data: branches = [], isLoading: branchesLoading } = useBranches(
-    watchWorkCenterId ? Number(watchWorkCenterId) : null
+    watchWorkCenterId ? Number(watchWorkCenterId) : null,
   );
   const { data: transformers = [] } = useTransformers(transformerSearchTerm);
 
@@ -155,18 +162,18 @@ export default function PowerOutageRequestForm({
   // =============================================
   const handleTransformerSearch = (searchTerm: string) => {
     if (searchTerm.length >= 2) {
-      logFormInteraction('transformer_search_performed', {
+      logFormInteraction("transformer_search_performed", {
         searchTerm,
-        searchLength: searchTerm.length
+        searchLength: searchTerm.length,
       });
     }
     setTransformerSearchTerm(searchTerm);
   };
 
   const onTransformerSelect = (transformer: any) => {
-    logUserAction('transformer_selected_from_form', {
+    logUserAction("transformer_selected_from_form", {
       transformerNumber: transformer.transformerNumber,
-      gisDetails: transformer.gisDetails
+      gisDetails: transformer.gisDetails,
     });
     handleTransformerSelect(transformer);
     setTransformerSearchTerm(""); // Clear search after selection
@@ -176,13 +183,13 @@ export default function PowerOutageRequestForm({
   // Excel Import Handler
   // =============================================
   const handleImportData = (importedData: PowerOutageRequestInput[]) => {
-    logUserAction('excel_data_imported', {
+    logUserAction("excel_data_imported", {
       count: importedData.length,
-      hasExistingRequests: requests.length > 0
+      hasExistingRequests: requests.length > 0,
     });
-    
+
     // เพิ่มข้อมูลที่นำเข้าจาก Excel เข้าในรายการคำขอ
-    importedData.forEach(data => {
+    importedData.forEach((data) => {
       addRequest(data);
     });
   };
@@ -228,7 +235,7 @@ export default function PowerOutageRequestForm({
             >
               เพิ่มเข้ารายการ
             </FormButton>
-            
+
             <FormButton
               type="submit"
               variant="primary"

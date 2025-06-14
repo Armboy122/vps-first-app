@@ -1,6 +1,6 @@
-import { memo } from 'react';
-import Pagination from '@/app/power-outage-requests/pagination';
-import { ItemsPerPageSelector } from './ItemsPerPageSelector';
+import { memo } from "react";
+import Pagination from "@/app/power-outage-requests/pagination";
+import { ItemsPerPageSelector } from "./ItemsPerPageSelector";
 
 interface PaginationControlsProps {
   currentPage: number;
@@ -13,35 +13,37 @@ interface PaginationControlsProps {
   onItemsPerPageChange: (itemsPerPage: number) => void;
 }
 
-export const PaginationControls = memo<PaginationControlsProps>(({
-  currentPage,
-  totalPages,
-  itemsPerPage,
-  totalItems,
-  displayStart,
-  displayEnd,
-  onPageChange,
-  onItemsPerPageChange
-}) => {
-  return (
-    <div className="mt-6 flex flex-col lg:flex-row justify-between items-center gap-4">
-      {/* Items per page selector and info */}
-      <ItemsPerPageSelector
-        itemsPerPage={itemsPerPage}
-        onItemsPerPageChange={onItemsPerPageChange}
-        totalItems={totalItems}
-        currentStart={displayStart}
-        currentEnd={displayEnd}
-      />
+export const PaginationControls = memo<PaginationControlsProps>(
+  ({
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    totalItems,
+    displayStart,
+    displayEnd,
+    onPageChange,
+    onItemsPerPageChange,
+  }) => {
+    return (
+      <div className="mt-6 flex flex-col lg:flex-row justify-between items-center gap-4">
+        {/* Items per page selector and info */}
+        <ItemsPerPageSelector
+          itemsPerPage={itemsPerPage}
+          onItemsPerPageChange={onItemsPerPageChange}
+          totalItems={totalItems}
+          currentStart={displayStart}
+          currentEnd={displayEnd}
+        />
 
-      {/* Pagination */}
-      <Pagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={onPageChange}
-      />
-    </div>
-  );
-});
+        {/* Pagination */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={onPageChange}
+        />
+      </div>
+    );
+  },
+);
 
-PaginationControls.displayName = 'PaginationControls';
+PaginationControls.displayName = "PaginationControls";

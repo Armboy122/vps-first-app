@@ -1,7 +1,13 @@
 "use client";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faPlus, faPrint, faFilter, faCheck, faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import {
+  faPlus,
+  faPrint,
+  faFilter,
+  faCheck,
+  faExclamationTriangle,
+} from "@fortawesome/free-solid-svg-icons";
 import PrintAnnouncement from "../print";
 import { Request } from "@prisma/client";
 import { printSelectedRequests } from "./PrintService";
@@ -47,7 +53,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
   if (isViewer) {
     return null;
   }
-  
+
   return (
     <div className="mb-6 bg-white rounded-lg shadow-md p-4">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -61,12 +67,14 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
               สร้างคำขอดับไฟใหม่
             </Link>
           )}
-          
+
           {selectedRequests.length > 0 ? (
             <div className="flex items-center gap-3">
               <div className="relative">
                 <select
-                  onChange={(e) => handleBulkStatusChange(e.target.value as Request)}
+                  onChange={(e) =>
+                    handleBulkStatusChange(e.target.value as Request)
+                  }
                   className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
                 >
                   <option value="">เปลี่ยนสถานะที่เลือก</option>
@@ -78,9 +86,11 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
                   <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
                 </div>
               </div>
-              
+
               <button
-                onClick={() => printSelectedRequests(selectedRequests, requests)}
+                onClick={() =>
+                  printSelectedRequests(selectedRequests, requests)
+                }
                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
               >
                 <FontAwesomeIcon icon={faPrint} className="mr-2" />
@@ -89,12 +99,15 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
             </div>
           ) : (
             <div className="text-gray-500 italic flex items-center">
-              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 text-yellow-500" />
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                className="mr-2 text-yellow-500"
+              />
               กรุณาเลือกรายการเพื่อดำเนินการ
             </div>
           )}
         </div>
-        
+
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
             <FontAwesomeIcon icon={faCheck} className="mr-2" />
@@ -106,4 +119,4 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
       </div>
     </div>
   );
-}; 
+};

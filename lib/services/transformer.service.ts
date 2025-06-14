@@ -8,7 +8,10 @@ export class TransformerService {
   /**
    * ค้นหา Transformer ตามคำค้นหา
    */
-  static async searchTransformers(searchTerm: string, limit: number = 10): Promise<Transformer[]> {
+  static async searchTransformers(
+    searchTerm: string,
+    limit: number = 10,
+  ): Promise<Transformer[]> {
     if (!searchTerm.trim()) {
       return [];
     }
@@ -22,17 +25,19 @@ export class TransformerService {
       },
       take: limit,
       orderBy: {
-        transformerNumber: 'asc'
-      }
+        transformerNumber: "asc",
+      },
     });
   }
 
   /**
    * ดึง Transformer ตาม transformerNumber
    */
-  static async getByTransformerNumber(transformerNumber: string): Promise<Transformer | null> {
+  static async getByTransformerNumber(
+    transformerNumber: string,
+  ): Promise<Transformer | null> {
     return await prisma.transformer.findUnique({
-      where: { transformerNumber }
+      where: { transformerNumber },
     });
   }
 
@@ -44,7 +49,7 @@ export class TransformerService {
     gisDetails: string;
   }): Promise<Transformer> {
     return await prisma.transformer.create({
-      data
+      data,
     });
   }
 
@@ -52,12 +57,12 @@ export class TransformerService {
    * อัปเดต Transformer
    */
   static async updateTransformer(
-    transformerNumber: string, 
-    data: Partial<Pick<Transformer, 'gisDetails'>>
+    transformerNumber: string,
+    data: Partial<Pick<Transformer, "gisDetails">>,
   ): Promise<Transformer> {
     return await prisma.transformer.update({
       where: { transformerNumber },
-      data
+      data,
     });
   }
 
@@ -66,7 +71,7 @@ export class TransformerService {
    */
   static async exists(transformerNumber: string): Promise<boolean> {
     const count = await prisma.transformer.count({
-      where: { transformerNumber }
+      where: { transformerNumber },
     });
     return count > 0;
   }

@@ -3,8 +3,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
 
-import { changePassword, updateUserProfile, getCurrentUser } from "../api/action/User";
-import { getWorkCenters, getBranches } from "../api/action/getWorkCentersAndBranches";
+import {
+  changePassword,
+  updateUserProfile,
+  getCurrentUser,
+} from "../api/action/User";
+import {
+  getWorkCenters,
+  getBranches,
+} from "../api/action/getWorkCentersAndBranches";
 
 interface WorkCenter {
   id: number;
@@ -35,26 +42,28 @@ interface UserProfile {
 
 export default function User() {
   const { data: session, update } = useSession();
-  
+
   // Profile Data
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
-  
+
   // Form States
-  const [fullName, setFullName] = useState('');
+  const [fullName, setFullName] = useState("");
   const [selectedWorkCenterId, setSelectedWorkCenterId] = useState<number>(0);
   const [selectedBranchId, setSelectedBranchId] = useState<number>(0);
-  
+
   // Password States
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   // UI States
-  const [message, setMessage] = useState('');
-  const [messageType, setMessageType] = useState<'success' | 'error' | 'info'>('info');
+  const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error" | "info">(
+    "info",
+  );
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Data
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
   const [branches, setBranches] = useState<Branch[]>([]);
@@ -63,7 +72,7 @@ export default function User() {
   // Load branches
   const loadBranches = useCallback(async (workCenterId: number) => {
     if (!workCenterId) return;
-    
+
     try {
       setIsLoadingBranches(true);
       const branchData = await getBranches(workCenterId);
@@ -85,7 +94,7 @@ export default function User() {
         setFullName(result.user.fullName);
         setSelectedWorkCenterId(result.user.workCenter.id);
         setSelectedBranchId(result.user.branch.id);
-        
+
         // Load branches for current work center
         loadBranches(result.user.workCenter.id);
       }
@@ -125,7 +134,10 @@ export default function User() {
   };
 
   // Show message
-  const showMessage = (msg: string, type: "success" | "error" | "info" = "info") => {
+  const showMessage = (
+    msg: string,
+    type: "success" | "error" | "info" = "info",
+  ) => {
     setMessage(msg);
     setMessageType(type);
     setTimeout(() => setMessage(""), 5000);
@@ -134,16 +146,16 @@ export default function User() {
   const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!userProfile) return;
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const result = await updateUserProfile({
         fullName,
         workCenterId: selectedWorkCenterId,
         branchId: selectedBranchId,
       });
-      
+
       if (result.success) {
         showMessage("อัปเดตโปรไฟล์สำเร็จ", "success");
         // Reload profile data
@@ -162,19 +174,19 @@ export default function User() {
 
   const handlePasswordChange = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (newPassword !== confirmPassword) {
       showMessage("รหัสผ่านใหม่ไม่ตรงกัน", "error");
       return;
     }
-    
+
     if (newPassword.length < 6) {
       showMessage("รหัสผ่านใหม่ต้องมีความยาวอย่างน้อย 6 ตัวอักษร", "error");
       return;
     }
-    
+
     setIsSubmitting(true);
-    
+
     try {
       const result = await changePassword(currentPassword, newPassword);
       if (result.success) {
@@ -205,22 +217,30 @@ export default function User() {
       <div className="container mx-auto px-4 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">จัดการโปรไฟล์</h1>
-          <p className="text-gray-600">อัปเดตข้อมูลส่วนตัวและการตั้งค่าบัญชีของคุณ</p>
+          <h1 className="text-4xl font-bold text-gray-800 mb-2">
+            จัดการโปรไฟล์
+          </h1>
+          <p className="text-gray-600">
+            อัปเดตข้อมูลส่วนตัวและการตั้งค่าบัญชีของคุณ
+          </p>
         </div>
 
         {/* Message Alert */}
         {message && (
-          <div className={`mb-6 p-4 rounded-xl border-l-4 ${
-            messageType === "success" 
-              ? "bg-green-50 border-green-500 text-green-700" 
-              : messageType === "error"
-              ? "bg-red-50 border-red-500 text-red-700"
-              : "bg-blue-50 border-blue-500 text-blue-700"
-          } shadow-sm`}>
+          <div
+            className={`mb-6 p-4 rounded-xl border-l-4 ${
+              messageType === "success"
+                ? "bg-green-50 border-green-500 text-green-700"
+                : messageType === "error"
+                  ? "bg-red-50 border-red-500 text-red-700"
+                  : "bg-blue-50 border-blue-500 text-blue-700"
+            } shadow-sm`}
+          >
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                {messageType === "success" && <span className="text-xl">✅</span>}
+                {messageType === "success" && (
+                  <span className="text-xl">✅</span>
+                )}
                 {messageType === "error" && <span className="text-xl">❌</span>}
                 {messageType === "info" && <span className="text-xl">ℹ️</span>}
               </div>
@@ -238,11 +258,13 @@ export default function User() {
               <div className="text-center mb-6">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
                   <span className="text-3xl font-bold text-white">
-                    {userProfile?.fullName.charAt(0) || '?'}
+                    {userProfile?.fullName.charAt(0) || "?"}
                   </span>
                 </div>
                 <h2 className="text-xl font-bold text-gray-800 mb-1">
-                  {isLoadingProfile ? "กำลังโหลด..." : userProfile?.fullName || "ไม่ระบุชื่อ"}
+                  {isLoadingProfile
+                    ? "กำลังโหลด..."
+                    : userProfile?.fullName || "ไม่ระบุชื่อ"}
                 </h2>
                 <p className="text-gray-600 text-sm">
                   รหัสพนักงาน: {userProfile?.employeeId || "-"}
@@ -256,7 +278,9 @@ export default function User() {
                       <span className="text-blue-600 mr-2">🏢</span>
                       จุดรวมงาน
                     </h3>
-                    <p className="text-gray-800">{userProfile.workCenter.name}</p>
+                    <p className="text-gray-800">
+                      {userProfile.workCenter.name}
+                    </p>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -264,7 +288,9 @@ export default function User() {
                       <span className="text-green-600 mr-2">🏬</span>
                       สาขา
                     </h3>
-                    <p className="text-gray-800">{userProfile.branch.fullName}</p>
+                    <p className="text-gray-800">
+                      {userProfile.branch.fullName}
+                    </p>
                   </div>
 
                   <div className="bg-gray-50 rounded-lg p-4">
@@ -272,15 +298,17 @@ export default function User() {
                       <span className="text-purple-600 mr-2">👤</span>
                       บทบาท
                     </h3>
-                    <span className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                      userProfile.role === "ADMIN" 
-                        ? "bg-red-100 text-red-800" 
-                        : userProfile.role === "MANAGER"
-                        ? "bg-orange-100 text-orange-800"
-                        : userProfile.role === "SUPERVISOR"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
+                    <span
+                      className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
+                        userProfile.role === "ADMIN"
+                          ? "bg-red-100 text-red-800"
+                          : userProfile.role === "MANAGER"
+                            ? "bg-orange-100 text-orange-800"
+                            : userProfile.role === "SUPERVISOR"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-blue-100 text-blue-800"
+                      }`}
+                    >
                       {userProfile.role === "ADMIN" && "ผู้ดูแลระบบ"}
                       {userProfile.role === "MANAGER" && "ผู้บริหาร"}
                       {userProfile.role === "SUPERVISOR" && "หัวหน้างาน"}
@@ -302,8 +330,12 @@ export default function User() {
                   <span className="text-white text-xl">✏️</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">แก้ไขข้อมูลส่วนตัว</h2>
-                  <p className="text-gray-600 text-sm">อัปเดตชื่อและหน่วยงานของคุณ</p>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    แก้ไขข้อมูลส่วนตัว
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    อัปเดตชื่อและหน่วยงานของคุณ
+                  </p>
                 </div>
               </div>
 
@@ -330,7 +362,9 @@ export default function User() {
                   </label>
                   <select
                     value={selectedWorkCenterId}
-                    onChange={(e) => handleWorkCenterChange(Number(e.target.value))}
+                    onChange={(e) =>
+                      handleWorkCenterChange(Number(e.target.value))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
                     required
                   >
@@ -350,7 +384,9 @@ export default function User() {
                   </label>
                   <select
                     value={selectedBranchId}
-                    onChange={(e) => setSelectedBranchId(Number(e.target.value))}
+                    onChange={(e) =>
+                      setSelectedBranchId(Number(e.target.value))
+                    }
                     className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
                     required
                     disabled={!selectedWorkCenterId || isLoadingBranches}
@@ -369,7 +405,9 @@ export default function User() {
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !selectedWorkCenterId || !selectedBranchId}
+                    disabled={
+                      isSubmitting || !selectedWorkCenterId || !selectedBranchId
+                    }
                     className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isSubmitting ? (
@@ -392,8 +430,12 @@ export default function User() {
                   <span className="text-white text-xl">🔐</span>
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">เปลี่ยนรหัสผ่าน</h2>
-                  <p className="text-gray-600 text-sm">อัปเดตรหัสผ่านเพื่อความปลอดภัยของบัญชี</p>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    เปลี่ยนรหัสผ่าน
+                  </h2>
+                  <p className="text-gray-600 text-sm">
+                    อัปเดตรหัสผ่านเพื่อความปลอดภัยของบัญชี
+                  </p>
                 </div>
               </div>
 
@@ -425,7 +467,9 @@ export default function User() {
                     minLength={6}
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร</p>
+                  <p className="text-xs text-gray-500 mt-1">
+                    รหัสผ่านต้องมีความยาวอย่างน้อย 6 ตัวอักษร
+                  </p>
                 </div>
 
                 <div>
@@ -441,15 +485,25 @@ export default function User() {
                     minLength={6}
                     required
                   />
-                  {newPassword && confirmPassword && newPassword !== confirmPassword && (
-                    <p className="text-xs text-red-500 mt-1">รหัสผ่านไม่ตรงกัน</p>
-                  )}
+                  {newPassword &&
+                    confirmPassword &&
+                    newPassword !== confirmPassword && (
+                      <p className="text-xs text-red-500 mt-1">
+                        รหัสผ่านไม่ตรงกัน
+                      </p>
+                    )}
                 </div>
 
                 <div className="flex justify-end pt-4">
                   <button
                     type="submit"
-                    disabled={isSubmitting || !currentPassword || !newPassword || !confirmPassword || newPassword !== confirmPassword}
+                    disabled={
+                      isSubmitting ||
+                      !currentPassword ||
+                      !newPassword ||
+                      !confirmPassword ||
+                      newPassword !== confirmPassword
+                    }
                     className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                   >
                     {isSubmitting ? (

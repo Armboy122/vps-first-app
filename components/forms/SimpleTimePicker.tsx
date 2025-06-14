@@ -1,7 +1,7 @@
 "use client";
-import React from 'react';
-import { Controller, Control, FieldError } from 'react-hook-form';
-import { FormSelect } from './FormSelect';
+import React from "react";
+import { Controller, Control, FieldError } from "react-hook-form";
+import { FormSelect } from "./FormSelect";
 
 interface SimpleTimePickerProps {
   name: string;
@@ -20,31 +20,31 @@ export const SimpleTimePicker: React.FC<SimpleTimePickerProps> = ({
   error,
   disabled = false,
   minTime,
-  maxTime
+  maxTime,
 }) => {
   // สร้างตัวเลือกเวลาทุก 30 นาที ตั้งแต่ 06:00 - 20:00
   const generateTimeOptions = () => {
     const options = [];
     const startHour = 6;
     const endHour = 20;
-    
+
     for (let hour = startHour; hour <= endHour; hour++) {
       for (let minute = 0; minute < 60; minute += 30) {
-        const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        
+        const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+
         // ตรวจสอบ minTime และ maxTime
         if (minTime && timeString <= minTime) continue; // เปลี่ยนจาก < เป็น <= เพื่อไม่ให้เลือกเวลาเดียวกัน
         if (maxTime && timeString > maxTime) continue;
-        
-        const displayTime = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')} น.`;
-        
+
+        const displayTime = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")} น.`;
+
         options.push({
           value: timeString,
-          label: displayTime
+          label: displayTime,
         });
       }
     }
-    
+
     return options;
   };
 
