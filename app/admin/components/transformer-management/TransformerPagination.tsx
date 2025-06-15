@@ -1,11 +1,11 @@
 import { useAdminContext } from "../../context/AdminContext";
 
 interface TransformerPaginationProps {
-  totalTransformers: number;
+  totalCount: number;
   totalPages: number;
 }
 
-export function TransformerPagination({ totalTransformers, totalPages }: TransformerPaginationProps) {
+export function TransformerPagination({ totalCount, totalPages }: TransformerPaginationProps) {
   const { transformerSearchParams, updateTransformerSearchParams } = useAdminContext();
 
   // Handle page change
@@ -50,13 +50,13 @@ export function TransformerPagination({ totalTransformers, totalPages }: Transfo
 
   // Calculate showing range
   const startItem = (transformerSearchParams.page - 1) * transformerSearchParams.limit + 1;
-  const endItem = Math.min(transformerSearchParams.page * transformerSearchParams.limit, totalTransformers);
+  const endItem = Math.min(transformerSearchParams.page * transformerSearchParams.limit, totalCount);
 
   if (totalPages <= 1) {
     return (
       <div className="flex items-center justify-between">
         <div className="text-sm text-gray-700">
-          แสดง {totalTransformers} รายการ
+          แสดง {totalCount} รายการ
         </div>
       </div>
     );
@@ -88,7 +88,7 @@ export function TransformerPagination({ totalTransformers, totalPages }: Transfo
           <p className="text-sm text-gray-700">
             แสดง <span className="font-medium">{startItem}</span> ถึง{" "}
             <span className="font-medium">{endItem}</span> จาก{" "}
-            <span className="font-medium">{totalTransformers}</span> รายการ
+            <span className="font-medium">{totalCount}</span> รายการ
           </p>
         </div>
 

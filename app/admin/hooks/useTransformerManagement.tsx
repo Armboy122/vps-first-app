@@ -26,7 +26,7 @@ export function useTransformerManagement() {
   });
 
   const transformers = data?.transformers || [];
-  const totalTransformers = data?.totalTransformers || 0;
+  const totalTransformers = data?.totalCount || 0;
   const totalPages = data?.totalPages || 0;
 
   return {

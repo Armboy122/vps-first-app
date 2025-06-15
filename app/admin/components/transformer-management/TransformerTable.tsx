@@ -12,7 +12,7 @@ import { PageSizeSelector } from "../shared/PageSizeSelector";
 
 interface TransformersResponse {
   transformers: Transformer[];
-  totalTransformers: number;
+  totalCount: number;
   totalPages: number;
 }
 
@@ -87,7 +87,7 @@ export function TransformerTable() {
     );
   }
 
-  const { transformers = [], totalTransformers = 0, totalPages = 0 } = data || {};
+  const { transformers = [], totalCount = 0, totalPages = 0 } = data || {};
 
   return (
     <>
@@ -175,7 +175,7 @@ export function TransformerTable() {
 
             {/* Pagination */}
             <TransformerPagination 
-              totalTransformers={totalTransformers} 
+              totalCount={totalCount} 
               totalPages={totalPages} 
             />
           </>

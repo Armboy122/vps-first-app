@@ -31,8 +31,12 @@ docker rm nextjs-app-uat 2>/dev/null || true
 
 # Run new container on port 3002 using date tag
 echo "🔸 Starting UAT container on port 3002..."
-if docker run -d --name nextjs-app-uat -p 3002:3000 --restart unless-stopped $IMAGE_NAME:$DATE_TAG; then
-    echo "✅ UAT container running at http://localhost:3002"
+if docker run -d --name nextjs-app-uat -p 3002:3000 --network vps-first-app_mynetwork \
+    -e DATABASE_URL="postgresql://sa:1234@db:5432/PeaTransformer?schema=public" \
+    -e NEXTAUTH_SECRET="armoby122-uat" \
+    -e NEXTAUTH_URL="https://test.peas3.shop" \
+    --restart unless-stopped $IMAGE_NAME:$DATE_TAG; then
+    echo "✅ UAT container running at https://test.peas3.shop"
     echo "📝 Image tag: $DATE_TAG"
 else
     echo "❌ ไม่สามารถเริ่ม container ได้"
