@@ -1,4 +1,4 @@
-# Ultra-Fast Multi-stage Dockerfile สำหรับ Next.js + Prisma
+# UAT Environment Dockerfile สำหรับ Next.js + Prisma
 # Stage 1: Base - ติดตั้ง dependencies พื้นฐาน
 FROM node:18-alpine AS base
 RUN apk add --no-cache libc6-compat openssl curl dumb-init
@@ -7,17 +7,21 @@ WORKDIR /app
 # Stage 2: Production Dependencies
 FROM base AS deps
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+# ใช้ cache mount สำหรับ npm cache (เร็วกว่าเดิม 50-70%)
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --only=production
 
-# Stage 3: Build Dependencies
+# Stage 3: Build Dependencies  
 FROM base AS build-deps
 COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+# ใช้ cache mount สำหรับ npm cache
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
 
-# Stage 4: Builder - build application และ generate Prisma
+# Stage 4: Builder - build application สำหรับ UAT
 FROM base AS builder
 
-# Environment variables สำหรับ build (ย้ายขึ้นมาก่อน)
+# Environment variables สำหรับ UAT build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
@@ -35,17 +39,17 @@ RUN npx prisma generate
 # คัดลอก source code ทั้งหมด (layer นี้จะ rebuild เมื่อโค้ดเปลี่ยน)
 COPY . .
 
-# Build Next.js
+# Build Next.js สำหรับ UAT
 RUN npm run build
 
-# Stage 5: Runner - Production image ที่เล็กที่สุด
+# Stage 5: UAT Runner - Production image สำหรับ UAT
 FROM base AS runner
 
 # สร้าง non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Environment variables
+# Environment variables สำหรับ UAT (ภายในยังคงใช้ port 3000)
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PORT=3000
@@ -65,10 +69,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 # เปลี่ยนเป็น non-root user
 USER nextjs
 
-# เปิด port
+# เปิด port 3000 ภายใน (จะ map เป็น 3002 ภายนอก)
 EXPOSE 3000
 
-
-
-# ใช้ dumb-init สำหรับ proper signal handling และ Next.js standalone
-CMD ["dumb-init", "node", "server.js"]
+# ใช้ dumb-init สำหรับ proper signal handling
+CMD ["dumb-init", "node", "server.js"] 

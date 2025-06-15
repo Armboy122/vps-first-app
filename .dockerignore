@@ -67,3 +67,7 @@ coverage
 .parcel-cache
 .npm
 .yarn-cache
+
+# Additional files
+*.md
+README*
