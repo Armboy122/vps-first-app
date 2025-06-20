@@ -26,7 +26,7 @@ import {
   Autocomplete,
   Loader
 } from "@mantine/core";
-import { DateInput } from "@mantine/dates";
+import { DatePickerInput } from "@mantine/dates";
 import dayjs from "dayjs";
 
 interface WorkCenter {
@@ -99,6 +99,11 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
     label: `${t.transformerNumber} - ${t.gisDetails}`
   }));
 
+  // ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย (พศ.)
+  const formatThaiDate = (date: string) => {
+    return dayjs(date).add(543, 'year').format("DD/MM/YYYY");
+  };
+
   return (
     <Stack gap="xl">
       {/* ส่วนที่ 1: ข้อมูลวันที่และเวลา */}
@@ -126,32 +131,44 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               name="outageDate"
               control={control}
               render={({ field }) => (
-                <DateInput
-                  label="วันที่ดับไฟ"
-                  placeholder="เลือกวันที่"
-                  value={field.value ? dayjs(field.value).toDate() : null}
-                  onChange={(date) => {
-                    if (date) {
-                      const dateString = dayjs(date).format("YYYY-MM-DD");
-                      field.onChange(dateString);
-                      // Trigger onDateChange for validation
-                      onDateChange({ target: { value: dateString } } as any);
-                    }
-                  }}
-                  minDate={dayjs(minSelectableDate).toDate()}
-                  error={errors.outageDate?.message}
-                  size="md"
-                  withAsterisk
-                  styles={{
-                    input: {
-                      fontSize: '16px',
-                    }
-                  }}
-                />
+                <div>
+                  <DatePickerInput
+                    label="วันที่ดับไฟ"
+                    placeholder="กดเลือกวันที่"
+                    value={field.value ? dayjs(field.value).toDate() : null}
+                    onChange={(date) => {
+                      if (date) {
+                        const dateString = dayjs(date).format("YYYY-MM-DD");
+                        field.onChange(dateString);
+                        // Trigger onDateChange for validation
+                        onDateChange({ target: { value: dateString } } as any);
+                      }
+                    }}
+                    valueFormat="DD/MM/YYYY"
+                    minDate={dayjs(minSelectableDate).toDate()}
+                    error={errors.outageDate?.message}
+                    size="md"
+                    withAsterisk
+                    clearable
+                    dropdownType="modal"
+                    styles={{
+                      input: {
+                        fontSize: '16px',
+                        cursor: 'pointer',
+                      }
+                    }}
+                  />
+                  {/* แสดงวันที่ที่เลือกในรูปแบบไทย */}
+                  {field.value && (
+                    <Text size="xs" c="blue" mt={2}>
+                      📅 วันที่เลือก: {formatThaiDate(field.value)}
+                    </Text>
+                  )}
+                </div>
               )}
             />
             <Text size="xs" c="dimmed" mt={4}>
-              วันที่เร็วที่สุด: {dayjs(minSelectableDate).format("DD/MM/YYYY")}
+              วันที่เร็วที่สุด: {formatThaiDate(minSelectableDate)}
             </Text>
           </Grid.Col>
 
@@ -164,7 +181,6 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               error={errors.startTime}
               minTime="06:00"
               maxTime="19:30"
-              placeholder="08:00"
             />
           </Grid.Col>
 
@@ -177,7 +193,6 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               error={errors.endTime}
               minTime={watchedStartTime || "06:30"}
               maxTime="20:00"
-              placeholder="12:00"
             />
             {watchedStartTime && watchedEndTime && watchedEndTime <= watchedStartTime && (
               <Alert color="red" mt={4}>

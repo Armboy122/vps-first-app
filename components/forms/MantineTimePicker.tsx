@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { Controller, Control, FieldError } from "react-hook-form";
-import { TimeInput } from "@mantine/dates";
+import { TimePicker } from "@mantine/dates";
 
 interface MantineTimePickerProps {
   name: string;
@@ -11,7 +11,6 @@ interface MantineTimePickerProps {
   disabled?: boolean;
   minTime?: string;
   maxTime?: string;
-  placeholder?: string;
 }
 
 export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
@@ -22,48 +21,39 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
   disabled = false,
   minTime,
   maxTime,
-  placeholder = "เลือกเวลา",
 }) => {
   return (
     <Controller
       name={name}
       control={control}
       render={({ field: { onChange, value } }) => {
+        const handleTimeChange = (timeValue: string) => {
+          // TimePicker จะจัดการ min/max เอง แค่ส่งค่าต่อไป
+          onChange(timeValue);
+        };
 
         return (
           <div className="space-y-1">
-            <TimeInput
+            <TimePicker
               label={label}
-              placeholder={placeholder}
               value={value || ""}
-              onChange={(event) => {
-                const timeString = event.target.value;
-                if (timeString) {
-                  // Validate time format and range
-                  const [hours, minutes] = timeString.split(':').map(Number);
-                  if (hours >= 0 && hours < 24 && minutes >= 0 && minutes < 60) {
-                    const timeValue = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-                    
-                    // Check time range
-                    if ((minTime && timeValue < minTime) || (maxTime && timeValue > maxTime)) {
-                      return; // Don't update if out of range
-                    }
-                    
-                    onChange(timeValue);
-                  }
-                } else {
-                  onChange("");
-                }
-              }}
+              onChange={handleTimeChange}
               disabled={disabled}
               error={error?.message}
-              withSeconds={false}
               size="md"
+              withSeconds={false}
+              withDropdown={true}
+              clearable
+              hoursStep={1}
+              minutesStep={1}
+              min={minTime}
+              max={maxTime}
               styles={{
                 input: {
                   fontSize: '16px', // ป้องกัน zoom ใน iOS
                   borderRadius: '8px',
                   transition: 'border-color 0.2s',
+                  cursor: 'pointer',
                 },
                 label: {
                   fontWeight: 500,
@@ -76,8 +66,11 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
             {/* Helper text */}
             <div className="text-xs text-gray-500">
               {minTime && maxTime && (
-                <span>⏰ เวลาทำการ: {minTime} - {maxTime} น.</span>
+                <span>⏰ เวลาที่อนุญาต: {minTime} - {maxTime} น.</span>
               )}
+              <div className="mt-1 text-blue-600">
+                💡 คลิกที่ช่องเวลาเพื่อเลือกจากดรอปดาวน์ (เวลานอกช่วงจะไม่สามารถเลือกได้)
+              </div>
             </div>
           </div>
         );
