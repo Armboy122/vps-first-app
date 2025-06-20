@@ -11,7 +11,7 @@ import {
   FormField,
   FormInput,
   FormSelect,
-  SimpleTimePicker,
+  DualTimePicker,
 } from "@/components/forms";
 import dayjs from "dayjs";
 
@@ -137,7 +137,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
         required
         icon="🕐"
       >
-        <SimpleTimePicker
+        <DualTimePicker
           name="startTime"
           control={control}
           error={errors.startTime}
@@ -145,7 +145,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
           maxTime="19:30"
         />
         <p className="text-xs text-gray-500 mt-1">
-          ⏰ เวลาทำการ: 06:00 - 19:30 น. (ทุก 10 นาที)
+          ⏰ เวลาทำการ: 06:00 - 19:30 น.
         </p>
       </FormField>
 
@@ -157,7 +157,7 @@ export const FormFields: React.FC<FormFieldsProps> = ({
         required
         icon="🕐"
       >
-        <SimpleTimePicker
+        <DualTimePicker
           name="endTime"
           control={control}
           error={errors.endTime}

@@ -22,14 +22,14 @@ export const SimpleTimePicker: React.FC<SimpleTimePickerProps> = ({
   minTime,
   maxTime,
 }) => {
-  // สร้างตัวเลือกเวลาทุก 30 นาที ตั้งแต่ 06:00 - 20:00
+  // สร้างตัวเลือกเวลาทุก 1 นาที ตั้งแต่ 06:00 - 20:00
   const generateTimeOptions = () => {
     const options = [];
     const startHour = 6;
     const endHour = 20;
 
     for (let hour = startHour; hour <= endHour; hour++) {
-      for (let minute = 0; minute < 60; minute += 30) {
+      for (let minute = 0; minute < 60; minute += 1) {
         const timeString = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
 
         // ตรวจสอบ minTime และ maxTime

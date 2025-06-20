@@ -14,7 +14,7 @@ import {
 
 // Components
 import { FormButton } from "@/components/forms";
-import { FormFields } from "./PowerOutageRequestForm/FormFields";
+import { ImprovedFormFields } from "@/components/forms";
 import { RequestList } from "./PowerOutageRequestForm/RequestList";
 import { StatusMessages } from "./PowerOutageRequestForm/StatusMessages";
 import { CSVImport } from "./PowerOutageRequestForm/CSVImport";
@@ -202,8 +202,8 @@ export default function PowerOutageRequestForm({
       <div className="space-y-6">
         {/* ฟอร์มหลัก */}
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          {/* ฟิลด์ต่างๆ ในฟอร์ม */}
-          <FormFields
+          {/* ฟิลด์ต่างๆ ในฟอร์ม - Mantine Version */}
+          <ImprovedFormFields
             register={register}
             control={control}
             errors={errors}

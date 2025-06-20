@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MantineProvider } from "@mantine/core";
 import { useState } from "react";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -9,7 +10,11 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SessionProvider>{children}</SessionProvider>
+      <SessionProvider>
+        <MantineProvider>
+          {children}
+        </MantineProvider>
+      </SessionProvider>
     </QueryClientProvider>
   );
 }
