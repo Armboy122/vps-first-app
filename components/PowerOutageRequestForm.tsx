@@ -17,8 +17,8 @@ import { FormButton } from "@/components/forms";
 import { FormFields } from "./PowerOutageRequestForm/FormFields";
 import { RequestList } from "./PowerOutageRequestForm/RequestList";
 import { StatusMessages } from "./PowerOutageRequestForm/StatusMessages";
-import { ExcelImport } from "./PowerOutageRequestForm/ExcelImport";
-import { ExcelImportGuide } from "./PowerOutageRequestForm/ExcelImportGuide";
+import { CSVImport } from "./PowerOutageRequestForm/CSVImport";
+// import { ExcelImportGuide } from "./PowerOutageRequestForm/ExcelImportGuide";
 
 // Hooks และ State Management
 import { usePowerOutageFormLogic } from "@/hooks/usePowerOutageFormLogic";
@@ -256,21 +256,10 @@ export default function PowerOutageRequestForm({
           minSelectableDate={minSelectableDate}
         />
 
-        {/* คู่มือการใช้งาน Excel Import */}
-        <ExcelImportGuide role={role} />
-
-        {/* นำเข้าข้อมูลจาก Excel */}
+        {/* นำเข้าข้อมูลจาก CSV */}
         <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">
-              📊 นำเข้าข้อมูลจากไฟล์ Excel
-            </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              เพิ่มหลายรายการพร้อมกันจากไฟล์ Excel เพื่อประหยัดเวลา
-            </p>
-          </div>
           <div className="p-6">
-            <ExcelImport
+            <CSVImport
               role={role}
               workCenters={workCenters}
               onImportData={handleImportData}
