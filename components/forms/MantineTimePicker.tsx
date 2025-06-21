@@ -28,8 +28,33 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
       control={control}
       render={({ field: { onChange, value } }) => {
         const handleTimeChange = (timeValue: string) => {
-          // TimePicker จะจัดการ min/max เอง แค่ส่งค่าต่อไป
-          onChange(timeValue);
+          console.log("TimePicker raw value:", timeValue);
+          
+          if (timeValue) {
+            // แปลงเวลาให้ตรงกับ validation regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
+            let formattedTime = timeValue;
+            
+            // ถ้าเป็นรูปแบบ HH:MM:SS ให้ตัดวินาทีออก
+            if (timeValue.includes(':') && timeValue.split(':').length > 2) {
+              const timeParts = timeValue.split(':');
+              formattedTime = `${timeParts[0]}:${timeParts[1]}`;
+            }
+            
+            // แปลงจาก zero-padded เป็น single digit hour ถ้าจำเป็น
+            const timeParts = formattedTime.split(':');
+            if (timeParts.length === 2) {
+              let hour = parseInt(timeParts[0]);
+              let minute = timeParts[1];
+              
+              // ให้ส่งเป็น H:MM format (single digit hour ถ้าเป็น 0-9)
+              formattedTime = `${hour}:${minute}`;
+            }
+            
+            console.log("Formatted time for validation:", formattedTime);
+            onChange(formattedTime);
+          } else {
+            onChange(timeValue);
+          }
         };
 
         return (
