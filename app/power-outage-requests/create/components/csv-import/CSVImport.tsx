@@ -399,6 +399,49 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         }
       }
 
+      // ตรวจสอบหม้อแปลง
+      let transformerNumber = "";
+      if (row.transformerNumber?.trim()) {
+        const rawTransformer = row.transformerNumber.trim();
+        // แยก transformerNumber จาก label ถ้ามี " - "
+        if (rawTransformer.includes(' - ')) {
+          transformerNumber = rawTransformer.split(' - ')[0];
+        } else {
+          transformerNumber = rawTransformer;
+        }
+
+        // ตรวจสอบว่าหม้อแปลงมีอยู่ในระบบหรือไม่
+        try {
+          const foundTransformers = await searchTransformers(transformerNumber);
+          const exactMatch = foundTransformers.find(t => t.transformerNumber === transformerNumber);
+          
+          if (!exactMatch) {
+            rowErrors.push({
+              row: rowNumber,
+              field: "หมายเลขหม้อแปลง",
+              message: `ไม่พบหม้อแปลงหมายเลข "${transformerNumber}" ในระบบ กรุณาตรวจสอบความถูกต้อง`,
+              value: row.transformerNumber,
+            });
+          } else {
+            console.log("CSV Processing - Raw:", rawTransformer, "Extracted:", transformerNumber, "Found in DB:", true);
+          }
+        } catch (error) {
+          rowErrors.push({
+            row: rowNumber,
+            field: "หมายเลขหม้อแปลง",
+            message: `เกิดข้อผิดพลาดในการตรวจสอบหม้อแปลง "${transformerNumber}"`,
+            value: row.transformerNumber,
+          });
+        }
+      } else {
+        rowErrors.push({
+          row: rowNumber,
+          field: "หมายเลขหม้อแปลง",
+          message: "กรุณาระบุหมายเลขหม้อแปลง",
+          value: row.transformerNumber,
+        });
+      }
+
       // หากไม่มี error ให้เพิ่มข้อมูลเข้า validData
       if (rowErrors.length === 0 && parsedDate) {
         try {
@@ -410,14 +453,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             endTime,
             workCenterId,
             branchId,
-            transformerNumber: (() => {
-              // แยก transformerNumber จาก label ถ้ามี " - "
-              const rawTransformer = row.transformerNumber!.trim();
-              if (rawTransformer.includes(' - ')) {
-                return rawTransformer.split(' - ')[0];
-              }
-              return rawTransformer;
-            })(),
+            transformerNumber,
             gisDetails: row.gisDetails?.trim() || "",
             area: row.area?.trim() || null,
           });

@@ -292,6 +292,7 @@ export async function createMultiplePowerOutageRequests(
       dataList.length,
       "items",
     );
+    console.log("Transformer numbers being processed:", dataList.map(d => d.transformerNumber));
 
     // Validate ข้อมูลทั้งหมดก่อน
     const validatedDataList: Array<{
@@ -338,6 +339,22 @@ export async function createMultiplePowerOutageRequests(
           validatedData.outageDate,
           validatedData.endTime,
         );
+
+        // ตรวจสอบว่า transformer มีอยู่ใน database หรือไม่
+        const transformerExists = await prisma.transformer.findUnique({
+          where: { transformerNumber: validatedData.transformerNumber }
+        });
+        
+        if (!transformerExists) {
+          validationErrors.push({
+            index: i + 1,
+            error: `ไม่พบหม้อแปลงหมายเลข "${validatedData.transformerNumber}" ในระบบ`,
+            data: validatedData,
+          });
+          continue;
+        }
+        
+        console.log(`Transformer ${validatedData.transformerNumber} exists in database`);
 
         validatedDataList.push({
           outageDate,

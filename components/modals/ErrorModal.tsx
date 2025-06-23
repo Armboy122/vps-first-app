@@ -100,26 +100,82 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
         {/* รายการ validation errors */}
         {validationErrors.length > 0 && (
           <div>
-            <Text fw={500} size="sm" mb="xs">
-              รายละเอียดข้อผิดพลาด:
+            <Text fw={500} size="sm" mb="xs" c="red">
+              📋 รายละเอียดข้อผิดพลาด ({validationErrors.length} รายการ):
             </Text>
-            <List spacing="xs" size="sm">
-              {validationErrors.map((validationError, index) => (
-                <List.Item key={index}>
-                  <Text span fw={500}>
-                    รายการที่ {validationError.index}:
-                  </Text>{" "}
-                  <Text span size="sm">
-                    {validationError.error}
-                  </Text>
-                  {showDetails && validationError.data && (
-                    <Code block mt="xs" style={{ fontSize: "12px" }}>
-                      {JSON.stringify(validationError.data, null, 2)}
-                    </Code>
-                  )}
-                </List.Item>
-              ))}
-            </List>
+            <div style={{ 
+              maxHeight: "300px", 
+              overflowY: "auto", 
+              border: "1px solid #e9ecef",
+              borderRadius: "4px",
+              padding: "8px"
+            }}>
+              <List spacing="sm" size="sm">
+                {validationErrors.map((validationError, index) => (
+                  <List.Item key={index} style={{ 
+                    padding: "8px",
+                    backgroundColor: "#fff5f5",
+                    borderRadius: "4px",
+                    border: "1px solid #fed7d7"
+                  }}>
+                    <div>
+                      <Text span fw={600} c="red">
+                        🔴 รายการที่ {validationError.index}:
+                      </Text>
+                      <Text span size="sm" ml="xs">
+                        {validationError.error}
+                      </Text>
+                    </div>
+                    
+                    {/* แสดงข้อมูลที่ผิดพลาด */}
+                    {validationError.data && (
+                      <div style={{ marginTop: "4px" }}>
+                        <Text size="xs" c="gray.6" fw={500}>
+                          💡 วิธีแก้ไข:
+                        </Text>
+                        {validationError.error.includes("ไม่พบหม้อแปลง") ? (
+                          <Text size="xs" c="blue">
+                            • ตรวจสอบหมายเลขหม้อแปลงให้ถูกต้อง<br/>
+                            • ใช้ฟีเจอร์ค้นหาในระบบเพื่อหาหมายเลขที่ถูกต้อง<br/>
+                            • ติดต่อผู้ดูแลระบบหากแน่ใจว่าหมายเลขถูกต้อง
+                          </Text>
+                        ) : validationError.error.includes("วันที่") ? (
+                          <Text size="xs" c="blue">
+                            • ตั้งวันที่ให้มากกว่าวันปัจจุบันอย่างน้อย 10 วัน<br/>
+                            • ใช้รูปแบบ DD/MM/YYYY เช่น 25/07/2025
+                          </Text>
+                        ) : validationError.error.includes("เวลา") ? (
+                          <Text size="xs" c="blue">
+                            • ใช้เวลาในช่วง 06:00 - 20:00 น.<br/>
+                            • เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที<br/>
+                            • ใช้รูปแบบ HH:MM เช่น 08:00
+                          </Text>
+                        ) : (
+                          <Text size="xs" c="blue">
+                            • ตรวจสอบข้อมูลในแถวนี้และแก้ไขให้ถูกต้อง
+                          </Text>
+                        )}
+                      </div>
+                    )}
+                    
+                    {showDetails && validationError.data && (
+                      <Code block mt="xs" style={{ fontSize: "11px" }}>
+                        {JSON.stringify(validationError.data, null, 2)}
+                      </Code>
+                    )}
+                  </List.Item>
+                ))}
+              </List>
+            </div>
+            
+            <Alert color="blue" icon={<span>💡</span>} mt="md" variant="light">
+              <Text size="sm" fw={500}>คำแนะนำ:</Text>
+              <Text size="xs">
+                • แก้ไขข้อมูลใน CSV ตามคำแนะนำข้างต้น<br/>
+                • บันทึกไฟล์และลองนำเข้าใหม่อีกครั้ง<br/>
+                • หากยังมีปัญหา กรุณาติดต่อผู้ดูแลระบบ
+              </Text>
+            </Alert>
           </div>
         )}
 
