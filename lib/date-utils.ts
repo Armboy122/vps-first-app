@@ -65,8 +65,44 @@ export function createThailandDateTime(
   date: Date | string,
   timeString: string,
 ): Date {
+  console.log("createThailandDateTime input:", { date, timeString });
+  
+  if (!timeString || timeString.trim() === "") {
+    throw new Error("Time string is required and cannot be empty");
+  }
+  
   const dateStr = typeof date === "string" ? date : format(date, "yyyy-MM-dd");
-  return new Date(`${dateStr}T${timeString}:00+07:00`);
+  
+  // แปลงเวลาให้เป็นรูปแบบ HH:MM (zero-padded)
+  const timeParts = timeString.split(':');
+  if (timeParts.length !== 2) {
+    throw new Error(`Invalid time format: ${timeString}. Expected HH:MM format.`);
+  }
+  
+  const hourNum = parseInt(timeParts[0]);
+  const minuteNum = parseInt(timeParts[1]);
+  
+  if (isNaN(hourNum) || isNaN(minuteNum)) {
+    throw new Error(`Invalid time values: ${timeString}. Hours and minutes must be numbers.`);
+  }
+  
+  if (hourNum < 0 || hourNum > 23 || minuteNum < 0 || minuteNum > 59) {
+    throw new Error(`Invalid time range: ${timeString}. Hours must be 0-23, minutes must be 0-59.`);
+  }
+  
+  const hours = hourNum.toString().padStart(2, '0');
+  const minutes = minuteNum.toString().padStart(2, '0');
+  const formattedTime = `${hours}:${minutes}`;
+  
+  const isoString = `${dateStr}T${formattedTime}:00+07:00`;
+  console.log("Creating Date from ISO string:", isoString);
+  
+  const result = new Date(isoString);
+  if (isNaN(result.getTime())) {
+    throw new Error(`Failed to create valid Date from: ${isoString}`);
+  }
+  
+  return result;
 }
 
 /**

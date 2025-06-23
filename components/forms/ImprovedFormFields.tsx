@@ -191,10 +191,25 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               control={control}
               label="เวลาสิ้นสุด *"
               error={errors.endTime}
-              minTime={watchedStartTime || "06:30"}
+              minTime={(() => {
+                if (!watchedStartTime) return "06:30";
+                // คำนวณเวลาขั้นต่ำ (เวลาเริ่มต้น + 30 นาที)
+                const [hour, min] = watchedStartTime.split(':').map(Number);
+                const totalMinutes = hour * 60 + min + 30;
+                const newHour = Math.floor(totalMinutes / 60);
+                const newMin = totalMinutes % 60;
+                return `${newHour.toString().padStart(2, '0')}:${newMin.toString().padStart(2, '0')}`;
+              })()}
               maxTime="20:00"
             />
-            {watchedStartTime && watchedEndTime && watchedEndTime <= watchedStartTime && (
+            {watchedStartTime && watchedEndTime && (() => {
+              // แปลงเวลาเป็นนาทีเพื่อเปรียบเทียบ
+              const [startHour, startMin] = watchedStartTime.split(':').map(Number);
+              const [endHour, endMin] = watchedEndTime.split(':').map(Number);
+              const startMinutes = startHour * 60 + startMin;
+              const endMinutes = endHour * 60 + endMin;
+              return endMinutes <= startMinutes + 29; // ต้องมากกว่า 30 นาที
+            })() && (
               <Alert color="red" mt={4}>
                 ⚠️ เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที
               </Alert>
@@ -284,13 +299,35 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   data={transformerData}
                   value={field.value || ""}
                   onChange={(value) => {
+                    console.log("Autocomplete onChange:", value);
                     field.onChange(value);
                     onTransformerSearch(value);
                   }}
                   onOptionSubmit={(value) => {
-                    const transformer = transformers.find(t => t.transformerNumber === value);
+                    console.log("Autocomplete onOptionSubmit - value:", value);
+                    console.log("Available transformers:", transformers.map(t => t.transformerNumber));
+                    
+                    // เมื่อเลือกจาก dropdown ให้หา transformer โดยใช้ label ที่แสดง
+                    const transformer = transformers.find(t => 
+                      `${t.transformerNumber} - ${t.gisDetails}` === value
+                    );
                     if (transformer) {
+                      console.log("Found transformer by label, using transformerNumber:", transformer.transformerNumber);
+                      // ตั้งค่า transformerNumber ที่ถูกต้องใน form (ไม่ใช่ label)
+                      field.onChange(transformer.transformerNumber);
                       onTransformerSelect(transformer);
+                    } else {
+                      // ถ้าไม่เจอจาก label ให้ลองหาจาก transformerNumber โดยตรง
+                      const directTransformer = transformers.find(t => t.transformerNumber === value);
+                      if (directTransformer) {
+                        console.log("Found transformer by transformerNumber:", directTransformer.transformerNumber);
+                        field.onChange(directTransformer.transformerNumber);
+                        onTransformerSelect(directTransformer);
+                      } else {
+                        console.log("Transformer not found, using raw value:", value);
+                        // ถ้าไม่เจอเลย ให้ใช้ค่าที่พิมพ์มา
+                        field.onChange(value);
+                      }
                     }
                   }}
                   error={errors.transformerNumber?.message}

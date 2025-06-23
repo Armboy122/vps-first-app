@@ -82,7 +82,7 @@ export default function PowerOutageRequestForm({
   // =============================================
   // Local State
   // =============================================
-  const [transformerSearchTerm, setTransformerSearchTerm] = useState("");
+  const [transformerSearchTerm, setTransformerSearchTerm] = useState("TR");
 
   // =============================================
   // Form Setup
