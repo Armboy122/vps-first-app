@@ -316,25 +316,16 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   placeholder="ค้นหาหมายเลขหม้อแปลง"
                   data={transformerData}
                   value={(() => {
-                    // Debug: แสดงค่าปัจจุบันใน form
-                    console.log("Current form transformerNumber value:", field.value);
-                    
                     // หา transformer เพื่อแสดง label ใน input
                     const transformer = transformers.find(t => t.transformerNumber === field.value);
                     if (transformer) {
-                      const displayValue = `${transformer.transformerNumber} - ${transformer.gisDetails}`;
-                      console.log("Displaying label:", displayValue);
-                      return displayValue;
+                      return `${transformer.transformerNumber} - ${transformer.gisDetails}`;
                     }
-                    
                     return field.value || "";
                   })()}
                   onChange={(value) => {
-                    console.log("Autocomplete onChange:", value);
-                    
                     // แยก transformerNumber จาก label
                     const transformerNumber = extractTransformerNumber(value);
-                    console.log("Extracted transformerNumber:", transformerNumber);
                     
                     // ตั้งค่า transformerNumber ใน form
                     field.onChange(transformerNumber);
@@ -343,21 +334,16 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                     onTransformerSearch(value);
                   }}
                   onOptionSubmit={(value) => {
-                    console.log("Autocomplete onOptionSubmit - value:", value);
-                    
                     // แยก transformerNumber จาก value
                     const transformerNumber = extractTransformerNumber(value);
-                    console.log("Extracted transformerNumber:", transformerNumber);
                     
                     // หา transformer โดยใช้ transformerNumber
                     const transformer = transformers.find(t => t.transformerNumber === transformerNumber);
                     if (transformer) {
-                      console.log("Found transformer:", transformer.transformerNumber);
                       // ตั้งค่า transformerNumber ที่ถูกต้องใน form
                       field.onChange(transformer.transformerNumber);
                       onTransformerSelect(transformer);
                     } else {
-                      console.log("Transformer not found, using extracted value:", transformerNumber);
                       // ถ้าไม่เจอ ให้ใช้ transformerNumber ที่แยกได้
                       field.onChange(transformerNumber);
                     }

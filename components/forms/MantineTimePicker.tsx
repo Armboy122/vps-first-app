@@ -28,8 +28,6 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
       control={control}
       render={({ field: { onChange, value } }) => {
         const handleTimeChange = (timeValue: string) => {
-          console.log("TimePicker raw value:", timeValue);
-          
           if (timeValue) {
             // แปลงเวลาให้ตรงกับ validation regex: /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/
             let formattedTime = timeValue;
@@ -50,7 +48,6 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
               formattedTime = `${hour}:${minute}`;
             }
             
-            console.log("Formatted time for validation:", formattedTime);
             onChange(formattedTime);
           } else {
             onChange(timeValue);

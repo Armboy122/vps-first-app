@@ -65,8 +65,6 @@ export function createThailandDateTime(
   date: Date | string,
   timeString: string,
 ): Date {
-  console.log("createThailandDateTime input:", { date, timeString });
-  
   if (!timeString || timeString.trim() === "") {
     throw new Error("Time string is required and cannot be empty");
   }
@@ -95,7 +93,6 @@ export function createThailandDateTime(
   const formattedTime = `${hours}:${minutes}`;
   
   const isoString = `${dateStr}T${formattedTime}:00+07:00`;
-  console.log("Creating Date from ISO string:", isoString);
   
   const result = new Date(isoString);
   if (isNaN(result.getTime())) {
