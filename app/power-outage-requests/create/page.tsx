@@ -1,5 +1,5 @@
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
-import PowerOutageRequestForm from "@/components/PowerOutageRequestForm";
+import PowerOutageCreatePage from "./components/PowerOutageCreatePage";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/authOption";
 import { redirect } from "next/navigation";
@@ -30,7 +30,7 @@ export default async function CreatePowerOutageRequestPage() {
             </h1>
           </div>
           <div className="p-6">
-            <PowerOutageRequestForm
+            <PowerOutageCreatePage
               role={role}
               workCenterId={String(workCenterId)}
               branch={String(branchId)}
