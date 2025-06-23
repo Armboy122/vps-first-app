@@ -18,6 +18,21 @@ interface SubmitStatus {
   isLoading?: boolean;
 }
 
+interface ValidationError {
+  index: number;
+  error: string;
+  data?: any;
+}
+
+interface ErrorModalState {
+  opened: boolean;
+  title?: string;
+  message?: string;
+  type?: "error" | "warning" | "success" | "info";
+  validationErrors?: ValidationError[];
+  showDetails?: boolean;
+}
+
 interface PowerOutageFormState {
   // ข้อมูลพื้นฐาน
   branches: Branch[];
@@ -25,12 +40,19 @@ interface PowerOutageFormState {
   requests: PowerOutageRequestInput[];
   submitStatus: SubmitStatus | null;
   timeError: string | null;
+  
+  // Modal state
+  errorModal: ErrorModalState;
 
   // Actions สำหรับจัดการ state
   setBranches: (branches: Branch[]) => void;
   setTransformers: (transformers: Transformer[]) => void;
   setSubmitStatus: (status: SubmitStatus | null) => void;
   setTimeError: (error: string | null) => void;
+  
+  // Actions สำหรับจัดการ modal
+  showErrorModal: (modalState: Partial<ErrorModalState>) => void;
+  hideErrorModal: () => void;
 
   // Actions สำหรับจัดการคำขอ
   addRequest: (request: PowerOutageRequestInput) => void;
@@ -47,6 +69,14 @@ const initialState = {
   requests: [],
   submitStatus: null,
   timeError: null,
+  errorModal: {
+    opened: false,
+    title: undefined,
+    message: undefined,
+    type: "error" as const,
+    validationErrors: [],
+    showDetails: false,
+  },
 };
 
 export const usePowerOutageFormStore = create<PowerOutageFormState>(
@@ -58,6 +88,23 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>(
     setTransformers: (transformers) => set({ transformers }),
     setSubmitStatus: (submitStatus) => set({ submitStatus }),
     setTimeError: (timeError) => set({ timeError }),
+    
+    // การจัดการ modal
+    showErrorModal: (modalState) => 
+      set((state) => ({
+        errorModal: {
+          ...state.errorModal,
+          ...modalState,
+          opened: true,
+        },
+      })),
+    hideErrorModal: () => 
+      set((state) => ({
+        errorModal: {
+          ...state.errorModal,
+          opened: false,
+        },
+      })),
 
     // การจัดการคำขอ
     addRequest: (request) => {

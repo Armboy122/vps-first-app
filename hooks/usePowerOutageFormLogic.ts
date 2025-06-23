@@ -38,7 +38,7 @@ export const usePowerOutageFormLogic = ({
   requests,
 }: UsePowerOutageFormLogicProps) => {
   const { setValue, reset } = form;
-  const { setSubmitStatus } = usePowerOutageFormStore();
+  const { setSubmitStatus, showErrorModal } = usePowerOutageFormStore();
 
   /**
    * จัดการการเปลี่ยนแปลงวันที่
@@ -103,6 +103,11 @@ export const usePowerOutageFormLogic = ({
 
       if (!validation.isValid) {
         setTimeError(validation.error || "");
+        showErrorModal({
+          type: "error",
+          title: "ข้อมูลไม่ถูกต้อง",
+          message: validation.error || "กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง",
+        });
         logError(
           "power_outage_request_validation_failed",
           validation.error || "Validation failed",
@@ -132,16 +137,18 @@ export const usePowerOutageFormLogic = ({
             result.error || "Unknown error",
             { data },
           );
-          setSubmitStatus({
-            success: false,
-            message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ",
+          showErrorModal({
+            type: "error",
+            title: "ไม่สามารถบันทึกคำขอได้",
+            message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ กรุณาลองใหม่อีกครั้ง",
           });
         }
       } catch (error) {
         logError("power_outage_request_create_error", error as Error, { data });
-        setSubmitStatus({
-          success: false,
-          message: "เกิดข้อผิดพลาดในการบันทึกคำขอ",
+        showErrorModal({
+          type: "error",
+          title: "เกิดข้อผิดพลาดในการเชื่อมต่อ",
+          message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง",
         });
       }
     },

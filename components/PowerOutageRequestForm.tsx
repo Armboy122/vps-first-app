@@ -18,6 +18,7 @@ import { ImprovedFormFields } from "@/components/forms";
 import { RequestList } from "./PowerOutageRequestForm/RequestList";
 import { StatusMessages } from "./PowerOutageRequestForm/StatusMessages";
 import { CSVImport } from "./PowerOutageRequestForm/CSVImport";
+import { ErrorModal } from "@/components/modals/ErrorModal";
 // import { ExcelImportGuide } from "./PowerOutageRequestForm/ExcelImportGuide";
 
 // Hooks และ State Management
@@ -72,10 +73,12 @@ export default function PowerOutageRequestForm({
     requests,
     submitStatus,
     timeError,
+    errorModal,
     setTimeError,
     addRequest,
     removeRequest,
     clearAllRequests,
+    hideErrorModal,
     reset: resetStore,
   } = usePowerOutageFormStore();
 
@@ -278,6 +281,17 @@ export default function PowerOutageRequestForm({
           onRemoveFromList={removeRequest}
           onClearAllRequests={clearAllRequests}
           onSubmitAll={handleSubmitAll}
+        />
+        
+        {/* Error Modal */}
+        <ErrorModal
+          opened={errorModal.opened}
+          onClose={hideErrorModal}
+          title={errorModal.title}
+          message={errorModal.message}
+          type={errorModal.type}
+          validationErrors={errorModal.validationErrors}
+          showDetails={errorModal.showDetails}
         />
       </div>
     </LocalizationProvider>
