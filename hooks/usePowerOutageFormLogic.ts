@@ -242,18 +242,17 @@ export const usePowerOutageFormLogic = ({
 
         setTimeout(() => router.back(), 1500);
       } else {
-        const errorMessage = result.validationErrors?.length
-          ? `พบข้อผิดพลาด ${result.validationErrors.length} รายการ:\n${result.validationErrors.map((err) => `รายการที่ ${err.index}: ${err.error}`).join("\n")}`
-          : result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ";
-
-        logError("bulk_power_outage_requests_failed", errorMessage, {
+        logError("bulk_power_outage_requests_failed", result.error || "Unknown error", {
           requestCount: requests.length,
           validationErrors: result.validationErrors,
         });
 
-        setSubmitStatus({
-          success: false,
-          message: errorMessage,
+        showErrorModal({
+          type: "error",
+          title: "ไม่สามารถบันทึกคำขอได้",
+          message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอหลายรายการ",
+          validationErrors: result.validationErrors || [],
+          showDetails: !!result.validationErrors?.length,
         });
       }
     } catch (error) {

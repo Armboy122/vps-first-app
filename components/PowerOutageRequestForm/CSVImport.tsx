@@ -410,7 +410,14 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             endTime,
             workCenterId,
             branchId,
-            transformerNumber: row.transformerNumber!.trim(),
+            transformerNumber: (() => {
+              // แยก transformerNumber จาก label ถ้ามี " - "
+              const rawTransformer = row.transformerNumber!.trim();
+              if (rawTransformer.includes(' - ')) {
+                return rawTransformer.split(' - ')[0];
+              }
+              return rawTransformer;
+            })(),
             gisDetails: row.gisDetails?.trim() || "",
             area: row.area?.trim() || null,
           });
