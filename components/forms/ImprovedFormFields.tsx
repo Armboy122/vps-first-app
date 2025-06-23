@@ -86,6 +86,24 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   onTransformerSearch,
   onTransformerSelect,
 }) => {
+  
+  // ฟังก์ชันแยก transformerNumber จาก label
+  const extractTransformerNumber = (value: string): string => {
+    if (!value) return "";
+    
+    // ถ้ามี " - " ให้แยกเอาส่วนแรก
+    if (value.includes(' - ')) {
+      return value.split(' - ')[0];
+    }
+    
+    // ถ้าไม่มี ให้ใช้ค่าตรงๆ
+    return value;
+  };
+  
+  // ฟังก์ชันตรวจสอบว่าเป็น transformerNumber ที่ถูกต้องหรือไม่
+  const isValidTransformerNumber = (value: string): boolean => {
+    return transformers.some(t => t.transformerNumber === value);
+  };
   const workCenterOptions =
     workCenters?.map((wc) => ({ value: wc.id.toString(), label: wc.name })) || [];
   const branchOptions = branches.map((branch) => ({
@@ -297,37 +315,51 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   label="หมายเลขหม้อแปลง"
                   placeholder="ค้นหาหมายเลขหม้อแปลง"
                   data={transformerData}
-                  value={field.value || ""}
+                  value={(() => {
+                    // Debug: แสดงค่าปัจจุบันใน form
+                    console.log("Current form transformerNumber value:", field.value);
+                    
+                    // หา transformer เพื่อแสดง label ใน input
+                    const transformer = transformers.find(t => t.transformerNumber === field.value);
+                    if (transformer) {
+                      const displayValue = `${transformer.transformerNumber} - ${transformer.gisDetails}`;
+                      console.log("Displaying label:", displayValue);
+                      return displayValue;
+                    }
+                    
+                    return field.value || "";
+                  })()}
                   onChange={(value) => {
                     console.log("Autocomplete onChange:", value);
-                    field.onChange(value);
+                    
+                    // แยก transformerNumber จาก label
+                    const transformerNumber = extractTransformerNumber(value);
+                    console.log("Extracted transformerNumber:", transformerNumber);
+                    
+                    // ตั้งค่า transformerNumber ใน form
+                    field.onChange(transformerNumber);
+                    
+                    // ใช้ค่าเต็มสำหรับการค้นหา
                     onTransformerSearch(value);
                   }}
                   onOptionSubmit={(value) => {
                     console.log("Autocomplete onOptionSubmit - value:", value);
-                    console.log("Available transformers:", transformers.map(t => t.transformerNumber));
                     
-                    // เมื่อเลือกจาก dropdown ให้หา transformer โดยใช้ label ที่แสดง
-                    const transformer = transformers.find(t => 
-                      `${t.transformerNumber} - ${t.gisDetails}` === value
-                    );
+                    // แยก transformerNumber จาก value
+                    const transformerNumber = extractTransformerNumber(value);
+                    console.log("Extracted transformerNumber:", transformerNumber);
+                    
+                    // หา transformer โดยใช้ transformerNumber
+                    const transformer = transformers.find(t => t.transformerNumber === transformerNumber);
                     if (transformer) {
-                      console.log("Found transformer by label, using transformerNumber:", transformer.transformerNumber);
-                      // ตั้งค่า transformerNumber ที่ถูกต้องใน form (ไม่ใช่ label)
+                      console.log("Found transformer:", transformer.transformerNumber);
+                      // ตั้งค่า transformerNumber ที่ถูกต้องใน form
                       field.onChange(transformer.transformerNumber);
                       onTransformerSelect(transformer);
                     } else {
-                      // ถ้าไม่เจอจาก label ให้ลองหาจาก transformerNumber โดยตรง
-                      const directTransformer = transformers.find(t => t.transformerNumber === value);
-                      if (directTransformer) {
-                        console.log("Found transformer by transformerNumber:", directTransformer.transformerNumber);
-                        field.onChange(directTransformer.transformerNumber);
-                        onTransformerSelect(directTransformer);
-                      } else {
-                        console.log("Transformer not found, using raw value:", value);
-                        // ถ้าไม่เจอเลย ให้ใช้ค่าที่พิมพ์มา
-                        field.onChange(value);
-                      }
+                      console.log("Transformer not found, using extracted value:", transformerNumber);
+                      // ถ้าไม่เจอ ให้ใช้ transformerNumber ที่แยกได้
+                      field.onChange(transformerNumber);
                     }
                   }}
                   error={errors.transformerNumber?.message}
