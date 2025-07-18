@@ -151,7 +151,7 @@ export class PowerOutageRequestService {
       data: {
         ...data,
         omsStatus: "NOT_ADDED",
-        statusRequest: "NOT",
+        statusRequest: "CONFIRM",
       },
     });
   }
@@ -165,7 +165,7 @@ export class PowerOutageRequestService {
     const requests = dataList.map((data) => ({
       ...data,
       omsStatus: "NOT_ADDED" as const,
-      statusRequest: "NOT" as const,
+      statusRequest: "CONFIRM" as const,
     }));
 
     return await prisma.$transaction(async (tx) => {
