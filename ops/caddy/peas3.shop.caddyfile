@@ -1,0 +1,8 @@
+peas3.shop {
+	reverse_proxy 127.0.0.1:3000
+	encode gzip zstd
+}
+
+dev.peas3.shop, test.peas3.shop {
+	redir https://peas3.shop{uri} permanent
+}

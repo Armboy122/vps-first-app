@@ -48,6 +48,7 @@ RUN addgroup --system --gid 1001 nodejs && \
 # Environment variables
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
 
 # คัดลอกเฉพาะ production dependencies
@@ -61,6 +62,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # คัดลอก Prisma client ที่ generate แล้ว
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+
+RUN chmod +x ./docker-entrypoint.sh
 
 # เปลี่ยนเป็น non-root user
 USER nextjs
@@ -68,7 +72,5 @@ USER nextjs
 # เปิด port
 EXPOSE 3000
 
-
-
-# ใช้ dumb-init สำหรับ proper signal handling และ Next.js standalone
-CMD ["dumb-init", "node", "server.js"]
+# ใช้ dumb-init สำหรับ proper signal handling และ Prisma migrate ก่อน start
+ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]

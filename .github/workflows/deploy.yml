@@ -1,0 +1,94 @@
+name: Deploy VPS
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-peas3-shop
+  cancel-in-progress: true
+
+env:
+  VPS_HOST: 103.117.149.118
+  VPS_USER: peas3
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set image variables
+        run: |
+          echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+          echo "IMAGE_TAG=sha-${GITHUB_SHA::12}" >> "$GITHUB_ENV"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ github.token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+
+      - name: Build and push image
+        run: |
+          docker build \
+            --tag "$IMAGE_NAME:$IMAGE_TAG" \
+            --tag "$IMAGE_NAME:latest" \
+            .
+          docker push "$IMAGE_NAME:$IMAGE_TAG"
+          docker push "$IMAGE_NAME:latest"
+
+      - name: Configure SSH
+        env:
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+      - name: Upload deploy env
+        env:
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ github.token }}
+        run: |
+          cat > /tmp/vps-first-app-deploy.env <<EOF
+          APP_IMAGE=${IMAGE_NAME}:${IMAGE_TAG}
+          GHCR_USER=${GHCR_USER}
+          GHCR_TOKEN=${GHCR_TOKEN}
+          EOF
+
+          scp /tmp/vps-first-app-deploy.env "${VPS_USER}@${VPS_HOST}:/tmp/vps-first-app-deploy.env"
+          rm -f /tmp/vps-first-app-deploy.env
+
+      - name: Upload runtime files
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" 'mkdir -p /home/peas3/vps-first-app/scripts'
+          scp docker-compose.yml "${VPS_USER}@${VPS_HOST}:/home/peas3/vps-first-app/docker-compose.yml"
+          scp scripts/deploy-server.sh "${VPS_USER}@${VPS_HOST}:/home/peas3/vps-first-app/scripts/deploy-server.sh"
+
+      - name: Deploy on VPS
+        run: |
+          ssh "${VPS_USER}@${VPS_HOST}" '
+            set -euo pipefail
+            cleanup() {
+              docker logout ghcr.io >/dev/null 2>&1 || true
+              rm -f /tmp/vps-first-app-deploy.env
+            }
+            trap cleanup EXIT
+            set -a
+            . /tmp/vps-first-app-deploy.env
+            set +a
+            cd /home/peas3/vps-first-app
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+            chmod +x scripts/deploy-server.sh
+            ./scripts/deploy-server.sh
+          '

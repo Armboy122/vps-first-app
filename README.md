@@ -1,65 +1,100 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# VPS First App
 
-## Getting Started
+Next.js app ที่รันบน VPS แบบเรียบง่าย:
 
-First, run the development server:
+- `peas3.shop` -> `Caddy` -> `app` (`127.0.0.1:3000`)
+- `app` -> `Postgres` ผ่าน Docker network (`db`)
+- บนเครื่องมีแค่ 2 services: `app` และ `db`
+
+## Files สำคัญ
+
+- `docker-compose.yml` ใช้รัน production ทั้งหมด
+- `Dockerfile` image สำหรับแอพ
+- `docker-entrypoint.sh` รัน Prisma migrate ก่อน start app
+- `.env.example` ตัวอย่าง env สำหรับ VPS
+- `scripts/deploy-server.sh` deploy script ตัวเดียวสำหรับสั่งมือและ CI
+- `.github/workflows/deploy.yml` auto deploy เมื่อ push เข้า `main`
+- `ops/caddy/peas3.shop.caddyfile` block ของ Caddy สำหรับ domain นี้
+
+## การตั้งค่า VPS ครั้งแรก
+
+1. clone repo ไปไว้ที่ `/home/peas3/vps-first-app`
+2. สร้าง `.env` จาก `.env.example`
+3. ตั้งค่า Caddy ให้ `peas3.shop` reverse proxy ไป `127.0.0.1:3000`
+4. login GHCR หนึ่งครั้งถ้าจะ deploy เองจาก VPS:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+docker login ghcr.io
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+5. รัน:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+chmod +x scripts/deploy-server.sh
+./scripts/deploy-server.sh
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
+## ตัวอย่าง `.env`
 
-## Learn More
+```env
+APP_PORT=3000
+DB_PORT=5432
+APP_IMAGE=ghcr.io/armboy122/vps-first-app:latest
+POSTGRES_DB=PeaTransformer
+POSTGRES_USER=sa
+POSTGRES_PASSWORD=change-this-db-password
+DATABASE_URL=postgresql://sa:change-this-db-password@db:5432/PeaTransformer?schema=public
+NEXTAUTH_SECRET=change-this-nextauth-secret
+NEXTAUTH_URL=https://peas3.shop
+NEXT_PUBLIC_GENERATE_PDF=https://script.google.com/macros/s/AKfycbzMlQp7F8jI9v3nN1PSkV_laJ8BY66vLAheexB120jO5o7n8O8X0otZlHGCenOESvN61Q/exec
+```
 
-To learn more about Next.js, take a look at the following resources:
+## การเข้า DB จากเครื่องตัวเอง
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+อย่าเปิด `5432` ออก public internet
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
+ใช้ SSH tunnel แทน:
 
-## Deploy on Vercel
+```bash
+ssh -L 5432:127.0.0.1:5432 peas3@103.117.149.118
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+จากนั้นให้ DBeaver หรือ TablePlus ต่อไปที่:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+- host: `127.0.0.1`
+- port: `5432`
+- database / username / password: ตามค่าใน `.env`
 
-## การจัดการไทม์โซน (Timezone Management)
+## Auto Deploy
 
-ระบบนี้ได้รับการออกแบบให้รองรับการทำงานกับไทม์โซน UTC+7 (ประเทศไทย) อย่างถูกต้อง โดยใช้ไลบรารี utility ที่สร้างขึ้นมาเฉพาะสำหรับการจัดการวันและเวลา:
+เมื่อ push เข้า branch `main`, GitHub Actions จะทำตามลำดับนี้:
 
-- `lib/date-utils.ts` - ชุดฟังก์ชันสำหรับจัดการวันและเวลาในไทม์โซนประเทศไทย
+```bash
+docker build -t ghcr.io/armboy122/vps-first-app:sha-<commit> .
+docker push ghcr.io/armboy122/vps-first-app:sha-<commit>
+docker push ghcr.io/armboy122/vps-first-app:latest
+scp docker-compose.yml และ scripts/deploy-server.sh ไปที่ VPS
+ssh VPS
+./scripts/deploy-server.sh
+```
 
-ฟังก์ชันหลักที่ใช้ในการจัดการไทม์โซน:
-- `getThailandDate()` - สร้างวันที่ปัจจุบันในไทม์โซน UTC+7
-- `getThailandDateAtMidnight()` - สร้างวันที่ปัจจุบันเวลา 00:00:00 ในไทม์โซน UTC+7
-- `createThailandDateTime()` - สร้างวันที่และเวลาตามที่กำหนดในไทม์โซน UTC+7
-- `isDateInFuture()` - ตรวจสอบว่าวันที่อยู่ในอนาคตหรือไม่
-- `getDaysDifference()` - คำนวณความแตกต่างของวันระหว่างสองวันที่
+### GitHub Secrets ที่ต้องใส่
 
-## การแคชข้อมูล (Data Caching)
+- `VPS_SSH_KEY`
 
-ระบบมีการใช้การแคชข้อมูลเพื่อลดภาระของฐานข้อมูลและเพิ่มประสิทธิภาพ โดยใช้คุณสมบัติ `unstable_cache` ของ Next.js โดยมีไลบรารี utility สำหรับการจัดการแคช:
+`deploy-server.sh` จะใช้ `APP_IMAGE` ที่ workflow ส่งเข้าไป ทำให้ VPS ไม่ต้อง build image เองแล้ว
+และไม่ต้อง `git pull` บนเซิร์ฟเวอร์ทุก deploy
 
-- `lib/cache-utils.ts` - ชุดฟังก์ชันสำหรับจัดการการแคชข้อมูล
+## Rollback แบบเร็ว
 
-ฟังก์ชันหลักสำหรับการแคชข้อมูล:
-- `cacheData()` - ฟังก์ชันพื้นฐานสำหรับแคชข้อมูลทั่วไป
-- `cacheOMSStatusByWorkCenter()` - แคชข้อมูลสถานะ OMS ตามจุดรวมงาน
-- `cacheOMSStatusDistribution()` - แคชข้อมูลการกระจายสถานะ OMS
-- `clearCacheByPath()` - ล้างแคชตามพาธ
-- `clearCacheByTag()` - ล้างแคชตามแท็ก
-- `clearOMSCache()` - ล้างแคชข้อมูล OMS ทั้งหมด
+ถ้าต้อง rollback แบบ manual บน VPS ให้เปลี่ยน `APP_IMAGE` ชั่วคราวแล้วรัน deploy:
 
-การแคชข้อมูลจะถูกล้างโดยอัตโนมัติเมื่อมีการสร้าง แก้ไข หรือลบข้อมูลที่เกี่ยวข้อง เพื่อให้ข้อมูลที่แสดงเป็นข้อมูลล่าสุดเสมอ
+```bash
+export APP_IMAGE=ghcr.io/armboy122/vps-first-app:sha-<commit>
+./scripts/deploy-server.sh
+```
+
+## หมายเหตุ
+
+- service เก่าอย่าง `metabase`, `dev`, `uat/test` ถูกถอดออกจาก flow แล้ว
+- app และ db bind ที่ `127.0.0.1` เพื่อบังคับให้เข้าใช้งานผ่าน Caddy หรือ SSH tunnel เท่านั้น
