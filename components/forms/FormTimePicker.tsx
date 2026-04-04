@@ -1,8 +1,18 @@
 "use client";
+
+/**
+ * FormTimePicker
+ *
+ * Replaces the previous MUI MobileTimePicker with Mantine's TimeInput
+ * from @mantine/dates. This removes MUI from the shared component layer.
+ *
+ * Interface is unchanged: name, control, label, error, disabled.
+ * The field value is always a "HH:mm" string, matching the original contract.
+ */
+
 import React from "react";
 import { Controller, Control, FieldError } from "react-hook-form";
-import { MobileTimePicker } from "@mui/x-date-pickers/MobileTimePicker";
-import dayjs from "dayjs";
+import { TimeInput } from "@mantine/dates";
 
 interface FormTimePickerProps {
   name: string;
@@ -23,26 +33,15 @@ export const FormTimePicker: React.FC<FormTimePickerProps> = ({
     <Controller
       name={name}
       control={control}
-      render={({ field: { onChange, value } }) => (
-        <MobileTimePicker
+      render={({ field: { onChange, value, ref } }) => (
+        <TimeInput
+          ref={ref}
           label={label}
-          value={value ? dayjs(value, "HH:mm") : null}
-          onChange={(newValue: dayjs.Dayjs | null) => {
-            onChange(newValue ? newValue.format("HH:mm") : "");
-          }}
-          ampm={false}
-          format="HH:mm"
+          value={value ?? ""}
+          onChange={(event) => onChange(event.currentTarget.value)}
           disabled={disabled}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              variant: "outlined",
-              error: !!error,
-              helperText: error?.message,
-              className:
-                "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500",
-            },
-          }}
+          error={error?.message}
+          withSeconds={false}
         />
       )}
     />

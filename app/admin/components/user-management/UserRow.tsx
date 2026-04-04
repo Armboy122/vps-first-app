@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Role } from "@prisma/client";
 import { User } from "../../types/admin.types";
 import { ROLE_TRANSLATIONS, ROLE_COLORS } from "../../constants/admin.constants";
 import { updateUserRole, resetUserPassword, deleteUser } from "@/app/api/action/User";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { FeedbackBanner } from "../shared/FeedbackBanner";
 
 interface UserRowProps {
   user: User;
@@ -23,8 +24,25 @@ export function UserRow({ user }: UserRowProps) {
     title: "",
     message: "",
   });
+  /** ข้อความแจ้งเตือนสำเร็จ — จะหายไปเองใน 3 วินาที */
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  /** ข้อความแจ้งเตือนข้อผิดพลาด — จะหายไปเองใน 4 วินาที */
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
+
+  // ลบ success message อัตโนมัติหลังจาก 3 วินาที
+  useEffect(() => {
+    if (!successMessage) return;
+    const timer = setTimeout(() => setSuccessMessage(null), 3000);
+    return () => clearTimeout(timer);
+  }, [successMessage]);
+
+  useEffect(() => {
+    if (!actionError) return;
+    const timer = setTimeout(() => setActionError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [actionError]);
 
   // Mutations
   const updateRoleMutation = useMutation({
@@ -33,6 +51,12 @@ export function UserRow({ user }: UserRowProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setIsRoleMenuOpen(false);
+      setActionError(null);
+      setSuccessMessage("เปลี่ยน Role เรียบร้อยแล้ว");
+    },
+    onError: (error: Error) => {
+      setIsRoleMenuOpen(false);
+      setActionError(error.message || "ไม่สามารถเปลี่ยน Role ได้");
     },
   });
 
@@ -40,7 +64,12 @@ export function UserRow({ user }: UserRowProps) {
     mutationFn: (userId: number) => resetUserPassword(userId),
     onSuccess: () => {
       setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
-      alert("🔐 รีเซ็ตรหัสผ่านเรียบร้อยแล้ว! รหัสผ่านใหม่คือรหัสพนักงาน");
+      setActionError(null);
+      setSuccessMessage("รีเซ็ตรหัสผ่านเรียบร้อยแล้ว — รหัสผ่านใหม่คือรหัสพนักงาน");
+    },
+    onError: (error: Error) => {
+      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+      setActionError(error.message || "ไม่สามารถรีเซ็ตรหัสผ่านได้");
     },
   });
 
@@ -49,6 +78,12 @@ export function UserRow({ user }: UserRowProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+      setActionError(null);
+      setSuccessMessage("ลบผู้ใช้เรียบร้อยแล้ว");
+    },
+    onError: (error: Error) => {
+      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+      setActionError(error.message || "ไม่สามารถลบผู้ใช้ได้");
     },
   });
 
@@ -89,6 +124,29 @@ export function UserRow({ user }: UserRowProps) {
 
   return (
     <>
+      {/* Success notification row */}
+      {successMessage && (
+        <tr>
+          <td colSpan={4} className="px-6 py-2">
+            <FeedbackBanner
+              variant="success"
+              title="สำเร็จ"
+              message={successMessage}
+            />
+          </td>
+        </tr>
+      )}
+      {actionError && (
+        <tr>
+          <td colSpan={4} className="px-6 py-2">
+            <FeedbackBanner
+              variant="error"
+              title="ดำเนินการไม่สำเร็จ"
+              message={actionError}
+            />
+          </td>
+        </tr>
+      )}
       <tr className="hover:bg-gray-50 transition-colors">
         {/* User Info */}
         <td className="px-6 py-4 whitespace-nowrap">

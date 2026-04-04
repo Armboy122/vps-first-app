@@ -1,13 +1,19 @@
 "use client";
 import React from "react";
 import { FieldError } from "react-hook-form";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  formErrorClass,
+  formFieldWrapperClass,
+  formLabelClass,
+} from "./styles";
 
 interface FormFieldProps {
   label: string;
   name: string;
   error?: FieldError;
   required?: boolean;
-  icon?: string;
+  icon?: React.ReactNode;
   className?: string;
   children: React.ReactNode;
 }
@@ -22,19 +28,19 @@ export const FormField: React.FC<FormFieldProps> = ({
   children,
 }) => {
   return (
-    <div className={`space-y-2 ${className}`}>
+    <div className={`${formFieldWrapperClass} ${className}`}>
       <label
         htmlFor={name}
-        className="block text-sm font-semibold text-gray-700"
+        className={formLabelClass}
       >
-        {icon && <span className="mr-2">{icon}</span>}
+        {icon && <span className="mr-2 inline-flex align-middle">{icon}</span>}
         {label}
-        {required && <span className="text-red-500 ml-1">*</span>}
+        {required && <span className="ml-1 text-red-500">*</span>}
       </label>
       {children}
       {error && (
-        <p className="text-sm text-red-600 flex items-center">
-          <span className="mr-1">⚠️</span>
+        <p className={formErrorClass}>
+          <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-none" />
           {error.message}
         </p>
       )}

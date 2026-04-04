@@ -4,18 +4,28 @@ import { z } from "zod";
 
 export const PowerOutageRequestSchema = z
   .object({
-    outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
+    outageDate: z
+      .string()
+      .min(1, "กรุณาเลือกวันที่ดับไฟ"),
     startTime: z
       .string()
-      .min(1, "กรุณาระบุเวลาเริ่มต้น")
-      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "รูปแบบเวลาไม่ถูกต้อง"),
+      .min(1, "กรุณาระบุเวลาเริ่มต้น เช่น 08:00")
+      .regex(
+        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+        "รูปแบบเวลาไม่ถูกต้อง กรุณาใส่ในรูปแบบ HH:MM เช่น 08:00",
+      ),
     endTime: z
       .string()
-      .min(1, "กรุณาระบุเวลาสิ้นสุด")
-      .regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "รูปแบบเวลาไม่ถูกต้อง"),
+      .min(1, "กรุณาระบุเวลาสิ้นสุด เช่น 12:00")
+      .regex(
+        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+        "รูปแบบเวลาไม่ถูกต้อง กรุณาใส่ในรูปแบบ HH:MM เช่น 12:00",
+      ),
     workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงาน"),
     branchId: z.string().min(1, "กรุณาเลือกสาขา"),
-    transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
+    transformerNumber: z
+      .string()
+      .min(1, "กรุณาระบุหมายเลขหม้อแปลง หรือค้นหาจากช่องค้นหาด้านบน"),
     gisDetails: z.string(),
     area: z.string().nullable(),
   })
@@ -37,7 +47,8 @@ export const PowerOutageRequestSchema = z
       );
     },
     {
-      message: "เวลาต้องอยู่ในช่วงเวลาทำการ 06:00 - 20:00 น.",
+      message:
+        "เวลาต้องอยู่ในช่วงเวลาทำการ 06:00 - 20:00 น. กรุณาตรวจสอบเวลาเริ่มต้นและสิ้นสุดอีกครั้ง",
       path: ["startTime"],
     },
   )
@@ -53,19 +64,26 @@ export const PowerOutageRequestSchema = z
       return endTimeInMinutes > startTimeInMinutes + 29; // อย่างน้อย 30 นาที
     },
     {
-      message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที",
+      message:
+        "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที เช่น ถ้าเริ่มต้น 08:00 ต้องสิ้นสุดไม่ก่อน 08:30",
       path: ["endTime"],
     },
   );
 
 // Schema สำหรับการ update (ไม่มี refine เพื่อให้ใช้ pick ได้)
 export const PowerOutageRequestUpdateSchema = z.object({
-  outageDate: z.string().min(1, "กรุณาระบุวันที่ดับไฟ"),
-  startTime: z.string().min(1, "กรุณาระบุเวลาเริ่มต้น"),
-  endTime: z.string().min(1, "กรุณาระบุเวลาสิ้นสุด"),
+  outageDate: z.string().min(1, "กรุณาเลือกวันที่ดับไฟ"),
+  startTime: z
+    .string()
+    .min(1, "กรุณาระบุเวลาเริ่มต้น เช่น 08:00"),
+  endTime: z
+    .string()
+    .min(1, "กรุณาระบุเวลาสิ้นสุด เช่น 12:00"),
   workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงาน"),
   branchId: z.string().min(1, "กรุณาเลือกสาขา"),
-  transformerNumber: z.string().min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
+  transformerNumber: z
+    .string()
+    .min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
   gisDetails: z.string(),
   area: z.string().nullable(),
 });
@@ -83,7 +101,7 @@ export const GetAnnoucementRequest = z
       return data.outageDate != "";
     },
     {
-      message: "โปรดระบุวันที่ดับไฟ",
+      message: "กรุณาระบุวันที่ดับไฟ",
       path: ["outageDate"],
     },
   )
@@ -92,7 +110,7 @@ export const GetAnnoucementRequest = z
       return data.branchId != "";
     },
     {
-      message: "โปรดเลือกการไฟฟ้า",
+      message: "กรุณาเลือกสาขาการไฟฟ้า",
       path: ["branchId"],
     },
   )
@@ -101,7 +119,7 @@ export const GetAnnoucementRequest = z
       return data.workCenterId != "";
     },
     {
-      message: "โปรดเลือกการไฟฟ้า",
+      message: "กรุณาเลือกจุดรวมงาน",
       path: ["workCenterId"],
     },
   );

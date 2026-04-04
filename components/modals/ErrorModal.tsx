@@ -1,7 +1,24 @@
 "use client";
+
 import React from "react";
-import { Modal, Button, Alert, Stack, Text, List, Code } from "@mantine/core";
-// ใช้ emoji แทน icons เพื่อไม่ต้องติดตั้ง package เพิ่ม
+import {
+  Alert,
+  Badge,
+  Box,
+  Button,
+  Code,
+  Group,
+  Modal,
+  Paper,
+  Stack,
+  Text,
+} from "@mantine/core";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+  InformationCircleIcon,
+  XCircleIcon,
+} from "@heroicons/react/24/outline";
 
 interface ValidationError {
   index: number;
@@ -19,6 +36,33 @@ interface ErrorModalProps {
   showDetails?: boolean;
 }
 
+const modalMap = {
+  error: {
+    tone: "red",
+    icon: XCircleIcon,
+    defaultTitle: "เกิดข้อผิดพลาด",
+    iconShell: "bg-red-50 text-red-600",
+  },
+  warning: {
+    tone: "yellow",
+    icon: ExclamationTriangleIcon,
+    defaultTitle: "คำเตือน",
+    iconShell: "bg-yellow-50 text-yellow-700",
+  },
+  success: {
+    tone: "green",
+    icon: CheckCircleIcon,
+    defaultTitle: "สำเร็จ",
+    iconShell: "bg-green-50 text-green-600",
+  },
+  info: {
+    tone: "blue",
+    icon: InformationCircleIcon,
+    defaultTitle: "ข้อมูล",
+    iconShell: "bg-blue-50 text-blue-600",
+  },
+} as const;
+
 export const ErrorModal: React.FC<ErrorModalProps> = ({
   opened,
   onClose,
@@ -28,167 +72,118 @@ export const ErrorModal: React.FC<ErrorModalProps> = ({
   validationErrors = [],
   showDetails = false,
 }) => {
-  const getModalConfig = () => {
-    switch (type) {
-      case "success":
-        return {
-          color: "green",
-          icon: "✅",
-          defaultTitle: "สำเร็จ",
-          alertColor: "green",
-        };
-      case "warning":
-        return {
-          color: "yellow",
-          icon: "⚠️",
-          defaultTitle: "คำเตือน",
-          alertColor: "yellow",
-        };
-      case "info":
-        return {
-          color: "blue",
-          icon: "ℹ️",
-          defaultTitle: "ข้อมูล",
-          alertColor: "blue",
-        };
-      default:
-        return {
-          color: "red",
-          icon: "❌",
-          defaultTitle: "เกิดข้อผิดพลาด",
-          alertColor: "red",
-        };
-    }
-  };
-
-  const config = getModalConfig();
+  const config = modalMap[type];
+  const Icon = config.icon;
+  const hasValidationErrors = validationErrors.length > 0;
 
   return (
     <Modal
       opened={opened}
       onClose={onClose}
       title={
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <span style={{ fontSize: "20px" }}>{config.icon}</span>
-          <Text fw={600} size="lg">
-            {title || config.defaultTitle}
-          </Text>
-        </div>
+        <Group gap="sm" wrap="nowrap">
+          <span
+            className={`inline-flex h-10 w-10 items-center justify-center rounded-full ${config.iconShell}`}
+          >
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </span>
+          <div>
+            <Text fw={700} size="lg" lh={1.1}>
+              {title || config.defaultTitle}
+            </Text>
+            <Text size="xs" c="dimmed" fw={500}>
+              {type === "success"
+                ? "ผลลัพธ์พร้อมใช้งาน"
+                : "ตรวจสอบรายละเอียดด้านล่าง"}
+            </Text>
+          </div>
+        </Group>
       }
-      size="md"
+      size="lg"
       centered
-      styles={{
-        title: {
-          color: config.color === "red" ? "#fa5252" : 
-                 config.color === "green" ? "#51cf66" :
-                 config.color === "yellow" ? "#ffd43b" : "#339af0"
-        }
-      }}
+      radius="lg"
+      shadow="xl"
+      overlayProps={{ blur: 4, opacity: 0.28 }}
+      transitionProps={{ transition: "pop", duration: 180 }}
+      closeOnClickOutside={type !== "error"}
     >
       <Stack gap="md">
-        {/* ข้อความหลัก */}
         {message && (
-          <Alert
-            color={config.alertColor}
-            icon={<span>{config.icon}</span>}
-            variant="light"
-          >
-            <Text size="sm">{message}</Text>
+          <Alert color={config.tone} variant="light" radius="md">
+            <Text size="sm" lh={1.6}>
+              {message}
+            </Text>
           </Alert>
         )}
 
-        {/* รายการ validation errors */}
-        {validationErrors.length > 0 && (
-          <div>
-            <Text fw={500} size="sm" mb="xs" c="red">
-              📋 รายละเอียดข้อผิดพลาด ({validationErrors.length} รายการ):
-            </Text>
-            <div style={{ 
-              maxHeight: "300px", 
-              overflowY: "auto", 
-              border: "1px solid #e9ecef",
-              borderRadius: "4px",
-              padding: "8px"
-            }}>
-              <List spacing="sm" size="sm">
-                {validationErrors.map((validationError, index) => (
-                  <List.Item key={index} style={{ 
-                    padding: "8px",
-                    backgroundColor: "#fff5f5",
-                    borderRadius: "4px",
-                    border: "1px solid #fed7d7"
-                  }}>
-                    <div>
-                      <Text span fw={600} c="red">
-                        🔴 รายการที่ {validationError.index}:
-                      </Text>
-                      <Text span size="sm" ml="xs">
-                        {validationError.error}
-                      </Text>
-                    </div>
-                    
-                    {/* แสดงข้อมูลที่ผิดพลาด */}
-                    {validationError.data && (
-                      <div style={{ marginTop: "4px" }}>
-                        <Text size="xs" c="gray.6" fw={500}>
-                          💡 วิธีแก้ไข:
+        {hasValidationErrors && (
+          <Paper
+            withBorder
+            radius="md"
+            className="border-slate-200 bg-slate-50/80 p-4"
+          >
+            <Stack gap="sm">
+              <Group justify="space-between" align="center">
+                <Text fw={600} size="sm" c="red">
+                  รายละเอียดข้อผิดพลาด
+                </Text>
+                <Badge color="red" variant="light" radius="sm">
+                  {validationErrors.length} รายการ
+                </Badge>
+              </Group>
+
+              <Stack gap="sm" className="max-h-72 overflow-auto pr-1">
+                {validationErrors.map((validationError) => (
+                  <Paper
+                    key={`${validationError.index}-${validationError.error}`}
+                    withBorder
+                    radius="md"
+                    className="border-red-200 bg-white p-3"
+                  >
+                    <Stack gap={6}>
+                      <Group gap="xs" wrap="nowrap">
+                        <Badge color="red" variant="light" radius="sm">
+                          แถว {validationError.index}
+                        </Badge>
+                        <Text fw={600} size="sm" c="red">
+                          {validationError.error}
                         </Text>
-                        {validationError.error.includes("ไม่พบหม้อแปลง") ? (
-                          <Text size="xs" c="blue">
-                            • ตรวจสอบหมายเลขหม้อแปลงให้ถูกต้อง<br/>
-                            • ใช้ฟีเจอร์ค้นหาในระบบเพื่อหาหมายเลขที่ถูกต้อง<br/>
-                            • ติดต่อผู้ดูแลระบบหากแน่ใจว่าหมายเลขถูกต้อง
+                      </Group>
+
+                      {validationError.data && (
+                        <Box>
+                          <Text size="xs" fw={600} c="dimmed" mb={4}>
+                            ข้อมูลที่เกี่ยวข้อง
                           </Text>
-                        ) : validationError.error.includes("วันที่") ? (
-                          <Text size="xs" c="blue">
-                            • ตั้งวันที่ให้มากกว่าวันปัจจุบันอย่างน้อย 10 วัน<br/>
-                            • ใช้รูปแบบ DD/MM/YYYY เช่น 25/07/2025
-                          </Text>
-                        ) : validationError.error.includes("เวลา") ? (
-                          <Text size="xs" c="blue">
-                            • ใช้เวลาในช่วง 06:00 - 20:00 น.<br/>
-                            • เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที<br/>
-                            • ใช้รูปแบบ HH:MM เช่น 08:00
-                          </Text>
-                        ) : (
-                          <Text size="xs" c="blue">
-                            • ตรวจสอบข้อมูลในแถวนี้และแก้ไขให้ถูกต้อง
-                          </Text>
-                        )}
-                      </div>
-                    )}
-                    
-                    {showDetails && validationError.data && (
-                      <Code block mt="xs" style={{ fontSize: "11px" }}>
-                        {JSON.stringify(validationError.data, null, 2)}
-                      </Code>
-                    )}
-                  </List.Item>
+                          {showDetails ? (
+                            <Code block fz={11}>
+                              {JSON.stringify(validationError.data, null, 2)}
+                            </Code>
+                          ) : (
+                            <Text size="xs" c="dimmed" lh={1.5}>
+                              เปิด `showDetails` เพื่อดู payload แบบเต็ม
+                            </Text>
+                          )}
+                        </Box>
+                      )}
+                    </Stack>
+                  </Paper>
                 ))}
-              </List>
-            </div>
-            
-            <Alert color="blue" icon={<span>💡</span>} mt="md" variant="light">
-              <Text size="sm" fw={500}>คำแนะนำ:</Text>
-              <Text size="xs">
-                • แก้ไขข้อมูลใน CSV ตามคำแนะนำข้างต้น<br/>
-                • บันทึกไฟล์และลองนำเข้าใหม่อีกครั้ง<br/>
-                • หากยังมีปัญหา กรุณาติดต่อผู้ดูแลระบบ
-              </Text>
-            </Alert>
-          </div>
+              </Stack>
+            </Stack>
+          </Paper>
         )}
 
-        {/* ปุ่มปิด */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+        <Group justify="flex-end">
           <Button
-            variant="outline"
-            color={config.color}
+            variant="filled"
+            color={config.tone}
             onClick={onClose}
+            radius="md"
           >
             {type === "success" ? "ตกลง" : "ปิด"}
           </Button>
-        </div>
+        </Group>
       </Stack>
     </Modal>
   );

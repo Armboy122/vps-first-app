@@ -1,5 +1,5 @@
 import prisma from "@/lib/prisma";
-import { User, Role, WorkCenter, Branch } from "@prisma/client";
+import { User, Role, WorkCenter, Branch, Prisma } from "@prisma/client";
 
 // Types
 export interface UserWithRelations extends User {
@@ -104,7 +104,7 @@ export class UserService {
     employeeId: string,
     excludeId?: number,
   ): Promise<boolean> {
-    const where: any = { employeeId };
+    const where: Prisma.UserWhereInput = { employeeId };
     if (excludeId) {
       where.id = { not: excludeId };
     }

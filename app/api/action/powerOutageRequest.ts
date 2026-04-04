@@ -13,10 +13,22 @@ import { clearOMSCache } from "@/lib/cache-utils";
 import { z } from "zod";
 import {
   PowerOutageRequestService,
-  TransformerService,
   UserService,
 } from "@/lib/services";
 import prisma from "@/lib/prisma";
+
+// ─────────────────────────────────────────────
+// Shared result type for consistent server action returns
+// ─────────────────────────────────────────────
+type ActionResult<T> =
+  | { success: true; data: T }
+  | { success: false; error: string; details?: unknown };
+
+interface ValidationError {
+  index: number;
+  error: string;
+  data: PowerOutageRequestInput;
+}
 
 // ฟังก์ชันสำหรับ getCurrentUser
 async function getCurrentUser() {
@@ -74,19 +86,21 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
 
     return { success: true, data: result };
   } catch (error) {
-    console.error("Failed to create power outage request:", error);
-
     if (error instanceof z.ZodError) {
+      // Expected validation failure — no console.error needed
       const errorMessages = error.errors.map((err) => err.message).join(", ");
       return { success: false, error: `ข้อมูลไม่ถูกต้อง: ${errorMessages}` };
     }
 
     if (error && typeof error === "object" && "code" in error) {
-      if (error.code === "P2002") {
+      if ((error as { code: string }).code === "P2002") {
+        // Expected constraint violation — no console.error needed
         return { success: false, error: "ข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ" };
       }
     }
 
+    // Truly unexpected error
+    console.error("Failed to create power outage request:", error);
     return { success: false, error: "เกิดข้อผิดพลาดในการสร้างคำขอดับไฟ" };
   }
 }
@@ -105,6 +119,7 @@ export async function searchTransformers(searchTerm: string) {
     });
     return results;
   } catch (error) {
+    // Unexpected DB error — log and rethrow
     console.error("Error searching transformers:", error);
     throw error;
   }
@@ -287,12 +302,17 @@ export async function createMultiplePowerOutageRequests(
   const currentUser = await getCurrentUser();
 
   try {
-    console.log(
-      "Creating multiple power outage requests:",
-      dataList.length,
-      "items",
-    );
-    console.log("Transformer numbers being processed:", dataList.map(d => d.transformerNumber));
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        "Creating multiple power outage requests:",
+        dataList.length,
+        "items",
+      );
+      console.log(
+        "Transformer numbers being processed:",
+        dataList.map((d) => d.transformerNumber),
+      );
+    }
 
     // Validate ข้อมูลทั้งหมดก่อน
     const validatedDataList: Array<{
@@ -306,11 +326,7 @@ export async function createMultiplePowerOutageRequests(
       area: string | null;
       createdById: number;
     }> = [];
-    const validationErrors: Array<{
-      index: number;
-      error: string;
-      data: any;
-    }> = [];
+    const validationErrors: ValidationError[] = [];
 
     for (let i = 0; i < dataList.length; i++) {
       try {
@@ -354,7 +370,11 @@ export async function createMultiplePowerOutageRequests(
           continue;
         }
         
-        console.log(`Transformer ${validatedData.transformerNumber} exists in database`);
+        if (process.env.NODE_ENV !== "production") {
+          console.log(
+            `Transformer ${validatedData.transformerNumber} exists in database`,
+          );
+        }
 
         validatedDataList.push({
           outageDate,
@@ -402,11 +422,13 @@ export async function createMultiplePowerOutageRequests(
     const results =
       await PowerOutageRequestService.createMultipleRequests(validatedDataList);
 
-    console.log(
-      "Successfully created",
-      results.length,
-      "power outage requests",
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        "Successfully created",
+        results.length,
+        "power outage requests",
+      );
+    }
 
     // ล้างแคช OMS หลังจากสร้างคำขอดับไฟ
     clearOMSCache();
@@ -419,11 +441,9 @@ export async function createMultiplePowerOutageRequests(
       message: `บันทึกคำขอดับไฟสำเร็จทั้งหมด ${results.length} รายการ`,
     };
   } catch (error) {
-    console.error("Failed to create multiple power outage requests:", error);
-
-    // ตรวจสอบว่าเป็น Prisma error หรือไม่
     if (error && typeof error === "object" && "code" in error) {
-      if (error.code === "P2002") {
+      if ((error as { code: string }).code === "P2002") {
+        // Expected constraint violation — no console.error needed
         return {
           success: false,
           error: "พบข้อมูลซ้ำกับที่มีอยู่แล้วในระบบ",
@@ -433,6 +453,8 @@ export async function createMultiplePowerOutageRequests(
       }
     }
 
+    // Truly unexpected error
+    console.error("Failed to create multiple power outage requests:", error);
     return {
       success: false,
       error: "เกิดข้อผิดพลาดในการสร้างคำขอดับไฟ",

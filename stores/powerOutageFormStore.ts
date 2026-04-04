@@ -1,3 +1,21 @@
+/**
+ * powerOutageFormStore — Zustand global store สำหรับ PowerOutage create flow
+ *
+ * ความรับผิดชอบที่ชัดเจน:
+ *
+ * RHF (React Hook Form) เป็นเจ้าของ:
+ *   - ค่าของ field ปัจจุบันในฟอร์ม (outageDate, startTime, endTime, transformerNumber ฯลฯ)
+ *   - validation state ระดับ field (errors จาก zodResolver)
+ *   - dirty/touched/isSubmitting state ของฟอร์ม
+ *
+ * Zustand store นี้เป็นเจ้าของ:
+ *   - รายการคำขอที่ stage ไว้รอ submit เป็น batch (requests[])
+ *   - สถานะ error modal (errorModal)
+ *   - สถานะ submission โดยรวม (submitStatus — loading, success, error message)
+ *   - timeError ที่เกิดจาก cross-field validation (ไม่ใช่ RHF field error)
+ *   - branches/transformers ที่ fetch มาจาก API (cached ใน store เพื่อ share ระหว่าง component)
+ */
+
 import { create } from "zustand";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 
@@ -34,15 +52,21 @@ interface ErrorModalState {
 }
 
 interface PowerOutageFormState {
-  // ข้อมูลพื้นฐาน
+  // --- Zustand-owned: staged request list ---
+  requests: PowerOutageRequestInput[];
+
+  // --- Zustand-owned: submission status (loading / success / error message) ---
+  submitStatus: SubmitStatus | null;
+
+  // --- Zustand-owned: cross-field time error (not a RHF field error) ---
+  timeError: string | null;
+
+  // --- Zustand-owned: error modal UI state ---
+  errorModal: ErrorModalState;
+
+  // --- Zustand-owned: fetched lookup data (shared across components) ---
   branches: Branch[];
   transformers: Transformer[];
-  requests: PowerOutageRequestInput[];
-  submitStatus: SubmitStatus | null;
-  timeError: string | null;
-  
-  // Modal state
-  errorModal: ErrorModalState;
 
   // Actions สำหรับจัดการ state
   setBranches: (branches: Branch[]) => void;

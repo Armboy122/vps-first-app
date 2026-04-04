@@ -33,7 +33,7 @@ interface TableRowProps {
   isSupervisor: boolean;
   userWorkCenterId?: number;
   selectedRequests: number[];
-  setSelectedRequests: React.Dispatch<React.SetStateAction<number[]>>;
+  onToggleSelect: (id: number) => void;
   handleEdit: (request: PowerOutageRequest) => void;
   handleDelete: (id: number) => void;
   handleEditOmsStatus: (id: number, status: OMSStatus) => void;
@@ -192,23 +192,12 @@ export const TableRow = memo(
     isSupervisor,
     userWorkCenterId,
     selectedRequests,
-    setSelectedRequests,
+    onToggleSelect,
     handleEdit,
     handleDelete,
     handleEditOmsStatus,
     handleEditStatusRequest,
   }: TableRowProps) => {
-    const handleSelectRequest = useCallback(
-      (id: number) => {
-        setSelectedRequests((prev) =>
-          prev.includes(id)
-            ? prev.filter((reqId) => reqId !== id)
-            : [...prev, id],
-        );
-      },
-      [setSelectedRequests],
-    );
-
     const getRowBackgroundColor = useCallback(
       (outageDate: Date, omsStatus: string, statusRequest: string) => {
         const today = getThailandDateAtMidnight();
@@ -297,7 +286,7 @@ export const TableRow = memo(
             <input
               type="checkbox"
               checked={selectedRequests.includes(request.id)}
-              onChange={() => handleSelectRequest(request.id)}
+              onChange={() => onToggleSelect(request.id)}
               disabled={
                 !(
                   isAdmin ||

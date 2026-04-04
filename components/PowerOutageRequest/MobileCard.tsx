@@ -45,7 +45,7 @@ interface MobileCardProps {
   isSupervisor: boolean;
   userWorkCenterId?: number;
   selectedRequests: number[];
-  setSelectedRequests: React.Dispatch<React.SetStateAction<number[]>>;
+  onToggleSelect: (id: number) => void;
   handleEdit: (request: PowerOutageRequest) => void;
   handleDelete: (id: number) => void;
   handleEditOmsStatus: (id: number, status: OMSStatus) => void;
@@ -60,19 +60,13 @@ export const MobileCard: React.FC<MobileCardProps> = ({
   isSupervisor,
   userWorkCenterId,
   selectedRequests,
-  setSelectedRequests,
+  onToggleSelect,
   handleEdit,
   handleDelete,
   handleEditOmsStatus,
   handleEditStatusRequest,
 }) => {
   const [expanded, setExpanded] = useState(false);
-
-  const handleSelectRequest = (id: number) => {
-    setSelectedRequests((prev) =>
-      prev.includes(id) ? prev.filter((reqId) => reqId !== id) : [...prev, id],
-    );
-  };
 
   const getCardBackgroundColor = (
     outageDate: Date,
@@ -191,7 +185,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
               <input
                 type="checkbox"
                 checked={selectedRequests.includes(request.id)}
-                onChange={() => handleSelectRequest(request.id)}
+                onChange={() => onToggleSelect(request.id)}
                 disabled={
                   !(
                     isAdmin ||

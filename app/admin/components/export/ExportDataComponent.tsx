@@ -4,6 +4,7 @@ import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import { getPowerOutageRequests } from "@/app/api/action/powerOutageRequest";
 import { WorkCenter, ExportOptions } from "../../types/admin.types";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
+import { FeedbackBanner } from "../shared/FeedbackBanner";
 import { generateCSVContent } from "../../utils/csvParser";
 
 export function ExportDataComponent() {
@@ -14,6 +15,10 @@ export function ExportDataComponent() {
     format: "csv",
   });
   const [isExporting, setIsExporting] = useState(false);
+  /** ข้อความแจ้งเตือนสำเร็จหลัง export */
+  const [exportSuccess, setExportSuccess] = useState<string | null>(null);
+  /** ข้อความแจ้งเตือนข้อผิดพลาดหลัง export */
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Fetch work centers for filter
   const { data: workCenters = [] } = useQuery({
@@ -44,6 +49,8 @@ export function ExportDataComponent() {
   // Export data
   const handleExport = async () => {
     setIsExporting(true);
+    setExportSuccess(null);
+    setExportError(null);
 
     try {
       // Prepare filter parameters
@@ -65,7 +72,7 @@ export function ExportDataComponent() {
       const response = await getPowerOutageRequests(1, 10000, filters);
 
       if (!response.data || response.data.length === 0) {
-        alert("ไม่พบข้อมูลที่ตรงกับเงื่อนไขที่เลือก");
+        setExportError("ไม่พบข้อมูลที่ตรงกับเงื่อนไขที่เลือก");
         return;
       }
 
@@ -83,8 +90,6 @@ export function ExportDataComponent() {
         สถานะคำขอOMS: request.omsStatus === "NOT_ADDED" ? "ยังไม่ส่งเข้าระบบ" : request.omsStatus === "PROCESSED" ? "ดำเนินการแล้ว" : "ยกเลิก",
         วันที่ส่งคำขอ: new Date(request.createdAt).toLocaleDateString("th-TH"),
       }));
-
-      console.log("exportData", exportData);
 
       // Generate CSV content
       const headers = [
@@ -129,10 +134,14 @@ export function ExportDataComponent() {
       link.click();
       document.body.removeChild(link);
 
-      alert(`ส่งออกข้อมูลสำเร็จ! (${exportData.length} รายการ)`);
+      setExportSuccess(`ส่งออกข้อมูลสำเร็จ! (${exportData.length} รายการ)`);
     } catch (error) {
       console.error("Export error:", error);
-      alert("เกิดข้อผิดพลาดในการส่งออกข้อมูล");
+      setExportError(
+        error instanceof Error
+          ? error.message
+          : "เกิดข้อผิดพลาดในการส่งออกข้อมูล",
+      );
     } finally {
       setIsExporting(false);
     }
@@ -238,8 +247,26 @@ export function ExportDataComponent() {
           </div>
         </div>
 
+        {/* Export Status Feedback */}
+        {exportSuccess && (
+          <FeedbackBanner
+            className="mt-4"
+            variant="success"
+            title="ส่งออกข้อมูลสำเร็จ"
+            message={exportSuccess}
+          />
+        )}
+        {exportError && (
+          <FeedbackBanner
+            className="mt-4"
+            variant="error"
+            title="ส่งออกข้อมูลไม่สำเร็จ"
+            message={exportError}
+          />
+        )}
+
         {/* Export Button */}
-        <div className="mt-6 flex justify-end">
+        <div className="mt-4 flex justify-end">
           <button
             onClick={handleExport}
             disabled={isExporting}
@@ -251,7 +278,7 @@ export function ExportDataComponent() {
                 กำลังส่งออก...
               </div>
             ) : (
-              "📤 ส่งออกข้อมูล"
+              "ส่งออกข้อมูล"
             )}
           </button>
         </div>

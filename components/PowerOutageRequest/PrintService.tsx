@@ -1,5 +1,7 @@
 "use client";
 
+import { ActionFeedbackState } from "./ActionFeedback";
+
 // เพิ่ม type สำหรับ html2pdf
 declare global {
   interface Window {
@@ -465,10 +467,13 @@ const showPdfPreview = (htmlContent: string, filename: string) => {
 export const printSelectedRequests = async (
   selectedRequests: number[],
   requests: PowerOutageRequest[],
-) => {
+) : Promise<ActionFeedbackState> => {
   if (selectedRequests.length === 0) {
-    alert("กรุณาเลือกรายการที่ต้องการพิมพ์");
-    return;
+    return {
+      variant: "warning",
+      title: "ยังไม่ได้เลือกรายการสำหรับพิมพ์",
+      message: "เลือกรายการอย่างน้อย 1 รายการก่อนสร้างเอกสารสรุป",
+    };
   }
 
   try {
@@ -527,8 +532,19 @@ export const printSelectedRequests = async (
 
     // แสดง preview modal
     showPdfPreview(htmlContent, filename);
+    return {
+      variant: "success",
+      title: "เปิดตัวอย่าง PDF แล้ว",
+      message:
+        "ตรวจสอบข้อมูลในหน้าต่างตัวอย่าง จากนั้นกดพิมพ์เอกสารได้ทันที",
+    };
   } catch (error) {
     console.error("Error generating PDF preview:", error);
-    alert("เกิดข้อผิดพลาดในการสร้างตัวอย่าง PDF กรุณาลองใหม่อีกครั้ง");
+    return {
+      variant: "error",
+      title: "สร้างตัวอย่าง PDF ไม่สำเร็จ",
+      message:
+        "ระบบไม่สามารถสร้างตัวอย่างเอกสารได้ กรุณาลองใหม่อีกครั้ง",
+    };
   }
 };

@@ -1,10 +1,4 @@
-import {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  useDeferredValue,
-} from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   getPowerOutageRequests,
   updateOMS,
@@ -13,6 +7,7 @@ import {
 } from "@/app/api/action/powerOutageRequest";
 import { OMSStatus, Request } from "@prisma/client";
 import { PowerOutageRequestService } from "@/lib/services";
+import { useRequestFilters } from "./useRequestFilters";
 
 // Types
 interface PowerOutageRequest {
@@ -36,18 +31,6 @@ interface PowerOutageRequest {
   branch: { shortName: string };
 }
 
-interface FilterOptions {
-  statusFilter: string[];
-  omsStatusFilter: string[];
-  workCenterFilter: string;
-  branchFilter: string;
-  startDate: string;
-  endDate: string;
-  outageStartDate: string;
-  outageEndDate: string;
-  showPastOutageDates: boolean;
-}
-
 interface PaginationOptions {
   currentPage: number;
   itemsPerPage: number;
@@ -58,31 +41,23 @@ export const usePowerOutageRequests = (
   isAdmin?: boolean,
   isViewer?: boolean,
 ) => {
-  // State
-  const [requests, setRequests] = useState<PowerOutageRequest[]>([]);
+  // Raw data state
+  const [rawRequests, setRawRequests] = useState<PowerOutageRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Filters
-  const [filters, setFilters] = useState<FilterOptions>({
-    statusFilter: ["CONFIRM"],
-    omsStatusFilter: ["NOT_ADDED"],
-    workCenterFilter: "",
-    branchFilter: "",
-    startDate: "",
-    endDate: "",
-    outageStartDate: "",
-    outageEndDate: "",
-    showPastOutageDates: false,
-  });
-
-  // Deferred search for better performance
-  const deferredSearchTerm = useDeferredValue(searchTerm);
+  // Use filter sub-hook
+  const {
+    searchTerm,
+    setSearchTerm,
+    filters,
+    updateFilter: updateFilterBase,
+    filteredRequests,
+  } = useRequestFilters(rawRequests);
 
   // Load requests
   const loadRequests = useCallback(async () => {
@@ -112,7 +87,7 @@ export const usePowerOutageRequests = (
           : null,
       }));
 
-      setRequests(formattedResult);
+      setRawRequests(formattedResult);
     } catch (err) {
       console.error("Error loading requests:", err);
       setError("เกิดข้อผิดพลาดในการโหลดข้อมูล");
@@ -120,123 +95,6 @@ export const usePowerOutageRequests = (
       setLoading(false);
     }
   }, [userWorkCenterId, isAdmin, isViewer]);
-
-  // Filter functions
-  const createDateFilter = useCallback((startDate: string, endDate: string) => {
-    return (request: PowerOutageRequest) => {
-      if (!startDate && !endDate) return true;
-
-      const requestDate = new Date(request.createdAt);
-      const start = startDate ? new Date(startDate + "T00:00:00") : null;
-      const end = endDate ? new Date(endDate + "T23:59:59") : null;
-
-      if (start && requestDate < start) return false;
-      if (end && requestDate > end) return false;
-      return true;
-    };
-  }, []);
-
-  const createOutageDateFilter = useCallback(
-    (startDate: string, endDate: string, showPast: boolean) => {
-      return (request: PowerOutageRequest) => {
-        const outageDate = new Date(request.outageDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // Filter by show past dates
-        if (!showPast && outageDate < today) return false;
-
-        // Filter by date range
-        if (!startDate && !endDate) return true;
-
-        const start = startDate ? new Date(startDate + "T00:00:00") : null;
-        const end = endDate ? new Date(endDate + "T23:59:59") : null;
-
-        if (start && outageDate < start) return false;
-        if (end && outageDate > end) return false;
-        return true;
-      };
-    },
-    [],
-  );
-
-  const createStatusFilter = useCallback((statusFilters: string[]) => {
-    return (request: PowerOutageRequest) => {
-      if (statusFilters.length === 0) return true;
-      return statusFilters.includes(request.statusRequest);
-    };
-  }, []);
-
-  const createOMSStatusFilter = useCallback((omsStatusFilters: string[]) => {
-    return (request: PowerOutageRequest) => {
-      if (omsStatusFilters.length === 0) return true;
-      return omsStatusFilters.includes(request.omsStatus);
-    };
-  }, []);
-
-  const createWorkCenterFilter = useCallback((workCenterFilter: string) => {
-    return (request: PowerOutageRequest) => {
-      if (!workCenterFilter) return true;
-      return request.workCenterId.toString() === workCenterFilter;
-    };
-  }, []);
-
-  const createBranchFilter = useCallback((branchFilter: string) => {
-    return (request: PowerOutageRequest) => {
-      if (!branchFilter) return true;
-      return request.branchId.toString() === branchFilter;
-    };
-  }, []);
-
-  // Apply filters
-  const filteredByFilters = useMemo(() => {
-    const dateFilter = createDateFilter(filters.startDate, filters.endDate);
-    const outageFilter = createOutageDateFilter(
-      filters.outageStartDate,
-      filters.outageEndDate,
-      filters.showPastOutageDates,
-    );
-    const statusFilter = createStatusFilter(filters.statusFilter);
-    const omsFilter = createOMSStatusFilter(filters.omsStatusFilter);
-    const workCenterFilter = createWorkCenterFilter(filters.workCenterFilter);
-    const branchFilter = createBranchFilter(filters.branchFilter);
-
-    return requests.filter(
-      (request) =>
-        dateFilter(request) &&
-        outageFilter(request) &&
-        statusFilter(request) &&
-        omsFilter(request) &&
-        workCenterFilter(request) &&
-        branchFilter(request),
-    );
-  }, [
-    requests,
-    filters,
-    createDateFilter,
-    createOutageDateFilter,
-    createStatusFilter,
-    createOMSStatusFilter,
-    createWorkCenterFilter,
-    createBranchFilter,
-  ]);
-
-  // Apply search filter
-  const filteredRequests = useMemo(() => {
-    if (!deferredSearchTerm.trim()) {
-      return filteredByFilters;
-    }
-
-    const lowercaseSearch = deferredSearchTerm.toLowerCase();
-    return filteredByFilters.filter((request) => {
-      if (request.transformerNumber.toLowerCase().includes(lowercaseSearch))
-        return true;
-      if (request.area?.toLowerCase().includes(lowercaseSearch)) return true;
-      if (request.createdBy.fullName.toLowerCase().includes(lowercaseSearch))
-        return true;
-      return false;
-    });
-  }, [filteredByFilters, deferredSearchTerm]);
 
   // Pagination
   const currentItems = useMemo(() => {
@@ -327,10 +185,14 @@ export const usePowerOutageRequests = (
     [filteredRequests.length, itemsPerPage, currentPage],
   );
 
-  const updateFilter = useCallback((key: keyof FilterOptions, value: any) => {
-    setFilters((prev) => ({ ...prev, [key]: value }));
-    setCurrentPage(1); // Reset to first page when filters change
-  }, []);
+  // Wrap updateFilter to reset pagination on filter change
+  const updateFilter = useCallback(
+    (key: Parameters<typeof updateFilterBase>[0], value: any) => {
+      updateFilterBase(key, value);
+      setCurrentPage(1); // Reset to first page when filters change
+    },
+    [updateFilterBase],
+  );
 
   const updatePagination = useCallback(
     (options: Partial<PaginationOptions>) => {

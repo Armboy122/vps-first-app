@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -24,7 +24,6 @@ import { ErrorModal } from "@/components/modals/ErrorModal";
 import { usePowerOutageFormLogic } from "../hooks";
 import { usePowerOutageFormStore } from "@/stores/powerOutageFormStore";
 import { useWorkCenters } from "@/hooks/queries/useWorkCenters";
-import { useBranches } from "@/hooks/queries/useBranches";
 import { useTransformers } from "@/hooks/queries/useTransformers";
 import { useLogger } from "@/hooks/useLogger";
 import { logUserAction, logFormInteraction } from "@/lib/utils/logger";
@@ -74,6 +73,7 @@ export default function PowerOutageCreatePage({
     timeError,
     errorModal,
     setTimeError,
+    setTransformers,
     addRequest,
     removeRequest,
     clearAllRequests,
@@ -109,11 +109,11 @@ export default function PowerOutageCreatePage({
 
   // =============================================
   // Watch Values
+  // Only values needed at this level are watched here.
+  // ImprovedFormFields watches its own values via useWatch internally.
   // =============================================
-  const watchWorkCenterId = watch("workCenterId");
-  const watchedOutageDate = watch("outageDate");
-  const watchedStartTime = watch("startTime");
-  const watchedEndTime = watch("endTime");
+  const watchWorkCenterId = watch("workCenterId"); // needed for branchId reset below
+  const watchedOutageDate = watch("outageDate");   // needed for isDateValid gate
 
   // =============================================
   // Reset branchId when workCenterId changes
@@ -128,10 +128,13 @@ export default function PowerOutageCreatePage({
   // Data Fetching (React Query)
   // =============================================
   const { data: workCenters = initialWorkCenters || [] } = useWorkCenters();
-  const { data: branches = [], isLoading: branchesLoading } = useBranches(
-    watchWorkCenterId ? Number(watchWorkCenterId) : null,
-  );
-  const { data: transformers = [] } = useTransformers(transformerSearchTerm);
+
+  // Fetch transformers and sync into Zustand store so ImprovedFormFields can read them
+  // without needing them passed as props.
+  const { data: fetchedTransformers = [] } = useTransformers(transformerSearchTerm);
+  useEffect(() => {
+    setTransformers(fetchedTransformers);
+  }, [fetchedTransformers, setTransformers]);
 
   // =============================================
   // Calculated Values
@@ -205,22 +208,17 @@ export default function PowerOutageCreatePage({
         {/* ฟอร์มหลัก */}
         <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
           {/* ฟิลด์ต่างๆ ในฟอร์ม - Mantine Version */}
+          {/*
+           * ImprovedFormFields now fetches its own branches, transformers,
+           * timeError and computed date values internally — reducing prop drilling.
+           * Only RHF primitives and truly parent-owned data are passed here.
+           */}
           <ImprovedFormFields
             register={register}
             control={control}
             errors={errors}
             role={role}
             workCenters={workCenters}
-            branches={branches}
-            transformers={transformers}
-            watchWorkCenterId={watchWorkCenterId}
-            minSelectableDate={minSelectableDate}
-            watchedOutageDate={watchedOutageDate}
-            daysFromToday={daysFromToday}
-            timeError={timeError}
-            branchesLoading={branchesLoading}
-            watchedStartTime={watchedStartTime}
-            watchedEndTime={watchedEndTime}
             onDateChange={handleDateChange}
             onTransformerSearch={handleTransformerSearch}
             onTransformerSelect={onTransformerSelect}

@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import { updatePowerOutageRequest } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequesr";
+import { ConfirmDialog, LoadingSpinner } from "@/components/ui";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
@@ -13,18 +14,22 @@ import {
   logError,
 } from "@/lib/utils/logger";
 
-// Import custom hook
+// Import custom hooks
 import { usePowerOutageRequests } from "@/hooks/usePowerOutageRequests";
+import { useRequestSelection } from "@/hooks/useRequestSelection";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 // Import components from PowerOutageRequest folder
 import { TableHeader } from "./PowerOutageRequest/TableHeader";
 import { TableRow } from "./PowerOutageRequest/TableRow";
 import { MobileCard } from "./PowerOutageRequest/MobileCard";
+import { ActionFeedbackState } from "./PowerOutageRequest/ActionFeedback";
 import { FilterSection } from "./PowerOutageRequest/FilterSection";
 import { SearchSection } from "./PowerOutageRequest/SearchSection";
 import { BulkActions } from "./PowerOutageRequest/BulkActions";
 import { OMSStatusSummary } from "./PowerOutageRequest/OMSStatusSummary";
 import { PaginationControls } from "./PowerOutageRequest/PaginationControls";
+import { printSelectedRequests } from "./PowerOutageRequest/PrintService";
 
 // Types
 interface PowerOutageRequest {
@@ -53,6 +58,72 @@ interface WorkCenter {
   name: string;
 }
 
+type ConfirmAction =
+  | {
+      type: "delete";
+      requestId: number;
+      transformerNumber?: string;
+      title: string;
+      message: string;
+      confirmLabel: string;
+      isDestructive: boolean;
+    }
+  | {
+      type: "bulk-status";
+      requestIds: number[];
+      newStatus: Request;
+      title: string;
+      message: string;
+      confirmLabel: string;
+      isDestructive: boolean;
+    };
+
+const REQUEST_STATUS_LABELS: Record<Request, string> = {
+  NOT: "รออนุมัติ",
+  CONFIRM: "อนุมัติดับไฟ",
+  CANCELLED: "ยกเลิก",
+};
+
+// Empty state components
+const EmptyState = ({ message }: { message: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+    <svg
+      className="w-16 h-16 mb-4 text-gray-300"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+      />
+    </svg>
+    <p className="text-lg font-medium">{message}</p>
+  </div>
+);
+
+const NoSearchResults = ({ searchTerm }: { searchTerm: string }) => (
+  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
+    <svg
+      className="w-16 h-16 mb-4 text-gray-300"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1.5}
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+    <p className="text-lg font-medium">ไม่พบผลลัพธ์สำหรับ &ldquo;{searchTerm}&rdquo;</p>
+    <p className="text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือล้างตัวกรองออก</p>
+  </div>
+);
+
 export default function PowerOutageRequestList() {
   // Authentication & Logging
   const {
@@ -67,7 +138,7 @@ export default function PowerOutageRequestList() {
 
   useLogger(); // Auto-setup logging for this component
 
-  // Use custom hook for data management
+  // Data & filter hook
   const {
     requests,
     allRequests,
@@ -87,30 +158,29 @@ export default function PowerOutageRequestList() {
     handleDelete,
     loadRequests,
     displayRange,
-    getRowBackgroundColor,
   } = usePowerOutageRequests(userWorkCenterId, isAdmin, isViewer);
 
-  // Local state for UI only
+  // Selection hook
+  const {
+    selectedRequests,
+    selectAll,
+    handleSelectAll,
+    handleSelectRequest,
+    clearSelection,
+  } = useRequestSelection(requests);
+
+  // Mobile detection hook
+  const isMobile = useIsMobile();
+
+  // Local state
   const [editingRequest, setEditingRequest] =
     useState<PowerOutageRequest | null>(null);
-  const [selectedRequests, setSelectedRequests] = useState<number[]>([]);
-  const [selectAll, setSelectAll] = useState(false);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [isMobile, setIsMobile] = useState(false);
-
-  // Check if the screen is mobile
-  useEffect(() => {
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkIfMobile();
-    window.addEventListener("resize", checkIfMobile);
-
-    return () => {
-      window.removeEventListener("resize", checkIfMobile);
-    };
-  }, []);
+  const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
+    null,
+  );
+  const [actionFeedback, setActionFeedback] =
+    useState<ActionFeedbackState | null>(null);
 
   // Fetch work centers on mount
   const fetchWorkCenters = useCallback(async () => {
@@ -127,6 +197,18 @@ export default function PowerOutageRequestList() {
       fetchWorkCenters();
     }
   }, [authLoading, fetchWorkCenters]);
+
+  useEffect(() => {
+    if (!actionFeedback || actionFeedback.variant === "error") {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setActionFeedback(null);
+    }, 5000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [actionFeedback]);
 
   // UI handlers
   const handleEdit = (request: PowerOutageRequest) => {
@@ -188,8 +270,30 @@ export default function PowerOutageRequestList() {
     setEditingRequest(null);
   };
 
-  // Delete handler using hook method
-  const handleDeleteConfirm = async (id: number) => {
+  const closeConfirmDialog = useCallback(() => {
+    if (!confirmAction) {
+      return;
+    }
+
+    if (confirmAction.type === "delete") {
+      logUserAction("power_outage_request_delete_cancelled", {
+        requestId: confirmAction.requestId,
+      });
+    }
+
+    if (confirmAction.type === "bulk-status") {
+      logUserAction("bulk_status_change_cancelled", {
+        newStatus: confirmAction.newStatus,
+        selectedCount: confirmAction.requestIds.length,
+        requestIds: confirmAction.requestIds,
+      });
+    }
+
+    setConfirmAction(null);
+  }, [confirmAction]);
+
+  // Delete handler
+  const handleDeleteConfirm = (id: number) => {
     const request = requests.find((r) => r.id === id);
 
     logUserAction("power_outage_request_delete_confirm_shown", {
@@ -197,107 +301,119 @@ export default function PowerOutageRequestList() {
       transformerNumber: request?.transformerNumber,
     });
 
-    if (window.confirm("คุณแน่ใจหรือไม่ที่จะลบคำขอนี้?")) {
-      logUserAction("power_outage_request_delete_confirmed", {
-        requestId: id,
-        transformerNumber: request?.transformerNumber,
-      });
-      await handleDelete(id);
-    } else {
-      logUserAction("power_outage_request_delete_cancelled", {
-        requestId: id,
-      });
-    }
-  };
-
-  // Selection handlers
-  const handleSelectAll = () => {
-    const newSelectAll = !selectAll;
-    setSelectAll(newSelectAll);
-
-    if (newSelectAll) {
-      const selectedIds = requests.map((request) => request.id);
-      setSelectedRequests(selectedIds);
-      logUserAction("power_outage_requests_select_all", {
-        selectedCount: selectedIds.length,
-        requestIds: selectedIds,
-      });
-    } else {
-      setSelectedRequests([]);
-      logUserAction("power_outage_requests_deselect_all", {
-        previousCount: requests.length,
-      });
-    }
-  };
-
-  const handleSelectRequest = (id: number) => {
-    const isCurrentlySelected = selectedRequests.includes(id);
-    const newSelectedRequests = isCurrentlySelected
-      ? selectedRequests.filter((reqId) => reqId !== id)
-      : [...selectedRequests, id];
-
-    setSelectedRequests(newSelectedRequests);
-
-    logUserAction("power_outage_request_selection_changed", {
+    setConfirmAction({
+      type: "delete",
       requestId: id,
-      action: isCurrentlySelected ? "deselected" : "selected",
-      totalSelected: newSelectedRequests.length,
+      transformerNumber: request?.transformerNumber,
+      title: "ลบคำขอดับไฟ",
+      message: request?.transformerNumber
+        ? `คุณต้องการลบคำขอของหม้อแปลง ${request.transformerNumber} ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้`
+        : "คุณต้องการลบคำขอนี้ใช่หรือไม่? การดำเนินการนี้ไม่สามารถย้อนกลับได้",
+      confirmLabel: "ลบรายการ",
+      isDestructive: true,
     });
-
-    // ตรวจสอบว่าทุกรายการถูกเลือกหรือไม่
-    setSelectAll(
-      requests.every((request) => newSelectedRequests.includes(request.id)),
-    );
   };
 
   // Bulk operations
-  const handleBulkStatusChange = async (newStatus: Request) => {
+  const handleBulkStatusChange = (newStatus: Request) => {
+    if (!newStatus || selectedRequests.length === 0) {
+      return;
+    }
+
     logUserAction("bulk_status_change_confirm_shown", {
       newStatus,
       selectedCount: selectedRequests.length,
       requestIds: selectedRequests,
     });
 
-    if (
-      window.confirm(
-        `คุณแน่ใจหรือไม่ที่จะเปลี่ยนสถานะของรายการที่เลือกเป็น ${newStatus}?`,
-      )
-    ) {
-      logUserAction("bulk_status_change_confirmed", {
-        newStatus,
-        selectedCount: selectedRequests.length,
-        requestIds: selectedRequests,
-      });
-
-      try {
-        for (const id of selectedRequests) {
-          await handleUpdateStatus(id, newStatus);
-        }
-
-        logUserAction("bulk_status_change_completed", {
-          newStatus,
-          processedCount: selectedRequests.length,
-          success: true,
-        });
-
-        setSelectedRequests([]);
-      } catch (error) {
-        logError("bulk_status_change_failed", error as Error, {
-          newStatus,
-          selectedCount: selectedRequests.length,
-          requestIds: selectedRequests,
-        });
-        console.error("Error updating multiple requests:", error);
-      }
-    } else {
-      logUserAction("bulk_status_change_cancelled", {
-        newStatus,
-        selectedCount: selectedRequests.length,
-      });
-    }
+    setConfirmAction({
+      type: "bulk-status",
+      requestIds: [...selectedRequests],
+      newStatus,
+      title: "เปลี่ยนสถานะคำขอที่เลือก",
+      message: `ยืนยันการเปลี่ยนสถานะ ${selectedRequests.length} รายการเป็น “${REQUEST_STATUS_LABELS[newStatus]}”`,
+      confirmLabel: "ยืนยันการเปลี่ยนสถานะ",
+      isDestructive: newStatus === "CANCELLED",
+    });
   };
 
-  // Status update handlers using hook methods
+  const handlePrintSelected = useCallback(async () => {
+    const feedback = await printSelectedRequests(selectedRequests, allRequests);
+    setActionFeedback(feedback);
+  }, [allRequests, selectedRequests]);
+
+  const handleConfirmAction = useCallback(async () => {
+    if (!confirmAction) {
+      return;
+    }
+
+    if (confirmAction.type === "delete") {
+      logUserAction("power_outage_request_delete_confirmed", {
+        requestId: confirmAction.requestId,
+        transformerNumber: confirmAction.transformerNumber,
+      });
+
+      const result = await handleDelete(confirmAction.requestId);
+      if (!result.success) {
+        logError(
+          "power_outage_request_delete_failed",
+          result.error || "Unknown error",
+          {
+            requestId: confirmAction.requestId,
+            transformerNumber: confirmAction.transformerNumber,
+          },
+        );
+        console.error("เกิดข้อผิดพลาดในการลบคำขอ:", result.error);
+        return;
+      }
+
+      setConfirmAction(null);
+      return;
+    }
+
+    logUserAction("bulk_status_change_confirmed", {
+      newStatus: confirmAction.newStatus,
+      selectedCount: confirmAction.requestIds.length,
+      requestIds: confirmAction.requestIds,
+    });
+
+    try {
+      for (const id of confirmAction.requestIds) {
+        const result = await handleUpdateStatus(id, confirmAction.newStatus);
+        if (!result.success) {
+          throw new Error(result.error || "Unknown error");
+        }
+      }
+
+      logUserAction("bulk_status_change_completed", {
+        newStatus: confirmAction.newStatus,
+        processedCount: confirmAction.requestIds.length,
+        success: true,
+      });
+
+      clearSelection();
+      setActionFeedback({
+        variant: "success",
+        title: "อัปเดตสถานะรายการเรียบร้อย",
+        message: `เปลี่ยนสถานะ ${confirmAction.requestIds.length} รายการเป็น “${REQUEST_STATUS_LABELS[confirmAction.newStatus]}” แล้ว`,
+      });
+      setConfirmAction(null);
+    } catch (error) {
+      logError("bulk_status_change_failed", error as Error, {
+        newStatus: confirmAction.newStatus,
+        selectedCount: confirmAction.requestIds.length,
+        requestIds: confirmAction.requestIds,
+      });
+      console.error("Error updating multiple requests:", error);
+      setActionFeedback({
+        variant: "error",
+        title: "ไม่สามารถอัปเดตสถานะพร้อมกันได้",
+        message: "บางรายการอาจยังไม่ถูกอัปเดต กรุณาตรวจสอบและลองใหม่อีกครั้ง",
+      });
+    }
+  }, [clearSelection, confirmAction, handleDelete, handleUpdateStatus]);
+
+  // Status update handlers
   const handleEditOmsStatus = async (id: number, newStatus: OMSStatus) => {
     const request = requests.find((r) => r.id === id);
 
@@ -362,21 +478,37 @@ export default function PowerOutageRequestList() {
     }
   };
 
-  // Loading spinner component
-  const LoadingSpinner = () => (
-    <div className="flex justify-center items-center h-64">
-      <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-blue-500"></div>
-    </div>
-  );
-
+  // Early returns for loading/error states
   if (authLoading)
-    return <div className="text-center py-10">กำลังโหลดข้อมูลผู้ใช้...</div>;
-  if (loading)
-    return <div className="text-center py-10">กำลังโหลดข้อมูลคำขอดับไฟ...</div>;
-  if (error)
-    return <div className="text-red-500 text-center py-10">{error}</div>;
+    return (
+      <LoadingSpinner minHeight={256} />
+    );
 
-  if (authLoading || loading) return <LoadingSpinner />;
+  if (error)
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <svg
+          className="w-16 h-16 mb-4 text-red-400"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={1.5}
+            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+          />
+        </svg>
+        <p className="text-red-500 text-lg font-medium">{error}</p>
+        <button
+          onClick={loadRequests}
+          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+        >
+          ลองใหม่อีกครั้ง
+        </button>
+      </div>
+    );
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -413,12 +545,12 @@ export default function PowerOutageRequestList() {
         }
       />
 
-      {/* OMS Status Summary - แสดงเฉพาะ admin และ viewer เท่านั้น */}
+      {/* OMS Status Summary - admin and viewer only */}
       {(isAdmin || isViewer) && (
         <OMSStatusSummary
           requests={allRequests}
           filteredRequests={allRequests}
-          showFilteredSummary={true} // ให้แสดงตามการกรอง
+          showFilteredSummary={true}
         />
       )}
 
@@ -428,79 +560,93 @@ export default function PowerOutageRequestList() {
         isAdmin={isAdmin}
         isViewer={isViewer}
         selectedRequests={selectedRequests}
-        requests={allRequests}
         handleBulkStatusChange={handleBulkStatusChange}
+        handlePrintSelected={handlePrintSelected}
+        actionFeedback={actionFeedback}
+        onDismissActionFeedback={() => setActionFeedback(null)}
       />
 
-      {/* Mobile or Desktop View Based on Screen Size */}
-      {isMobile ? (
-        // Mobile View
-        <div className="space-y-4">
-          {requests.map((request) => (
-            <MobileCard
-              key={request.id}
-              request={request}
-              isAdmin={isAdmin}
-              isUser={isUser}
-              isViewer={isViewer}
-              isSupervisor={isSupervisor}
-              userWorkCenterId={userWorkCenterId}
-              selectedRequests={selectedRequests}
-              setSelectedRequests={setSelectedRequests}
-              handleEdit={handleEdit}
-              handleDelete={handleDeleteConfirm}
-              handleEditOmsStatus={handleEditOmsStatus}
-              handleEditStatusRequest={handleEditStatusRequest}
-            />
-          ))}
-        </div>
+      {/* Loading state */}
+      {loading ? (
+        <LoadingSpinner minHeight={256} />
+      ) : requests.length === 0 ? (
+        // Empty states
+        searchTerm || filters.statusFilter.length > 0 || filters.omsStatusFilter.length > 0 ? (
+          <NoSearchResults searchTerm={searchTerm} />
+        ) : (
+          <EmptyState message="ยังไม่มีคำขอดับไฟในระบบ" />
+        )
       ) : (
-        // Desktop View
-        <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200">
-          <table className="min-w-full bg-white">
-            <TableHeader
-              selectAll={selectAll}
-              setSelectAll={handleSelectAll}
-              isAdmin={isAdmin}
-              isViewer={isViewer}
-              isSupervisor={isSupervisor}
-            />
-            <tbody className="divide-y divide-gray-100">
-              {requests.map((request) => (
-                <TableRow
-                  key={request.id}
-                  request={request}
-                  isAdmin={isAdmin}
-                  isUser={isUser}
-                  isViewer={isViewer}
-                  isSupervisor={isSupervisor}
-                  userWorkCenterId={userWorkCenterId}
-                  selectedRequests={selectedRequests}
-                  setSelectedRequests={setSelectedRequests}
-                  handleEdit={handleEdit}
-                  handleDelete={handleDeleteConfirm}
-                  handleEditOmsStatus={handleEditOmsStatus}
-                  handleEditStatusRequest={handleEditStatusRequest}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
+        // Mobile or Desktop View
+        isMobile ? (
+          <div className="space-y-4">
+            {requests.map((request) => (
+              <MobileCard
+                key={request.id}
+                request={request}
+                isAdmin={isAdmin}
+                isUser={isUser}
+                isViewer={isViewer}
+                isSupervisor={isSupervisor}
+                userWorkCenterId={userWorkCenterId}
+                selectedRequests={selectedRequests}
+                onToggleSelect={handleSelectRequest}
+                handleEdit={handleEdit}
+                handleDelete={handleDeleteConfirm}
+                handleEditOmsStatus={handleEditOmsStatus}
+                handleEditStatusRequest={handleEditStatusRequest}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200">
+            <table className="min-w-full bg-white">
+              <TableHeader
+                selectAll={selectAll}
+                onToggleSelectAll={handleSelectAll}
+                isAdmin={isAdmin}
+                isViewer={isViewer}
+                isSupervisor={isSupervisor}
+              />
+              <tbody className="divide-y divide-gray-100">
+                {requests.map((request) => (
+                  <TableRow
+                    key={request.id}
+                    request={request}
+                    isAdmin={isAdmin}
+                    isUser={isUser}
+                    isViewer={isViewer}
+                    isSupervisor={isSupervisor}
+                    userWorkCenterId={userWorkCenterId}
+                    selectedRequests={selectedRequests}
+                    onToggleSelect={handleSelectRequest}
+                    handleEdit={handleEdit}
+                    handleDelete={handleDeleteConfirm}
+                    handleEditOmsStatus={handleEditOmsStatus}
+                    handleEditStatusRequest={handleEditStatusRequest}
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )
       )}
 
       {/* Pagination Controls */}
-      <PaginationControls
-        currentPage={currentPage}
-        totalPages={totalPages}
-        itemsPerPage={itemsPerPage}
-        totalItems={displayRange.total}
-        displayStart={displayRange.start}
-        displayEnd={displayRange.end}
-        onPageChange={paginate}
-        onItemsPerPageChange={(newItemsPerPage) =>
-          updatePagination({ itemsPerPage: newItemsPerPage })
-        }
-      />
+      {!loading && (
+        <PaginationControls
+          currentPage={currentPage}
+          totalPages={totalPages}
+          itemsPerPage={itemsPerPage}
+          totalItems={displayRange.total}
+          displayStart={displayRange.start}
+          displayEnd={displayRange.end}
+          onPageChange={paginate}
+          onItemsPerPageChange={(newItemsPerPage) =>
+            updatePagination({ itemsPerPage: newItemsPerPage })
+          }
+        />
+      )}
 
       {/* Edit Modal */}
       {editingRequest && (
@@ -520,6 +666,16 @@ export default function PowerOutageRequestList() {
           open={!!editingRequest}
         />
       )}
+
+      <ConfirmDialog
+        opened={!!confirmAction}
+        onClose={closeConfirmDialog}
+        onConfirm={handleConfirmAction}
+        title={confirmAction?.title}
+        message={confirmAction?.message}
+        confirmLabel={confirmAction?.confirmLabel}
+        isDestructive={confirmAction?.isDestructive}
+      />
     </div>
   );
 }

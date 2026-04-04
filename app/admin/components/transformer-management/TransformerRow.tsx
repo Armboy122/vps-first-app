@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { deleteTransformer } from "@/app/api/action/User";
 import { Transformer } from "../../types/admin.types";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
+import { FeedbackBanner } from "../shared/FeedbackBanner";
 
 interface TransformerRowProps {
   transformer: Transformer;
@@ -11,7 +12,23 @@ interface TransformerRowProps {
 
 export function TransformerRow({ transformer, onEdit }: TransformerRowProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  /** ข้อความแจ้งข้อผิดพลาดเมื่อลบไม่สำเร็จ */
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  /** ข้อความแจ้งความสำเร็จเมื่อลบสำเร็จ */
+  const [deleteSuccess, setDeleteSuccess] = useState<string | null>(null);
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    if (!deleteError) return;
+    const timer = setTimeout(() => setDeleteError(null), 4000);
+    return () => clearTimeout(timer);
+  }, [deleteError]);
+
+  useEffect(() => {
+    if (!deleteSuccess) return;
+    const timer = setTimeout(() => setDeleteSuccess(null), 3000);
+    return () => clearTimeout(timer);
+  }, [deleteSuccess]);
 
   // Delete mutation
   const deleteMutation = useMutation({
@@ -19,6 +36,12 @@ export function TransformerRow({ transformer, onEdit }: TransformerRowProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transformers"] });
       setShowDeleteDialog(false);
+      setDeleteError(null);
+      setDeleteSuccess("ลบหม้อแปลงเรียบร้อยแล้ว");
+    },
+    onError: (error: Error) => {
+      setShowDeleteDialog(false);
+      setDeleteError(error.message || "เกิดข้อผิดพลาดในการลบหม้อแปลง");
     },
   });
 
@@ -40,6 +63,38 @@ export function TransformerRow({ transformer, onEdit }: TransformerRowProps) {
 
   return (
     <>
+      {/* Error notification row */}
+      {deleteError && (
+        <tr>
+          <td colSpan={5} className="px-6 py-2">
+            <FeedbackBanner
+              variant="error"
+              title="ลบหม้อแปลงไม่สำเร็จ"
+              message={deleteError}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setDeleteError(null)}
+                  className="text-sm font-medium text-rose-700 hover:text-rose-900"
+                >
+                  ปิด
+                </button>
+              }
+            />
+          </td>
+        </tr>
+      )}
+      {deleteSuccess && (
+        <tr>
+          <td colSpan={5} className="px-6 py-2">
+            <FeedbackBanner
+              variant="success"
+              title="สำเร็จ"
+              message={deleteSuccess}
+            />
+          </td>
+        </tr>
+      )}
       <tr className="hover:bg-gray-50 transition-colors">
         {/* Transformer Number */}
         <td className="px-6 py-4 whitespace-nowrap">

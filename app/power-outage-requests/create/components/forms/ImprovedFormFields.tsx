@@ -5,6 +5,7 @@ import {
   FieldErrors,
   UseFormRegister,
   Controller,
+  useWatch,
 } from "react-hook-form";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import {
@@ -13,13 +14,12 @@ import {
   FormSelect,
 } from "@/components/forms";
 import { MantineTimePicker } from "./MantineTimePicker";
-import { 
-  Paper, 
-  Group, 
-  Stack, 
-  Title, 
-  Text, 
-  Divider,
+import {
+  Paper,
+  Group,
+  Stack,
+  Title,
+  Text,
   Grid,
   Badge,
   Alert,
@@ -29,15 +29,15 @@ import {
 import { DatePickerInput } from "@mantine/dates";
 import dayjs from "dayjs";
 
+// Hooks — data is fetched/derived here to reduce prop drilling
+import { usePowerOutageFormStore } from "@/stores/powerOutageFormStore";
+import { useBranches } from "@/hooks/queries/useBranches";
+import { useTransformers } from "@/hooks/queries/useTransformers";
+import { getMinSelectableDate, getDaysFromToday } from "@/lib/utils/dateUtils";
+
 interface WorkCenter {
   id: number;
   name: string;
-}
-
-interface Branch {
-  id: number;
-  shortName: string;
-  workCenterId: number;
 }
 
 interface Transformer {
@@ -45,22 +45,33 @@ interface Transformer {
   gisDetails: string;
 }
 
+/**
+ * Props for ImprovedFormFields
+ *
+ * Deliberately lean — only props that cannot be derived inside this component:
+ *   - register / control / errors: must come from the parent RHF instance
+ *   - role: determines which fields are shown (admin vs regular user)
+ *   - workCenters: list loaded server-side and passed down from the page
+ *   - onDateChange: triggers parent-level date validation side-effect
+ *   - onTransformerSearch: updates the search term held in the parent
+ *   - onTransformerSelect: lets the parent react to a transformer being picked
+ *
+ * The following data that was previously prop-drilled is now fetched/derived
+ * directly inside this component:
+ *   - branches, branchesLoading  (useBranches query, keyed on watched workCenterId)
+ *   - transformers               (useTransformers query, managed here)
+ *   - timeError                  (read from Zustand store)
+ *   - minSelectableDate          (derived from dateUtils)
+ *   - watchedOutageDate, watchWorkCenterId, watchedStartTime, watchedEndTime
+ *                                (useWatch on the provided control)
+ *   - daysFromToday              (derived from watchedOutageDate)
+ */
 interface ImprovedFormFieldsProps {
   register: UseFormRegister<PowerOutageRequestInput>;
   control: Control<PowerOutageRequestInput>;
   errors: FieldErrors<PowerOutageRequestInput>;
   role: string;
   workCenters?: WorkCenter[];
-  branches: Branch[];
-  transformers: Transformer[];
-  watchWorkCenterId: string;
-  minSelectableDate: string;
-  watchedOutageDate: string;
-  daysFromToday: number | null;
-  timeError: string | null;
-  branchesLoading?: boolean;
-  watchedStartTime?: string;
-  watchedEndTime?: string;
   onDateChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   onTransformerSearch: (searchTerm: string) => void;
   onTransformerSelect: (transformer: Transformer) => void;
@@ -72,38 +83,50 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   errors,
   role,
   workCenters,
-  branches,
-  transformers,
-  watchWorkCenterId,
-  minSelectableDate,
-  watchedOutageDate,
-  daysFromToday,
-  timeError,
-  branchesLoading,
-  watchedStartTime,
-  watchedEndTime,
   onDateChange,
   onTransformerSearch,
   onTransformerSelect,
 }) => {
-  
-  // ฟังก์ชันแยก transformerNumber จาก label
+  // =========================================
+  // Data derived / fetched inside the component
+  // (previously passed as props — reduces prop drilling)
+  // =========================================
+
+  // Read cross-field time error from Zustand store (not a RHF field error)
+  const { timeError } = usePowerOutageFormStore();
+
+  // Watch RHF field values via the provided control
+  const watchWorkCenterId = useWatch({ control, name: "workCenterId" });
+  const watchedOutageDate = useWatch({ control, name: "outageDate" });
+  const watchedStartTime = useWatch({ control, name: "startTime" });
+  const watchedEndTime = useWatch({ control, name: "endTime" });
+
+  // Fetch branches when workCenterId changes
+  const { data: branches = [], isLoading: branchesLoading } = useBranches(
+    watchWorkCenterId ? Number(watchWorkCenterId) : null,
+  );
+
+  // Fetch transformers based on search term managed inside parent via onTransformerSearch;
+  // the transformers list itself comes from the Zustand store (set by parent via useTransformers)
+  const { transformers } = usePowerOutageFormStore();
+
+  // Calculated values
+  const minSelectableDate = getMinSelectableDate();
+  const daysFromToday = getDaysFromToday(watchedOutageDate);
+
+  // =========================================
+  // Helper functions
+  // =========================================
+
+  // แยก transformerNumber จาก label ("TX001 - หน้าโรงเรียน" → "TX001")
   const extractTransformerNumber = (value: string): string => {
     if (!value) return "";
-    
-    // ถ้ามี " - " ให้แยกเอาส่วนแรก
     if (value.includes(' - ')) {
       return value.split(' - ')[0];
     }
-    
-    // ถ้าไม่มี ให้ใช้ค่าตรงๆ
     return value;
   };
-  
-  // ฟังก์ชันตรวจสอบว่าเป็น transformerNumber ที่ถูกต้องหรือไม่
-  const isValidTransformerNumber = (value: string): boolean => {
-    return transformers.some(t => t.transformerNumber === value);
-  };
+
   const workCenterOptions =
     workCenters?.map((wc) => ({ value: wc.id.toString(), label: wc.name })) || [];
   const branchOptions = branches.map((branch) => ({
@@ -112,12 +135,12 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   }));
 
   // สร้าง autocomplete data สำหรับ transformer
-  const transformerData = transformers.map(t => ({
+  const transformerData = transformers.map((t: Transformer) => ({
     value: t.transformerNumber,
     label: `${t.transformerNumber} - ${t.gisDetails}`
   }));
 
-  // ฟังก์ชันแปลงวันที่เป็นรูปแบบไทย (พศ.)
+  // แปลงวันที่เป็นรูปแบบไทย (พศ.)
   const formatThaiDate = (date: string) => {
     return dayjs(date).add(543, 'year').format("DD/MM/YYYY");
   };
@@ -155,12 +178,14 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                     placeholder="กดเลือกวันที่"
                     value={field.value ? dayjs(field.value).toDate() : null}
                     onChange={(date) => {
-                      if (date) {
-                        const dateString = dayjs(date).format("YYYY-MM-DD");
-                        field.onChange(dateString);
-                        // Trigger onDateChange for validation
-                        onDateChange({ target: { value: dateString } } as any);
-                      }
+                      const dateString = date
+                        ? dayjs(date).format("YYYY-MM-DD")
+                        : "";
+
+                      field.onChange(dateString);
+                      onDateChange({
+                        target: { value: dateString },
+                      } as React.ChangeEvent<HTMLInputElement>);
                     }}
                     valueFormat="DD/MM/YYYY"
                     minDate={dayjs(minSelectableDate).toDate()}
@@ -317,7 +342,9 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   data={transformerData}
                   value={(() => {
                     // หา transformer เพื่อแสดง label ใน input
-                    const transformer = transformers.find(t => t.transformerNumber === field.value);
+                    const transformer = transformers.find(
+                      (t: Transformer) => t.transformerNumber === field.value
+                    );
                     if (transformer) {
                       return `${transformer.transformerNumber} - ${transformer.gisDetails}`;
                     }
@@ -326,25 +353,21 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   onChange={(value) => {
                     // แยก transformerNumber จาก label
                     const transformerNumber = extractTransformerNumber(value);
-                    
-                    // ตั้งค่า transformerNumber ใน form
                     field.onChange(transformerNumber);
-                    
                     // ใช้ค่าเต็มสำหรับการค้นหา
                     onTransformerSearch(value);
                   }}
                   onOptionSubmit={(value) => {
                     // แยก transformerNumber จาก value
                     const transformerNumber = extractTransformerNumber(value);
-                    
                     // หา transformer โดยใช้ transformerNumber
-                    const transformer = transformers.find(t => t.transformerNumber === transformerNumber);
+                    const transformer = transformers.find(
+                      (t: Transformer) => t.transformerNumber === transformerNumber
+                    );
                     if (transformer) {
-                      // ตั้งค่า transformerNumber ที่ถูกต้องใน form
                       field.onChange(transformer.transformerNumber);
                       onTransformerSelect(transformer);
                     } else {
-                      // ถ้าไม่เจอ ให้ใช้ transformerNumber ที่แยกได้
                       field.onChange(transformerNumber);
                     }
                   }}
@@ -402,7 +425,7 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               </label>
               <FormInput
               {...register("area")}
-              placeholder="ระบุพื้นที่หรือชุมชนที่ได้รับผลกระทব"
+              placeholder="ระบุพื้นที่หรือชุมชนที่ได้รับผลกระทบ"
               error={errors.area}
             />
               <Text size="xs" c="dimmed" mt={4}>

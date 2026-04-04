@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { createTransformer, updateTransformer } from "@/app/api/action/User";
 import { Transformer } from "../../types/admin.types";
 import { validateTransformerData } from "../../utils/csvParser";
+import { FeedbackBanner } from "../shared/FeedbackBanner";
 
 interface TransformerFormProps {
   transformer?: Transformer;
@@ -25,7 +26,8 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
     mutationFn: (data: typeof formData) => createTransformer(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transformers"] });
-      onSuccess();
+      // ปิด form หลังจาก 500ms เพื่อให้ผู้ใช้เห็นว่าการบันทึกสำเร็จ
+      setTimeout(() => onSuccess(), 500);
     },
   });
 
@@ -33,7 +35,7 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
     mutationFn: (data: typeof formData) => updateTransformer(transformer!.id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["transformers"] });
-      onSuccess();
+      setTimeout(() => onSuccess(), 500);
     },
   });
 
@@ -67,6 +69,11 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
+  const isSuccess = createMutation.isSuccess || updateMutation.isSuccess;
+  const mutationErrorMessage =
+    (createMutation.error as any)?.message ||
+    (updateMutation.error as any)?.message ||
+    "เกิดข้อผิดพลาดในการบันทึกข้อมูล";
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -115,25 +122,39 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
 
           {/* Validation Errors */}
           {validationErrors.length > 0 && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <h4 className="text-sm font-medium text-red-800 mb-1">ข้อมูลไม่ถูกต้อง:</h4>
-              <ul className="text-sm text-red-600 space-y-1">
-                {validationErrors.map((error, index) => (
-                  <li key={index}>• {error}</li>
-                ))}
-              </ul>
-            </div>
+            <FeedbackBanner
+              variant="error"
+              title="ข้อมูลไม่ถูกต้อง"
+              message={
+                <ul className="space-y-1">
+                  {validationErrors.map((error, index) => (
+                    <li key={index}>• {error}</li>
+                  ))}
+                </ul>
+              }
+            />
+          )}
+
+          {/* Success feedback */}
+          {isSuccess && (
+            <FeedbackBanner
+              variant="success"
+              title="บันทึกสำเร็จ"
+              message={
+                isEditing
+                  ? "บันทึกการแก้ไขหม้อแปลงเรียบร้อยแล้ว"
+                  : "เพิ่มหม้อแปลงใหม่เรียบร้อยแล้ว"
+              }
+            />
           )}
 
           {/* Mutation Errors */}
           {(createMutation.error || updateMutation.error) && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-600">
-                {(createMutation.error as any)?.message || 
-                 (updateMutation.error as any)?.message || 
-                 "เกิดข้อผิดพลาดในการบันทึกข้อมูล"}
-              </p>
-            </div>
+            <FeedbackBanner
+              variant="error"
+              title="ไม่สามารถบันทึกข้อมูลได้"
+              message={mutationErrorMessage}
+            />
           )}
 
           {/* Form Actions */}

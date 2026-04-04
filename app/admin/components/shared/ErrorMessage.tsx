@@ -1,29 +1,29 @@
+import { FeedbackBanner } from "./FeedbackBanner";
+
 interface ErrorMessageProps {
   message: string;
   retry?: () => void;
   className?: string;
 }
 
-export function ErrorMessage({ 
-  message, 
-  retry, 
-  className = "" 
-}: ErrorMessageProps) {
+export function ErrorMessage({ message, retry, className = "" }: ErrorMessageProps) {
   return (
-    <div className={`p-4 bg-red-50 border border-red-200 rounded-lg ${className}`}>
-      <div className="flex items-center">
-        <span className="text-red-500 mr-2">❌</span>
-        <span className="text-red-700 font-medium">เกิดข้อผิดพลาด:</span>
-      </div>
-      <p className="text-red-600 mt-1">{message}</p>
-      {retry && (
-        <button
-          onClick={retry}
-          className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
-        >
-          ลองใหม่
-        </button>
-      )}
-    </div>
+    <FeedbackBanner
+      variant="error"
+      title="เกิดข้อผิดพลาด"
+      message={message}
+      action={
+        retry ? (
+          <button
+            type="button"
+            onClick={retry}
+            className="rounded-md border border-rose-200 bg-white px-3 py-1.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
+          >
+            ลองใหม่
+          </button>
+        ) : undefined
+      }
+      className={className}
+    />
   );
 }

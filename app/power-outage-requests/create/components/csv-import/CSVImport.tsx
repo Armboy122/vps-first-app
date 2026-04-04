@@ -1,10 +1,27 @@
 "use client";
+
+/**
+ * CSVImport component
+ *
+ * ความรับผิดชอบ:
+ *   - จัดการ UI state (upload, show results, warnings)
+ *   - อ่านและ parse ไฟล์ CSV
+ *   - เรียกใช้ validateAndTransformCSVRows จาก utils/csvValidation
+ *   - ส่งข้อมูลที่ถูกต้องกลับไปยัง parent ผ่าน onImportData
+ *
+ * Logic การ parse/validate ข้อมูลทั้งหมดอยู่ใน:
+ *   app/power-outage-requests/create/utils/csvValidation.ts
+ */
+
 import React, { useState, useRef } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import { FormButton } from "@/components/forms";
-import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
-import { searchTransformers } from "@/app/api/action/powerOutageRequest";
 import dayjs from "dayjs";
+import {
+  parseCSVLine,
+  validateAndTransformCSVRows,
+  type CSVValidationError,
+} from "../../utils/csvValidation";
 
 interface CSVImportProps {
   role: string;
@@ -14,24 +31,6 @@ interface CSVImportProps {
   userBranch?: string;
   existingRequests?: PowerOutageRequestInput[];
   onClearExistingRequests?: () => void;
-}
-
-interface CSVRow {
-  outageDate?: string;
-  startTime?: string;
-  endTime?: string;
-  workCenterName?: string;
-  branchName?: string;
-  transformerNumber?: string;
-  gisDetails?: string;
-  area?: string;
-}
-
-interface ValidationError {
-  row: number;
-  field: string;
-  message: string;
-  value: any;
 }
 
 export const CSVImport: React.FC<CSVImportProps> = ({
@@ -44,9 +43,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
   onClearExistingRequests,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<ValidationError[]>(
-    [],
-  );
+  const [lastFileName, setLastFileName] = useState("");
+  const [validationErrors, setValidationErrors] = useState<CSVValidationError[]>([]);
   const [importResults, setImportResults] = useState<{
     total: number;
     success: number;
@@ -57,427 +55,13 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Parse CSV line with proper handling of quoted fields
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      
-      if (char === '"') {
-        inQuotes = !inQuotes;
-      } else if (char === "," && !inQuotes) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
-    }
-    
-    result.push(current.trim());
-    return result;
-  };
-
-  const formatTime = (timeInput: string): string => {
-    if (!timeInput?.trim()) return "";
-    
-    const cleanTime = timeInput.trim();
-
-    // รูปแบบ HH:MM หรือ H:MM
-    const timeMatch = cleanTime.match(/^(\d{1,2}):(\d{2})$/);
-    if (timeMatch) {
-      const [, hours, minutes] = timeMatch;
-      const h = parseInt(hours);
-      const m = parseInt(minutes);
-
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${h.toString().padStart(2, "0")}:${minutes}`;
-      }
-    }
-
-    // รูปแบบ HHMM หรือ HMM (เช่น 0800, 830)
-    const numericTime = cleanTime.replace(/[^\d]/g, "");
-    if (numericTime.length >= 3 && numericTime.length <= 4) {
-      let hours, minutes;
-      if (numericTime.length === 3) {
-        hours = numericTime.slice(0, 1);
-        minutes = numericTime.slice(1);
-      } else {
-        hours = numericTime.slice(0, 2);
-        minutes = numericTime.slice(2);
-      }
-
-      const h = parseInt(hours);
-      const m = parseInt(minutes);
-
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      }
-    }
-
-    // รูปแบบ H.M หรือ HH.MM (ใช้จุดแทนโคลอน)
-    const dotTimeMatch = cleanTime.match(/^(\d{1,2})\.(\d{1,2})$/);
-    if (dotTimeMatch) {
-      const [, hours, minutes] = dotTimeMatch;
-      const h = parseInt(hours);
-      const m = parseInt(minutes);
-
-      if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-      }
-    }
-
-    return "";
-  };
-
-  const parseDate = (dateInput: string): dayjs.Dayjs | null => {
-    if (!dateInput?.trim()) return null;
-    
-    const cleanDate = dateInput.trim();
-    
-    // รองรับรูปแบบต่างๆ: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY
-    const formats = ["YYYY-MM-DD", "DD/MM/YYYY", "DD-MM-YYYY", "YYYY/MM/DD"];
-    
-    for (const format of formats) {
-      const parsed = dayjs(cleanDate, format, true);
-      if (parsed.isValid()) {
-        return parsed;
-      }
-    }
-    
-    return null;
-  };
-
-  const validateAndTransformData = async (
-    rows: CSVRow[],
-  ): Promise<{
-    validData: PowerOutageRequestInput[];
-    errors: ValidationError[];
-  }> => {
-    const validData: PowerOutageRequestInput[] = [];
-    const errors: ValidationError[] = [];
-
-    // Cache สำหรับ branches ของแต่ละ workCenter
-    const branchCache = new Map<number, any[]>();
-    
-    // ตรวจสอบว่ามีข้อมูลหรือไม่
-    if (!rows || rows.length === 0) {
-      errors.push({
-        row: 0,
-        field: "ไฟล์",
-        message: "ไม่พบข้อมูลในไฟล์ CSV",
-        value: null,
-      });
-      return { validData, errors };
-    }
-
-    for (let index = 0; index < rows.length; index++) {
-      const row = rows[index];
-      const rowNumber = index + 2; // +2 เพราะมี header และ index เริ่มจาก 0
-      const rowErrors: ValidationError[] = [];
-      
-      // ตรวจสอบว่าแถวนี้มีข้อมูลหรือไม่ (skip empty rows)
-      const hasData = Object.values(row).some(value => 
-        value !== null && value !== undefined && value !== ""
-      );
-      
-      if (!hasData) {
-        continue; // ข้ามแถวที่ว่าง
-      }
-
-      // ตรวจสอบและแปลงวันที่ดับไฟ
-      const parsedDate = parseDate(row.outageDate || "");
-      if (!parsedDate) {
-        rowErrors.push({
-          row: rowNumber,
-          field: "วันที่ดับไฟ",
-          message: "กรุณาระบุวันที่ดับไฟ (รูปแบบ: YYYY-MM-DD หรือ DD/MM/YYYY)",
-          value: row.outageDate,
-        });
-      } else {
-        // ตรวจสอบเงื่อนไขวันที่ (ต้องมากกว่าวันปัจจุบัน 10 วัน)
-        const today = dayjs();
-        const minDate = today.add(10, "day");
-
-        if (parsedDate.isBefore(minDate, "day")) {
-          const daysFromToday = parsedDate.diff(today, "day");
-          rowErrors.push({
-            row: rowNumber,
-            field: "วันที่ดับไฟ",
-            message: `วันที่ดับไฟต้องมากกว่าวันปัจจุบันอย่างน้อย 10 วัน (วันที่เลือก: ${parsedDate.format("DD/MM/YYYY")} - เหลือเพียง ${daysFromToday} วัน)`,
-            value: row.outageDate,
-          });
-        }
-      }
-
-      // ตรวจสอบและแปลงเวลา
-      const startTime = formatTime(row.startTime || "");
-      const endTime = formatTime(row.endTime || "");
-
-      // ตรวจสอบเวลาเริ่มต้น
-      if (!startTime) {
-        rowErrors.push({
-          row: rowNumber,
-          field: "เวลาเริ่มต้น",
-          message: "กรุณาระบุเวลาเริ่มต้น (รูปแบบ: HH:MM เช่น 08:00)",
-          value: row.startTime,
-        });
-      } else {
-        // ตรวจสอบช่วงเวลาทำการ (06:00 - 19:30)
-        const [startHour, startMin] = startTime.split(":").map(Number);
-        const startMinutes = startHour * 60 + startMin;
-        const workingStart = 6 * 60; // 06:00
-        const workingEnd = 19 * 60 + 30; // 19:30
-
-        if (startMinutes < workingStart || startMinutes > workingEnd) {
-          rowErrors.push({
-            row: rowNumber,
-            field: "เวลาเริ่มต้น",
-            message: "เวลาเริ่มต้นต้องอยู่ระหว่าง 06:00 - 19:30 น.",
-            value: row.startTime,
-          });
-        }
-      }
-
-      // ตรวจสอบเวลาสิ้นสุด
-      if (!endTime) {
-        rowErrors.push({
-          row: rowNumber,
-          field: "เวลาสิ้นสุด",
-          message: "กรุณาระบุเวลาสิ้นสุด (รูปแบบ: HH:MM เช่น 12:00)",
-          value: row.endTime,
-        });
-      } else {
-        // ตรวจสอบช่วงเวลาทำการ (06:30 - 20:00)
-        const [endHour, endMin] = endTime.split(":").map(Number);
-        const endMinutes = endHour * 60 + endMin;
-        const workingEnd = 20 * 60; // 20:00
-
-        if (endMinutes > workingEnd) {
-          rowErrors.push({
-            row: rowNumber,
-            field: "เวลาสิ้นสุด",
-            message: "เวลาสิ้นสุดต้องไม่เกิน 20:00 น.",
-            value: row.endTime,
-          });
-        }
-
-        // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที
-        if (startTime) {
-          const [startHour, startMin] = startTime.split(":").map(Number);
-          const startMinutes = startHour * 60 + startMin;
-
-          if (endMinutes <= startMinutes + 29) {
-            rowErrors.push({
-              row: rowNumber,
-              field: "เวลาสิ้นสุด",
-              message: "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที",
-              value: row.endTime,
-            });
-          }
-        }
-      }
-
-      // ตรวจสอบหมายเลขหม้อแปลง
-      if (!row.transformerNumber?.trim()) {
-        rowErrors.push({
-          row: rowNumber,
-          field: "หมายเลขหม้อแปลง",
-          message: "กรุณาระบุหมายเลขหม้อแปลง",
-          value: row.transformerNumber,
-        });
-      } else {
-        // ตรวจสอบหม้อแปลงจาก API
-        try {
-          const transformerResults = await searchTransformers(
-            row.transformerNumber.trim(),
-          );
-          if (transformerResults.length === 0) {
-            rowErrors.push({
-              row: rowNumber,
-              field: "หมายเลขหม้อแปลง",
-              message: `ไม่พบหมายเลขหม้อแปลง "${row.transformerNumber}" ในระบบ`,
-              value: row.transformerNumber,
-            });
-          } else {
-            // หากพบหม้อแปลง ให้ใช้ GIS จากระบบ (ถ้าไม่มีใน CSV)
-            if (!row.gisDetails?.trim() && transformerResults[0].gisDetails) {
-              row.gisDetails = transformerResults[0].gisDetails;
-            }
-          }
-        } catch (error) {
-          // หากเกิดข้อผิดพลาดในการค้นหา ให้เตือนแต่ไม่ขัดขวางการนำเข้า
-          console.warn(
-            `Error validating transformer ${row.transformerNumber}:`,
-            error,
-          );
-        }
-      }
-
-      // ตรวจสอบจุดรวมงานและสาขา (สำหรับ Admin)
-      let workCenterId = userWorkCenterId || "";
-      let branchId = userBranch || "";
-
-      if (role === "ADMIN") {
-        if (!row.workCenterName?.trim()) {
-          rowErrors.push({
-            row: rowNumber,
-            field: "จุดรวมงาน",
-            message: "กรุณาระบุจุดรวมงาน",
-            value: row.workCenterName,
-          });
-        } else {
-          // ค้นหา workCenter ID จากชื่อ
-          const workCenter = workCenters.find(
-            (wc) =>
-              wc.name
-                .toLowerCase()
-                .includes(row.workCenterName!.toLowerCase()) ||
-              row.workCenterName!.toLowerCase().includes(wc.name.toLowerCase()),
-          );
-
-          if (!workCenter) {
-            rowErrors.push({
-              row: rowNumber,
-              field: "จุดรวมงาน",
-              message: `ไม่พบจุดรวมงาน "${row.workCenterName}" ในระบบ`,
-              value: row.workCenterName,
-            });
-          } else {
-            workCenterId = workCenter.id.toString();
-
-            // ค้นหาสาขาจาก workCenterId
-            if (row.branchName?.trim()) {
-              try {
-                // ตรวจสอบใน cache ก่อน
-                let branches = branchCache.get(workCenter.id);
-                if (!branches) {
-                  branches = await getBranches(workCenter.id);
-                  branchCache.set(workCenter.id, branches);
-                }
-
-                // ค้นหาสาขาที่ตรงกัน
-                const branch = branches.find(
-                  (b: any) =>
-                    b.shortName
-                      .toLowerCase()
-                      .includes(row.branchName!.toLowerCase()) ||
-                    row
-                      .branchName!.toLowerCase()
-                      .includes(b.shortName.toLowerCase()),
-                );
-
-                if (branch) {
-                  branchId = branch.id.toString();
-                } else {
-                  rowErrors.push({
-                    row: rowNumber,
-                    field: "สาขา",
-                    message: `ไม่พบสาขา "${row.branchName}" ในจุดรวมงาน "${row.workCenterName}"`,
-                    value: row.branchName,
-                  });
-                }
-              } catch (error) {
-                rowErrors.push({
-                  row: rowNumber,
-                  field: "สาขา",
-                  message: `เกิดข้อผิดพลาดในการค้นหาสาขา "${row.branchName}"`,
-                  value: row.branchName,
-                });
-              }
-            } else {
-              rowErrors.push({
-                row: rowNumber,
-                field: "สาขา",
-                message: "กรุณาระบุสาขา",
-                value: row.branchName,
-              });
-            }
-          }
-        }
-      }
-
-      // ตรวจสอบหม้อแปลง
-      let transformerNumber = "";
-      if (row.transformerNumber?.trim()) {
-        const rawTransformer = row.transformerNumber.trim();
-        // แยก transformerNumber จาก label ถ้ามี " - "
-        if (rawTransformer.includes(' - ')) {
-          transformerNumber = rawTransformer.split(' - ')[0];
-        } else {
-          transformerNumber = rawTransformer;
-        }
-
-        // ตรวจสอบว่าหม้อแปลงมีอยู่ในระบบหรือไม่
-        try {
-          const foundTransformers = await searchTransformers(transformerNumber);
-          const exactMatch = foundTransformers.find(t => t.transformerNumber === transformerNumber);
-          
-          if (!exactMatch) {
-            rowErrors.push({
-              row: rowNumber,
-              field: "หมายเลขหม้อแปลง",
-              message: `ไม่พบหม้อแปลงหมายเลข "${transformerNumber}" ในระบบ กรุณาตรวจสอบความถูกต้อง`,
-              value: row.transformerNumber,
-            });
-          } else {
-            console.log("CSV Processing - Raw:", rawTransformer, "Extracted:", transformerNumber, "Found in DB:", true);
-          }
-        } catch (error) {
-          rowErrors.push({
-            row: rowNumber,
-            field: "หมายเลขหม้อแปลง",
-            message: `เกิดข้อผิดพลาดในการตรวจสอบหม้อแปลง "${transformerNumber}"`,
-            value: row.transformerNumber,
-          });
-        }
-      } else {
-        rowErrors.push({
-          row: rowNumber,
-          field: "หมายเลขหม้อแปลง",
-          message: "กรุณาระบุหมายเลขหม้อแปลง",
-          value: row.transformerNumber,
-        });
-      }
-
-      // หากไม่มี error ให้เพิ่มข้อมูลเข้า validData
-      if (rowErrors.length === 0 && parsedDate) {
-        try {
-          const outageDate = parsedDate.format("YYYY-MM-DD");
-
-          validData.push({
-            outageDate,
-            startTime,
-            endTime,
-            workCenterId,
-            branchId,
-            transformerNumber,
-            gisDetails: row.gisDetails?.trim() || "",
-            area: row.area?.trim() || null,
-          });
-        } catch (error) {
-          errors.push({
-            row: rowNumber,
-            field: "ทั่วไป",
-            message: "เกิดข้อผิดพลาดในการแปลงข้อมูล",
-            value: row,
-          });
-        }
-      } else {
-        errors.push(...rowErrors);
-      }
-    }
-
-    return { validData, errors };
-  };
-
   const handleFileSelect = async (
     event: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
+
+    setLastFileName(file.name);
 
     // ตรวจสอบว่ามีรายการอยู่แล้วหรือไม่
     if (existingRequests.length > 0) {
@@ -519,50 +103,46 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
       }
 
-      // Parse header
+      // Parse header line (not validated beyond existence — template download handles format)
       const headerLine = lines[0];
-      const expectedHeaders = [
-        "วันที่ดับไฟ",
-        "เวลาเริ่มต้น", 
-        "เวลาสิ้นสุด",
-        ...(role === "ADMIN" ? ["จุดรวมงาน", "สาขา"] : []),
-        "หมายเลขหม้อแปลง",
-        "สถานที่ติดตั้ง (GIS)",
-        "พื้นที่ไฟดับ"
-      ];
+      void parseCSVLine(headerLine); // ensure header parses without error
 
-      const headers = parseCSVLine(headerLine);
-      
-      // Parse data rows
-      const rows: CSVRow[] = [];
+      // Parse data rows into CSVRow objects
+      const rows: import("../../utils/csvValidation").CSVRow[] = [];
       for (let i = 1; i < lines.length; i++) {
         const line = lines[i].trim();
         if (!line) continue;
 
         const values = parseCSVLine(line);
-        
-        const row: CSVRow = {
-          outageDate: values[0]?.replace(/"/g, '') || "",
-          startTime: values[1]?.replace(/"/g, '') || "",
-          endTime: values[2]?.replace(/"/g, '') || "",
+
+        const row: import("../../utils/csvValidation").CSVRow = {
+          outageDate: values[0]?.replace(/"/g, "") || "",
+          startTime: values[1]?.replace(/"/g, "") || "",
+          endTime: values[2]?.replace(/"/g, "") || "",
         };
 
         let colIndex = 3;
         if (role === "ADMIN") {
-          row.workCenterName = values[colIndex]?.replace(/"/g, '') || "";
-          row.branchName = values[colIndex + 1]?.replace(/"/g, '') || "";
+          row.workCenterName = values[colIndex]?.replace(/"/g, "") || "";
+          row.branchName = values[colIndex + 1]?.replace(/"/g, "") || "";
           colIndex += 2;
         }
 
-        row.transformerNumber = values[colIndex]?.replace(/"/g, '') || "";
-        row.gisDetails = values[colIndex + 1]?.replace(/"/g, '') || "";
-        row.area = values[colIndex + 2]?.replace(/"/g, '') || "";
+        row.transformerNumber = values[colIndex]?.replace(/"/g, "") || "";
+        row.gisDetails = values[colIndex + 1]?.replace(/"/g, "") || "";
+        row.area = values[colIndex + 2]?.replace(/"/g, "") || "";
 
         rows.push(row);
       }
 
+      // Delegate all validation logic to the utility function
       const { validData, errors: validationErrs } =
-        await validateAndTransformData(rows);
+        await validateAndTransformCSVRows(rows, {
+          role,
+          workCenters,
+          userWorkCenterId,
+          userBranch,
+        });
 
       setValidationErrors(validationErrs);
       setImportResults({
@@ -645,6 +225,40 @@ export const CSVImport: React.FC<CSVImportProps> = ({
     document.body.removeChild(link);
   };
 
+  const resultTone = !importResults
+    ? null
+    : importResults.success === importResults.total
+      ? {
+          wrapper:
+            "border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100",
+          badge: "bg-emerald-100 text-emerald-700",
+          title: "นำเข้าข้อมูลสำเร็จทั้งหมด",
+          description:
+            "ระบบตรวจสอบไฟล์แล้วและเพิ่มทุกรายการเข้าฟอร์มเรียบร้อย คุณสามารถตรวจทานก่อนบันทึกได้ทันที",
+        }
+      : importResults.success > 0
+        ? {
+            wrapper:
+              "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-100",
+            badge: "bg-amber-100 text-amber-700",
+            title: "นำเข้าได้บางส่วน",
+            description:
+              "รายการที่ถูกต้องถูกเพิ่มเข้าฟอร์มแล้ว ส่วนรายการที่มีปัญหาถูกสรุปไว้ด้านล่างเพื่อให้กลับไปแก้ได้เร็วขึ้น",
+          }
+        : {
+            wrapper:
+              "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-rose-100",
+            badge: "bg-rose-100 text-rose-700",
+            title: "ยังไม่สามารถเพิ่มข้อมูลได้",
+            description:
+              "ไฟล์ถูกอ่านได้ แต่ยังไม่พบรายการที่ผ่านเงื่อนไข กรุณาดูรายละเอียดข้อผิดพลาดและอัปโหลดใหม่อีกครั้ง",
+          };
+
+  const visibleValidationErrors =
+    importResults?.success && importResults.success > 0
+      ? validationErrors.slice(0, 6)
+      : validationErrors.slice(0, 10);
+
   return (
     <div className="space-y-4">
       {/* แจ้งเตือนเมื่อมีรายการอยู่แล้ว */}
@@ -692,12 +306,40 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         </div>
       )}
 
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h3 className="text-lg font-semibold text-green-800 mb-2">
-          📋 นำเข้าข้อมูลจากไฟล์ CSV
-        </h3>
+      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="space-y-2">
+            <div className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 shadow-sm">
+              CSV Import
+            </div>
+            <div>
+              <h3 className="text-xl font-semibold text-emerald-900">
+                นำเข้าคำขอดับไฟจากไฟล์ CSV
+              </h3>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-emerald-800/80">
+                เหมาะสำหรับการเพิ่มหลายรายการในรอบเดียว ระบบจะอ่านไฟล์,
+                ตรวจสอบความถูกต้องของแต่ละแถว และเพิ่มเฉพาะข้อมูลที่ผ่านเงื่อนไขให้ทันที
+              </p>
+            </div>
+          </div>
 
-        <div className="flex flex-wrap gap-3">
+          <div className="grid grid-cols-1 gap-2 text-xs text-emerald-800/80 sm:grid-cols-3">
+            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+              <p className="font-semibold text-emerald-900">สูงสุด 1,000 แถว</p>
+              <p>รองรับงาน batch แบบปลอดภัย</p>
+            </div>
+            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+              <p className="font-semibold text-emerald-900">ไฟล์ไม่เกิน 10MB</p>
+              <p>ช่วยให้ parse และตรวจสอบได้เร็ว</p>
+            </div>
+            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+              <p className="font-semibold text-emerald-900">เพิ่มเฉพาะแถวที่ผ่าน</p>
+              <p>แถวที่ผิดจะถูกสรุปให้แก้ง่าย</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-3">
           <FormButton
             type="button"
             variant="secondary"
@@ -725,124 +367,236 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           onChange={handleFileSelect}
           className="hidden"
         />
+
+        {lastFileName && (
+          <div className="mt-4 inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm">
+            ไฟล์ล่าสุด: {lastFileName}
+          </div>
+        )}
       </div>
 
-      {/* ผลลัพธ์การนำเข้า */}
-      {importResults && (
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-          <h4 className="font-semibold text-gray-800 mb-2">
-            📈 ผลลัพธ์การนำเข้า
-          </h4>
-          <div className="grid grid-cols-3 gap-4 text-sm">
-            <div className="text-center">
-              <div className="text-2xl font-bold text-blue-600">
-                {importResults.total}
+      {isProcessing && (
+        <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 p-5 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <div className="mt-1 h-10 w-10 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />
+              <div>
+                <h4 className="text-lg font-semibold text-sky-900">
+                  กำลังตรวจสอบไฟล์ CSV
+                </h4>
+                <p className="mt-1 text-sm leading-6 text-sky-800/80">
+                  ระบบกำลังอ่านไฟล์, แปลงข้อมูลแต่ละแถว และเช็กเงื่อนไขก่อนเพิ่มเข้าฟอร์ม
+                </p>
+                {lastFileName && (
+                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
+                    {lastFileName}
+                  </p>
+                )}
               </div>
-              <div className="text-gray-600">รายการทั้งหมด</div>
             </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-green-600">
-                {importResults.success}
+
+            <div className="grid gap-2 text-xs text-sky-800/80 sm:grid-cols-3">
+              <div className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 shadow-sm">
+                1. อ่านไฟล์และแยกข้อมูล
               </div>
-              <div className="text-gray-600">เพิ่มเข้าฟอร์มแล้ว</div>
-            </div>
-            <div className="text-center">
-              <div className="text-2xl font-bold text-red-600">
-                {importResults.errors}
+              <div className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 shadow-sm">
+                2. ตรวจสอบรูปแบบและเงื่อนไข
               </div>
-              <div className="text-gray-600">ไม่สามารถเพิ่มได้</div>
+              <div className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 shadow-sm">
+                3. เพิ่มเฉพาะรายการที่ผ่าน
+              </div>
             </div>
           </div>
-          {importResults.success > 0 && (
-            <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded">
-              <p className="text-sm text-green-700">
-                ✅ รายการที่ถูกต้องได้ถูกเพิ่มเข้าในฟอร์มแล้ว - คุณสามารถตรวจสอบและแก้ไขข้อมูลได้ตามต้องการ
-              </p>
-            </div>
-          )}
-          {importResults.hasPartialData && (
-            <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded">
-              <p className="text-sm text-yellow-700">
-                ⚠️ มีบางรายการที่ไม่สามารถเพิ่มได้ - ข้อมูลที่ถูกต้องได้ถูกเพิ่มเข้าฟอร์มแล้ว ส่วนข้อมูลที่มีปัญหาดูรายละเอียดด้านล่าง
-              </p>
-            </div>
-          )}
         </div>
       )}
 
-      {/* แสดงข้อผิดพลาด - เฉพาะกรณีที่ไม่มีข้อมูลถูกต้องเลย */}
-      {validationErrors.length > 0 && importResults && importResults.success === 0 && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <h4 className="font-semibold text-red-800 mb-3">
-            ⚠️ ไม่สามารถเพิ่มข้อมูลใดๆ ได้ - ข้อผิดพลาดที่พบ
-          </h4>
-          <div className="max-h-60 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-red-100">
-                <tr>
-                  <th className="px-3 py-2 text-left">แถว</th>
-                  <th className="px-3 py-2 text-left">ฟิลด์</th>
-                  <th className="px-3 py-2 text-left">ข้อผิดพลาด</th>
-                  <th className="px-3 py-2 text-left">ค่าที่ได้รับ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {validationErrors.slice(0, 10).map((error, index) => (
-                  <tr key={index} className="border-b border-red-200">
-                    <td className="px-3 py-2 font-medium">{error.row}</td>
-                    <td className="px-3 py-2">{error.field}</td>
-                    <td className="px-3 py-2 text-red-700">{error.message}</td>
-                    <td className="px-3 py-2 text-gray-600 truncate max-w-32">
-                      {error.value ? String(error.value) : "-"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            {validationErrors.length > 10 && (
-              <div className="mt-2 text-sm text-red-600">
-                ... และอีก {validationErrors.length - 10} ข้อผิดพลาด
+      {/* ผลลัพธ์การนำเข้า */}
+      {importResults && resultTone && (
+        <div
+          className={`rounded-2xl border p-5 shadow-sm ${resultTone.wrapper}`}
+        >
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-2">
+              <div
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${resultTone.badge}`}
+              >
+                Import Summary
+              </div>
+              <div>
+                <h4 className="text-xl font-semibold text-slate-900">
+                  {resultTone.title}
+                </h4>
+                <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-700">
+                  {resultTone.description}
+                </p>
+              </div>
+            </div>
+
+            {lastFileName && (
+              <div className="rounded-xl border border-white/80 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  ไฟล์ที่ตรวจล่าสุด
+                </p>
+                <p className="mt-1 font-medium text-slate-900">{lastFileName}</p>
               </div>
             )}
           </div>
-          <div className="mt-3 text-sm text-red-700">
-            💡 <strong>คำแนะนำ:</strong> กรุณาแก้ไขข้อผิดพลาดในไฟล์ CSV แล้วอัปโหลดใหม่
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                รายการทั้งหมด
+              </p>
+              <p className="mt-2 text-3xl font-semibold text-slate-900">
+                {importResults.total}
+              </p>
+              <p className="mt-2 text-sm text-slate-600">
+                จำนวนแถวที่อ่านจากไฟล์
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-200 bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">
+                เพิ่มเข้าฟอร์มแล้ว
+              </p>
+              <p className="mt-2 text-3xl font-semibold text-emerald-700">
+                {importResults.success}
+              </p>
+              <p className="mt-2 text-sm text-emerald-800/80">
+                พร้อมให้ตรวจทานและบันทึกต่อ
+              </p>
+            </div>
+            <div className="rounded-2xl border border-rose-200 bg-white/90 p-4 shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">
+                ต้องกลับไปแก้ไข
+              </p>
+              <p className="mt-2 text-3xl font-semibold text-rose-700">
+                {importResults.errors}
+              </p>
+              <p className="mt-2 text-sm text-rose-800/80">
+                ระบบยังไม่เพิ่มรายการส่วนนี้ให้
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">
+                สิ่งที่ควรทำต่อทันที
+              </p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <li>ตรวจรายการที่ถูกเพิ่มในฟอร์มว่าถูกต้องครบถ้วน</li>
+                <li>หากมีข้อมูลบางส่วนไม่ผ่าน ให้แก้ไฟล์ CSV แล้วอัปโหลดรอบใหม่เฉพาะส่วนที่เหลือ</li>
+                <li>เมื่อพร้อมแล้วค่อยบันทึกคำขอทั้งหมดจากหน้าฟอร์มด้านบน</li>
+              </ul>
+            </div>
+
+            <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
+              <p className="text-sm font-semibold text-slate-900">
+                แนวทางการอ่านผลลัพธ์
+              </p>
+              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+                <li>หาก “ต้องกลับไปแก้ไข” เป็น 0 แปลว่ารอบนี้พร้อมใช้งานทั้งหมด</li>
+                <li>หากมีทั้งสำเร็จและผิดพลาด แปลว่าเป็น partial import ไม่จำเป็นต้องเริ่มใหม่ทั้งไฟล์</li>
+                <li>รายละเอียดข้อผิดพลาดด้านล่างถูกตัดให้เห็นเฉพาะส่วนสำคัญก่อนเพื่ออ่านง่ายขึ้น</li>
+              </ul>
+            </div>
           </div>
         </div>
       )}
-      
-      {/* แสดงข้อผิดพลาดแบบย่อ - กรณีที่มีข้อมูลบางส่วนถูกต้อง */}
-      {validationErrors.length > 0 && importResults && importResults.success > 0 && (
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h4 className="font-semibold text-yellow-800 mb-3">
-            📋 รายการที่ไม่สามารถเพิ่มได้ ({validationErrors.length} รายการ)
-          </h4>
-          <div className="text-sm text-yellow-700 space-y-2">
-            <p>รายการที่มีปัญหา:</p>
-            <ul className="list-disc list-inside ml-4 space-y-1">
-              {validationErrors.slice(0, 5).map((error, index) => (
-                <li key={index}>
-                  <strong>แถว {error.row}:</strong> {error.field} - {error.message}
-                </li>
-              ))}
-              {validationErrors.length > 5 && (
-                <li className="text-yellow-600">
-                  ... และอีก {validationErrors.length - 5} ข้อผิดพลาด
-                </li>
-              )}
-            </ul>
-            <p className="mt-3 text-yellow-800">
-              💡 <strong>คำแนะนำ:</strong> ข้อมูลที่ถูกต้องได้ถูกเพิ่มเข้าฟอร์มแล้ว 
-              หากต้องการเพิ่มรายการที่เหลือ กรุณาแก้ไขข้อผิดพลาดในไฟล์ CSV แล้วอัปโหลดใหม่
+
+      {/* รายการข้อผิดพลาด */}
+      {validationErrors.length > 0 && importResults && (
+        <div
+          className={`rounded-2xl border p-5 shadow-sm ${
+            importResults.success > 0
+              ? "border-amber-200 bg-gradient-to-br from-amber-50 via-white to-amber-100"
+              : "border-rose-200 bg-gradient-to-br from-rose-50 via-white to-rose-100"
+          }`}
+        >
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h4 className="text-lg font-semibold text-slate-900">
+                {importResults.success > 0
+                  ? "รายการที่ยังต้องกลับไปแก้ไข"
+                  : "ยังไม่มีรายการที่ผ่านเงื่อนไข"}
+              </h4>
+              <p className="mt-1 text-sm leading-6 text-slate-700">
+                {importResults.success > 0
+                  ? "ระบบเก็บรายการที่ผ่านไว้ให้แล้ว ส่วนรายการด้านล่างเป็นจุดที่ต้องแก้ก่อนอัปโหลดเพิ่ม"
+                  : "ลองไล่ดูข้อผิดพลาดตามแถวและคอลัมน์ด้านล่าง จากนั้นแก้ไฟล์ CSV แล้วอัปโหลดใหม่อีกครั้ง"}
+              </p>
+            </div>
+
+            <div
+              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+                importResults.success > 0
+                  ? "bg-amber-100 text-amber-700"
+                  : "bg-rose-100 text-rose-700"
+              }`}
+            >
+              {validationErrors.length} จุดที่ต้องตรวจ
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl border border-white/80 bg-white/90 shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead className="bg-slate-100 text-slate-700">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-semibold">แถว</th>
+                    <th className="px-4 py-3 text-left font-semibold">ฟิลด์</th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      อาการที่พบ
+                    </th>
+                    <th className="px-4 py-3 text-left font-semibold">
+                      ค่าที่ระบบอ่านได้
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {visibleValidationErrors.map((error, index) => (
+                    <tr key={index} className="align-top">
+                      <td className="px-4 py-3 font-semibold text-slate-900">
+                        {error.row}
+                      </td>
+                      <td className="px-4 py-3 text-slate-700">{error.field}</td>
+                      <td className="px-4 py-3 text-slate-700">
+                        {error.message}
+                      </td>
+                      <td className="px-4 py-3 text-slate-500">
+                        <span className="inline-flex max-w-[220px] truncate rounded-full bg-slate-100 px-3 py-1 text-xs">
+                          {error.value ? String(error.value) : "-"}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {validationErrors.length > visibleValidationErrors.length && (
+            <p className="mt-3 text-sm text-slate-600">
+              แสดง {visibleValidationErrors.length} รายการแรกจากทั้งหมด{" "}
+              {validationErrors.length} จุดที่ต้องแก้
             </p>
+          )}
+
+          <div className="mt-4 rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900">วิธีแก้เร็วที่สุด</p>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-700">
+              <li>แก้แถวที่ขึ้น error จากไฟล์ CSV ต้นฉบับ</li>
+              <li>บันทึกไฟล์ใหม่เป็น CSV (UTF-8)</li>
+              <li>อัปโหลดเฉพาะไฟล์ที่แก้แล้วอีกครั้ง ระบบจะเพิ่มเฉพาะรายการที่ผ่านให้เหมือนเดิม</li>
+            </ol>
           </div>
         </div>
       )}
 
       {/* คำแนะนำรูปแบบไฟล์ */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-blue-800 mb-2">
-          📝 รูปแบบไฟล์ CSV
+      <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 p-5 shadow-sm">
+        <h4 className="text-lg font-semibold text-sky-900 mb-2">
+          รูปแบบไฟล์ CSV ที่ระบบอ่านได้
         </h4>
         <div className="text-sm text-blue-700 space-y-1">
           <p>

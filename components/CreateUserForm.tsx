@@ -16,6 +16,7 @@ import { useWorkCenters } from "@/hooks/queries/useWorkCenters";
 import { useBranches } from "@/hooks/queries/useBranches";
 import { useCreateUser, useCheckEmployeeId } from "@/hooks/queries/useUsers";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FeedbackBanner } from "@/app/admin/components/shared/FeedbackBanner";
 
 type WorkCenter = {
   id: number;
@@ -40,7 +41,11 @@ const ROLE_OPTIONS = [
 ];
 
 export default function CreateUserForm() {
-  const [error, setError] = useState("");
+  const [feedback, setFeedback] = useState<{
+    variant: "success" | "error";
+    title: string;
+    message: string;
+  } | null>(null);
   const router = useRouter();
 
   const {
@@ -79,6 +84,16 @@ export default function CreateUserForm() {
   const { data: employeeIdCheckResult, isLoading: isCheckingEmployeeId } =
     useCheckEmployeeId(debouncedEmployeeId);
 
+  useEffect(() => {
+    if (!feedback || feedback.variant !== "success") return;
+
+    const timer = setTimeout(() => {
+      router.replace("/admin");
+    }, 1400);
+
+    return () => clearTimeout(timer);
+  }, [feedback, router]);
+
   // Auto-update password to match employee ID
   useEffect(() => {
     if (employeeId && employeeId.length >= 6) {
@@ -94,20 +109,31 @@ export default function CreateUserForm() {
   }, [selectedWorkCenter, setValue]);
 
   const onSubmit = async (data: FormData) => {
-    setError("");
+    setFeedback(null);
 
     try {
       const result = await createUserMutation.mutateAsync(data);
       if (result.success) {
-        alert(
-          `✅ สร้างผู้ใช้เรียบร้อยแล้ว!\n\nชื่อ: ${data.fullName}\nรหัสพนักงาน: ${data.employeeId}\nรหัสผ่าน: ${data.password}\n\nกำลังกลับสู่หน้ารายชื่อผู้ใช้...`,
-        );
-        router.push("/admin");
+        setFeedback({
+          variant: "success",
+          title: "สร้างผู้ใช้เรียบร้อยแล้ว",
+          message:
+            "ระบบตั้งรหัสผ่านให้ตรงกับรหัสพนักงานเรียบร้อยแล้ว กำลังพากลับไปหน้าจัดการผู้ใช้",
+        });
       } else {
-        setError(`ไม่สามารถสร้างผู้ใช้ได้: ${result.error}`);
+        setFeedback({
+          variant: "error",
+          title: "ไม่สามารถสร้างผู้ใช้ได้",
+          message: result.error || "เกิดข้อผิดพลาดในการสร้างผู้ใช้",
+        });
       }
     } catch (err) {
-      setError("เกิดข้อผิดพลาดในการสร้างผู้ใช้");
+      setFeedback({
+        variant: "error",
+        title: "เกิดข้อผิดพลาดในการสร้างผู้ใช้",
+        message:
+          err instanceof Error ? err.message : "กรุณาลองใหม่อีกครั้ง",
+      });
     }
   };
 
@@ -140,6 +166,14 @@ export default function CreateUserForm() {
   return (
     <div className="max-w-2xl mx-auto">
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {feedback && (
+          <FeedbackBanner
+            variant={feedback.variant}
+            title={feedback.title}
+            message={feedback.message}
+          />
+        )}
+
         {/* Employee ID Field */}
         <FormField
           label="รหัสพนักงาน"
@@ -366,17 +400,6 @@ export default function CreateUserForm() {
               : "สร้างผู้ใช้"}
           </FormButton>
         </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex items-center">
-              <span className="text-red-500 mr-2">❌</span>
-              <span className="text-red-700 font-medium">เกิดข้อผิดพลาด:</span>
-            </div>
-            <p className="text-red-600 mt-1">{error}</p>
-          </div>
-        )}
 
         {/* Info Panel */}
         <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">

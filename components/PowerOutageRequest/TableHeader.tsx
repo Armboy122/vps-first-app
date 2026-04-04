@@ -1,9 +1,9 @@
 "use client";
-import { memo, useCallback } from "react";
+import { memo } from "react";
 
 interface TableHeaderProps {
   selectAll: boolean;
-  setSelectAll: (value: boolean) => void;
+  onToggleSelectAll: () => void;
   isAdmin: boolean;
   isViewer: boolean;
   isSupervisor: boolean;
@@ -12,15 +12,11 @@ interface TableHeaderProps {
 export const TableHeader = memo(
   ({
     selectAll,
-    setSelectAll,
+    onToggleSelectAll,
     isAdmin,
     isViewer,
     isSupervisor,
   }: TableHeaderProps) => {
-    const handleSelectAllChange = useCallback(() => {
-      setSelectAll(!selectAll);
-    }, [selectAll, setSelectAll]);
-
     return (
       <thead className="bg-gray-100">
         <tr>
@@ -29,7 +25,7 @@ export const TableHeader = memo(
               <input
                 type="checkbox"
                 checked={selectAll}
-                onChange={handleSelectAllChange}
+                onChange={onToggleSelectAll}
                 className="form-checkbox h-5 w-5 text-blue-600"
               />
             </th>

@@ -5,7 +5,7 @@ import prisma from "../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
 
 import { CreateUserInput, CreateUserSchema } from "@/lib/validations/user";
-import { Role } from "@prisma/client";
+import { Role, Prisma } from "@prisma/client";
 import { authOptions } from "@/authOption";
 
 export async function createUser(input: CreateUserInput) {
@@ -56,7 +56,7 @@ export async function getUsers(
   
   try {
     // สร้าง where condition
-    const whereCondition: any = {};
+    const whereCondition: Prisma.UserWhereInput = {};
     
     // เพิ่มเงื่อนไขการค้นหา
     if (search) {
@@ -515,7 +515,9 @@ export async function bulkUpsertTransformers(
     };
 
     // ตรวจสอบและ sanitize ข้อมูลก่อนประมวลผล
-    console.log(`Starting validation for ${data.length} records...`);
+    if (process.env.NODE_ENV !== "production") {
+      console.log(`Starting validation for ${data.length} records...`);
+    }
     reportProgress(0, 1, 0, data.length, "กำลังตรวจสอบความถูกต้องของข้อมูล...");
 
     const sanitizedData = data
@@ -600,9 +602,11 @@ export async function bulkUpsertTransformers(
       };
     }
 
-    console.log(
-      `Validation completed. Processing ${sanitizedData.length} valid records...`,
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `Validation completed. Processing ${sanitizedData.length} valid records...`,
+      );
+    }
     reportProgress(0, 1, 0, sanitizedData.length, "กำลังตรวจสอบข้อมูลซ้ำ...");
 
     // ตรวจสอบ duplicate ภายในข้อมูลที่ส่งมา - ใช้ Map สำหรับประสิทธิภาพ
@@ -643,9 +647,11 @@ export async function bulkUpsertTransformers(
       return firstIndex === index;
     });
 
-    console.log(
-      `After removing duplicates: ${uniqueData.length} unique records to process`,
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `After removing duplicates: ${uniqueData.length} unique records to process`,
+      );
+    }
     reportProgress(
       0,
       1,
@@ -670,18 +676,22 @@ export async function bulkUpsertTransformers(
       batches.push(uniqueData.slice(i, i + BATCH_SIZE));
     }
 
-    console.log(
-      `Split into ${batches.length} batches of up to ${BATCH_SIZE} records each`,
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `Split into ${batches.length} batches of up to ${BATCH_SIZE} records each`,
+      );
+    }
 
     // ประมวลผลแต่ละ batch ด้วยประสิทธิภาพสูง
     for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
       const batch = batches[batchIndex];
       const currentBatch = batchIndex + 1;
 
-      console.log(
-        `Processing batch ${currentBatch}/${batches.length} with ${batch.length} records...`,
-      );
+      if (process.env.NODE_ENV !== "production") {
+        console.log(
+          `Processing batch ${currentBatch}/${batches.length} with ${batch.length} records...`,
+        );
+      }
       reportProgress(
         currentBatch,
         batches.length,
@@ -744,14 +754,18 @@ export async function bulkUpsertTransformers(
               results.updated += updatedCount;
               results.success += batch.length;
 
-              console.log(
-                `Batch ${currentBatch} completed: Created ${createdCount}, Updated ${updatedCount}`,
-              );
+              if (process.env.NODE_ENV !== "production") {
+                console.log(
+                  `Batch ${currentBatch} completed: Created ${createdCount}, Updated ${updatedCount}`,
+                );
+              }
             } else {
               // Fallback ถ้า query ไม่ return ผลลัพธ์ที่คาดหวัง
-              console.warn(
-                `Batch ${currentBatch}: No result returned, assuming all records processed`,
-              );
+              if (process.env.NODE_ENV !== "production") {
+                console.warn(
+                  `Batch ${currentBatch}: No result returned, assuming all records processed`,
+                );
+              }
               results.success += batch.length;
               results.created += batch.length; // สมมติว่าเป็นการสร้างใหม่
             }
@@ -784,9 +798,11 @@ export async function bulkUpsertTransformers(
       }
     }
 
-    console.log(
-      `High-performance bulk processing completed. Total processed: ${results.success}, Errors: ${results.errors.length}`,
-    );
+    if (process.env.NODE_ENV !== "production") {
+      console.log(
+        `High-performance bulk processing completed. Total processed: ${results.success}, Errors: ${results.errors.length}`,
+      );
+    }
 
     // Final progress report
     reportProgress(

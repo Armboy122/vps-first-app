@@ -1,8 +1,127 @@
-@import '@mantine/core/styles.css';
-@import '@mantine/dates/styles.css';
+@import "@mantine/core/styles.css";
+@import "@mantine/dates/styles.css";
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --app-bg: #f4f7f5;
+  --app-surface: rgba(255, 255, 255, 0.84);
+  --app-surface-strong: #ffffff;
+  --app-border: rgba(15, 23, 42, 0.12);
+  --app-text: #10212f;
+  --app-text-muted: #52616f;
+  --app-pea: #245d42;
+  --app-pea-strong: #163826;
+  --app-amber: #b85f0d;
+  --app-shadow: 0 22px 70px rgba(15, 23, 42, 0.08);
+  color-scheme: light;
+}
 
+html {
+  scroll-behavior: smooth;
+  background:
+    radial-gradient(circle at top, rgba(36, 93, 66, 0.08), transparent 30%),
+    linear-gradient(180deg, #f8faf8 0%, #f3f6f4 100%);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: var(--app-text);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(36, 93, 66, 0.08), transparent 28%),
+    radial-gradient(circle at 80% 12%, rgba(245, 158, 11, 0.06), transparent 24%),
+    linear-gradient(180deg, rgba(248, 250, 248, 0.92), rgba(243, 246, 244, 1));
+  font-family: var(--font-sans), "IBM Plex Sans Thai", "Noto Sans Thai", sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.45;
+  background-image:
+    linear-gradient(rgba(15, 23, 42, 0.028) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(15, 23, 42, 0.028) 1px, transparent 1px);
+  background-size: 28px 28px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.82), transparent 92%);
+}
+
+::selection {
+  color: #ffffff;
+  background: var(--app-pea);
+}
+
+:focus-visible {
+  outline: 2px solid rgba(36, 93, 66, 0.7);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.font-display {
+  font-family: var(--font-display), "Noto Serif Thai", serif;
+  letter-spacing: -0.01em;
+}
+
+.app-surface {
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: var(--app-shadow);
+  backdrop-filter: blur(20px);
+}
+
+.app-card {
+  background: var(--app-surface-strong);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+}
+
+.app-muted {
+  color: var(--app-text-muted);
+}
+
+.app-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.app-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(82, 97, 111, 0.32);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.app-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(36, 93, 66, 0.48);
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

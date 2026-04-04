@@ -1,108 +1,106 @@
 "use client";
 
+/**
+ * Custom Tabs implementation using React Context API.
+ *
+ * Replaces the previous cloneElement-based prop drilling approach.
+ * Public API surface is unchanged: Tabs, TabsList, TabsTrigger, TabsContent.
+ */
+
 import * as React from "react";
+
+// ---- Context ----------------------------------------------------------------
+
+interface TabsContextValue {
+  activeTab: string | undefined;
+  setActiveTab: React.Dispatch<React.SetStateAction<string | undefined>>;
+}
+
+const TabsContext = React.createContext<TabsContextValue | null>(null);
+
+function useTabsContext(): TabsContextValue {
+  const ctx = React.useContext(TabsContext);
+  if (!ctx) {
+    throw new Error("Tabs sub-components must be used inside <Tabs>.");
+  }
+  return ctx;
+}
+
+// ---- Tabs (root) -------------------------------------------------------------
 
 interface TabsProps extends React.HTMLAttributes<HTMLDivElement> {
   defaultValue?: string;
 }
 
-export function Tabs({ defaultValue, className, ...props }: TabsProps) {
-  const [activeTab, setActiveTab] = React.useState(defaultValue);
+export function Tabs({ defaultValue, className, children, ...props }: TabsProps) {
+  const [activeTab, setActiveTab] = React.useState<string | undefined>(defaultValue);
 
   return (
-    <div
-      className={`${className || ""}`}
-      {...props}
-      data-active-tab={activeTab}
-    >
-      {React.Children.map(props.children, (child) => {
-        if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            activeTab,
-            setActiveTab,
-          });
-        }
-        return child;
-      })}
-    </div>
+    <TabsContext.Provider value={{ activeTab, setActiveTab }}>
+      <div className={className ?? ""} {...props}>
+        {children}
+      </div>
+    </TabsContext.Provider>
   );
 }
 
-interface TabsListProps extends React.HTMLAttributes<HTMLDivElement> {
-  activeTab?: string;
-  setActiveTab?: React.Dispatch<React.SetStateAction<string | undefined>>;
-}
+// ---- TabsList ---------------------------------------------------------------
 
 export function TabsList({
   className,
   children,
-  activeTab,
-  setActiveTab,
   ...props
-}: TabsListProps) {
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
-      className={`inline-flex h-10 items-center justify-center rounded-md bg-gray-100 p-1 ${
-        className || ""
+      className={`inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm backdrop-blur ${
+        className ?? ""
       }`}
       {...props}
     >
-      {React.Children.map(children, (child) => {
-        if (React.isValidElement(child)) {
-          return React.cloneElement(child as React.ReactElement<any>, {
-            activeTab,
-            setActiveTab,
-          });
-        }
-        return child;
-      })}
+      {children}
     </div>
   );
 }
 
-interface TabsTriggerProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+// ---- TabsTrigger ------------------------------------------------------------
+
+interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   value: string;
-  activeTab?: string;
-  setActiveTab?: React.Dispatch<React.SetStateAction<string | undefined>>;
 }
 
-export function TabsTrigger({
-  className,
-  value,
-  activeTab,
-  setActiveTab,
-  ...props
-}: TabsTriggerProps) {
+export function TabsTrigger({ className, value, ...props }: TabsTriggerProps) {
+  const { activeTab, setActiveTab } = useTabsContext();
   const isActive = activeTab === value;
 
   return (
     <button
-      className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:pointer-events-none disabled:opacity-50 ${
+      type="button"
+      className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(36,93,66,0.25)] disabled:pointer-events-none disabled:opacity-50 ${
         isActive
-          ? "bg-white text-blue-700 shadow-sm"
-          : "text-gray-600 hover:text-gray-900"
-      } ${className || ""}`}
-      onClick={() => setActiveTab?.(value)}
+          ? "bg-pea-700 text-white shadow-sm"
+          : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+      } ${className ?? ""}`}
+      onClick={() => setActiveTab(value)}
       {...props}
     />
   );
 }
 
+// ---- TabsContent ------------------------------------------------------------
+
 interface TabsContentProps extends React.HTMLAttributes<HTMLDivElement> {
   value: string;
-  activeTab?: string;
 }
 
-export function TabsContent({
-  className,
-  value,
-  activeTab,
-  ...props
-}: TabsContentProps) {
-  const isActive = activeTab === value;
+export function TabsContent({ className, value, children, ...props }: TabsContentProps) {
+  const { activeTab } = useTabsContext();
 
-  if (!isActive) return null;
+  if (activeTab !== value) return null;
 
-  return <div className={`mt-2 ${className || ""}`} {...props} />;
+  return (
+    <div className={`mt-3 ${className ?? ""}`} {...props}>
+      {children}
+    </div>
+  );
 }

@@ -6,6 +6,7 @@ import {
   User,
   WorkCenter,
   Branch,
+  Prisma,
 } from "@prisma/client";
 import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
@@ -68,7 +69,7 @@ export class PowerOutageRequestService {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Prisma.PowerOutageRequestWhereInput = {};
     if (filters?.workCenterId) {
       where.workCenterId = filters.workCenterId;
     }

@@ -65,12 +65,19 @@ export function AdminProvider({ children }: AdminProviderProps) {
   // ฟังก์ชันสำหรับอัปเดตพารามิเตอร์การค้นหาหม้อแปลง
   const updateTransformerSearchParams = useCallback(
     (newParams: Partial<TransformerSearchParams>) => {
-      setTransformerSearchParams((prev) => ({
-        ...prev,
-        ...newParams,
-        // รีเซ็ตหน้าเป็น 1 เมื่อมีการค้นหาใหม่
-        page: newParams.search !== undefined ? 1 : prev.page,
-      }));
+      setTransformerSearchParams((prev) => {
+        const updatedParams = { ...prev, ...newParams };
+
+        // รีเซ็ตหน้าเป็น 1 เมื่อมีการค้นหาใหม่ หรือเปลี่ยนขนาดหน้า
+        if (
+          (newParams.search !== undefined && newParams.search !== prev.search) ||
+          (newParams.limit !== undefined && newParams.limit !== prev.limit)
+        ) {
+          updatedParams.page = 1;
+        }
+
+        return updatedParams;
+      });
     },
     [],
   );

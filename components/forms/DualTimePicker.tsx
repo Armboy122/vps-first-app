@@ -1,6 +1,13 @@
 "use client";
 import React from "react";
 import { Controller, Control, FieldError } from "react-hook-form";
+import {
+  formControlBaseClass,
+  formControlDefaultClass,
+  formControlErrorClass,
+  formErrorClass,
+  formLabelClass,
+} from "./styles";
 
 interface DualTimePickerProps {
   name: string;
@@ -134,7 +141,7 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
         return (
           <div className="space-y-3">
             {label && (
-              <label className="block text-sm font-medium text-gray-700">
+              <label className={formLabelClass}>
                 {label}
               </label>
             )}
@@ -147,7 +154,7 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
                   value={hour}
                   onChange={(e) => handleHourChange(e.target.value)}
                   disabled={disabled}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white text-center font-medium text-gray-900 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={`${formControlBaseClass} ${formControlDefaultClass} text-center font-medium ${disabled ? "bg-slate-100" : ""}`}
                 >
                   <option value="">--</option>
                   {filteredHourOptions.map((option) => (
@@ -164,7 +171,7 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
                   value={minute}
                   onChange={(e) => handleMinuteChange(e.target.value)}
                   disabled={disabled || !hour}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white text-center font-medium text-gray-900 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                  className={`${formControlBaseClass} ${formControlDefaultClass} text-center font-medium ${disabled || !hour ? "bg-slate-100" : ""}`}
                 >
                   <option value="">--</option>
                   {filteredMinuteOptions.map((option) => (
@@ -179,27 +186,28 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
             {/* Helper Text */}
             <div className="text-center">
               {!hour && !minute && (
-                <p className="text-xs text-gray-500">
-                  👆 เลือกชั่วโมงก่อน แล้วเลือกนาที
+                <p className={formErrorClass}>
+                  <span className="font-semibold">ขั้นตอน</span>
+                  เลือกชั่วโมงก่อน แล้วเลือกนาที
                 </p>
               )}
               {hour && !minute && (
-                <p className="text-xs text-blue-600 font-medium">
-                  👍 เลือกนาทีให้ครบ
+                <p className="text-xs font-semibold text-pea-700">
+                  เลือกนาทีให้ครบ
                 </p>
               )}
               {hour && minute && (
-                <p className="text-xs text-green-600 font-medium">
-                  ✅ เวลาที่เลือก: {hour}:{minute} น.
+                <p className="text-xs font-semibold text-emerald-700">
+                  เวลาที่เลือก: {hour}:{minute} น.
                 </p>
               )}
             </div>
 
             {/* Error Message */}
             {error && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                <p className="text-sm text-red-700 text-center">
-                  ❌ {error.message}
+              <div className="rounded-xl border border-red-200 bg-red-50/70 p-3">
+                <p className="text-center text-sm text-red-700">
+                  {error.message}
                 </p>
               </div>
             )}

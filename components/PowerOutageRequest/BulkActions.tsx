@@ -10,36 +10,17 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import PrintAnnouncement from "../print";
 import { Request } from "@prisma/client";
-import { printSelectedRequests } from "./PrintService";
-
-interface PowerOutageRequest {
-  id: number;
-  createdAt: Date;
-  createdById: number;
-  outageDate: Date;
-  startTime: Date;
-  endTime: Date;
-  workCenterId: number;
-  branchId: number;
-  transformerNumber: string;
-  gisDetails: string;
-  area: string | null;
-  omsStatus: string;
-  statusRequest: string;
-  statusUpdatedAt: Date | null;
-  statusUpdatedById: number | null;
-  createdBy: { fullName: string };
-  workCenter: { name: string; id: number };
-  branch: { shortName: string };
-}
+import { ActionFeedback, ActionFeedbackState } from "./ActionFeedback";
 
 interface BulkActionsProps {
   isUser: boolean;
   isAdmin: boolean;
   isViewer?: boolean;
   selectedRequests: number[];
-  requests: PowerOutageRequest[];
   handleBulkStatusChange: (status: Request) => void;
+  handlePrintSelected: () => void | Promise<void>;
+  actionFeedback: ActionFeedbackState | null;
+  onDismissActionFeedback: () => void;
 }
 
 export const BulkActions: React.FC<BulkActionsProps> = ({
@@ -47,8 +28,10 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
   isAdmin,
   isViewer = false,
   selectedRequests,
-  requests,
   handleBulkStatusChange,
+  handlePrintSelected,
+  actionFeedback,
+  onDismissActionFeedback,
 }) => {
   if (isViewer) {
     return null;
@@ -56,6 +39,15 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
 
   return (
     <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+      {actionFeedback && (
+        <ActionFeedback
+          variant={actionFeedback.variant}
+          title={actionFeedback.title}
+          message={actionFeedback.message}
+          onDismiss={onDismissActionFeedback}
+        />
+      )}
+
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="flex flex-wrap items-center gap-3">
           {(isUser || isAdmin) && (
@@ -88,9 +80,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
               </div>
 
               <button
-                onClick={() =>
-                  printSelectedRequests(selectedRequests, requests)
-                }
+                onClick={handlePrintSelected}
                 className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
               >
                 <FontAwesomeIcon icon={faPrint} className="mr-2" />
@@ -103,7 +93,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
                 icon={faExclamationTriangle}
                 className="mr-2 text-yellow-500"
               />
-              กรุณาเลือกรายการเพื่อดำเนินการ
+              เลือกรายการก่อนจึงจะพิมพ์เอกสารหรือเปลี่ยนสถานะพร้อมกันได้
             </div>
           )}
         </div>

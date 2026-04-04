@@ -65,6 +65,42 @@ ssh -L 5432:127.0.0.1:5432 peas3@103.117.149.118
 - port: `5432`
 - database / username / password: ตามค่าใน `.env`
 
+## การรัน Local ด้วย DB บน VPS
+
+TablePlus ต่อได้เพราะมันสร้าง SSH tunnel ให้เอง แต่ `next dev` บนเครื่องคุณจะไม่ใช้ tunnel ของ TablePlus อัตโนมัติ
+
+ถ้าจะรัน local แล้วใช้ DB บน VPS ให้ทำ 2 อย่าง:
+
+1. เปิด SSH tunnel ค้างไว้ใน terminal อีกหน้าต่างหนึ่ง
+
+```bash
+ssh -N -L 15432:127.0.0.1:5432 -i ~/.ssh/peas3_github_actions peas3@103.117.149.118
+```
+
+2. สร้าง `.env.local` จาก `.env.local.example`
+
+```bash
+cp .env.local.example .env.local
+```
+
+แล้วแก้ `DATABASE_URL` ใน `.env.local` ให้เป็น:
+
+```env
+DATABASE_URL="postgresql://sa:<POSTGRES_PASSWORD>@127.0.0.1:15432/PeaTransformer?schema=public"
+```
+
+หลังจากนั้นค่อยรัน:
+
+```bash
+npm run dev
+```
+
+หมายเหตุ:
+
+- ห้ามใช้ host เป็น `103.117.149.118:5432` ตรง ๆ เพราะ public port ถูกปิดไว้แล้ว
+- ห้ามใช้ host เป็น `db` เพราะชื่อ `db` ใช้ได้เฉพาะใน Docker network บน VPS
+- ถ้าจะใช้ prod DB จาก local จริง ๆ ระวังคำสั่งที่เขียนข้อมูล เช่น seed, migrate, delete, bulk update
+
 ## Auto Deploy
 
 เมื่อ push เข้า branch `main`, GitHub Actions จะทำตามลำดับนี้:
