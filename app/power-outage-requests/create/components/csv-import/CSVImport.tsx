@@ -495,11 +495,37 @@ export const CSVImport: React.FC<CSVImportProps> = ({
                 แนวทางการอ่านผลลัพธ์
               </p>
               <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
-                <li>หาก “ต้องกลับไปแก้ไข” เป็น 0 แปลว่ารอบนี้พร้อมใช้งานทั้งหมด</li>
+                <li>หาก &quot;ต้องกลับไปแก้ไข&quot; เป็น 0 แปลว่ารอบนี้พร้อมใช้งานทั้งหมด</li>
                 <li>หากมีทั้งสำเร็จและผิดพลาด แปลว่าเป็น partial import ไม่จำเป็นต้องเริ่มใหม่ทั้งไฟล์</li>
                 <li>รายละเอียดข้อผิดพลาดด้านล่างถูกตัดให้เห็นเฉพาะส่วนสำคัญก่อนเพื่ออ่านง่ายขึ้น</li>
               </ul>
             </div>
+          </div>
+
+          {/* Action buttons: retry / dismiss */}
+          <div className="mt-4 flex flex-wrap gap-3">
+            {importResults.errors > 0 && (
+              <FormButton
+                type="button"
+                variant="secondary"
+                onClick={() => fileInputRef.current?.click()}
+                className="border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+              >
+                อัปโหลดไฟล์ที่แก้แล้ว
+              </FormButton>
+            )}
+            <FormButton
+              type="button"
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setImportResults(null);
+                setValidationErrors([]);
+              }}
+              className="border-slate-200 text-slate-500 bg-white hover:bg-slate-50"
+            >
+              ปิดผลลัพธ์
+            </FormButton>
           </div>
         </div>
       )}
@@ -593,12 +619,15 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         </div>
       )}
 
-      {/* คำแนะนำรูปแบบไฟล์ */}
-      <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 p-5 shadow-sm">
-        <h4 className="text-lg font-semibold text-sky-900 mb-2">
-          รูปแบบไฟล์ CSV ที่ระบบอ่านได้
-        </h4>
-        <div className="text-sm text-blue-700 space-y-1">
+      {/* คำแนะนำรูปแบบไฟล์ — collapsed by default to reduce visual noise */}
+      <details className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 shadow-sm group">
+        <summary className="cursor-pointer select-none p-5 text-lg font-semibold text-sky-900 list-none flex items-center justify-between">
+          <span>รูปแบบไฟล์ CSV ที่ระบบอ่านได้</span>
+          <span className="ml-2 text-sky-500 transition-transform group-open:rotate-180" aria-hidden="true">
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+          </span>
+        </summary>
+        <div className="px-5 pb-5 text-sm text-blue-700 space-y-1">
           <p>
             <strong>คอลัมน์ที่จำเป็น (เรียงตามลำดับ):</strong>
           </p>
@@ -622,7 +651,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           <ol className="list-decimal list-inside ml-4 space-y-1">
             <li>เปิด Excel หรือ Google Sheets</li>
             <li>ใส่ข้อมูลตามรูปแบบที่กำหนด</li>
-            <li>File → Save As → เลือก CSV (UTF-8)</li>
+            <li>File {'\u2192'} Save As {'\u2192'} เลือก CSV (UTF-8)</li>
             <li>อัปโหลดไฟล์ที่ได้</li>
           </ol>
           <p>
@@ -633,7 +662,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             <strong>ข้อจำกัด:</strong> ไฟล์สูงสุด 10MB, จำนวนแถวสูงสุด 1,000 แถว
           </p>
         </div>
-      </div>
+      </details>
     </div>
   );
 };

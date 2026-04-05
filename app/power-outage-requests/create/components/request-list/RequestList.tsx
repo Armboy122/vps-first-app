@@ -1,7 +1,8 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import { FormButton } from "@/components/forms";
+import { Trash2, X, ListChecks, Send } from "lucide-react";
 
 interface RequestListProps {
   requests: PowerOutageRequestInput[];
@@ -22,32 +23,61 @@ export const RequestList: React.FC<RequestListProps> = ({
   onClearAllRequests,
   onSubmitAll,
 }) => {
+  const [confirmingClear, setConfirmingClear] = useState(false);
+
   if (requests.length === 0) return null;
 
   return (
-    <div className="mt-8 p-6 bg-gray-50 border-t border-gray-200 rounded-lg">
-      {/* หัวข้อและปุ่มล้างทั้งหมด */}
-      <div className="flex justify-between items-center mb-4">
-        <div>
-          <h3 className="text-lg font-semibold text-gray-800">
-            รายการคำขอที่รอการบันทึก ({requests.length} รายการ)
-          </h3>
-          <p className="text-xs text-gray-500 mt-1">
-            📅 เรียงตามวันที่และเวลาเริ่มต้นอัตโนมัติ
-          </p>
+    <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+      {/* Header */}
+      <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 bg-slate-50/50">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-blue-50 ring-1 ring-blue-200/60">
+            <ListChecks className="w-4 h-4 text-blue-600" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">
+              รายการคำขอที่รอบันทึก
+            </h3>
+            <p className="text-xs text-slate-500">
+              {requests.length} รายการ - เรียงตามวันที่อัตโนมัติ
+            </p>
+          </div>
         </div>
-        <FormButton
-          variant="danger"
-          size="sm"
-          onClick={onClearAllRequests}
-          icon="🗑️"
-        >
-          ล้างทั้งหมด
-        </FormButton>
+        {confirmingClear ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-red-600 font-medium">ยืนยันลบทั้งหมด?</span>
+            <FormButton
+              variant="danger"
+              size="sm"
+              onClick={() => {
+                onClearAllRequests();
+                setConfirmingClear(false);
+              }}
+            >
+              ใช่ ลบทั้งหมด
+            </FormButton>
+            <FormButton
+              variant="secondary"
+              size="sm"
+              onClick={() => setConfirmingClear(false)}
+            >
+              ยกเลิก
+            </FormButton>
+          </div>
+        ) : (
+          <button
+            onClick={() => setConfirmingClear(true)}
+            className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 font-medium transition-colors cursor-pointer"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+            ล้างทั้งหมด
+          </button>
+        )}
       </div>
 
-      {/* รายการคำขอ */}
-      <div className="space-y-3 max-h-60 overflow-y-auto">
+      {/* Request cards */}
+      <div className="divide-y divide-slate-100 max-h-72 overflow-y-auto">
         {requests.map((request, index) => (
           <RequestCard
             key={index}
@@ -58,18 +88,20 @@ export const RequestList: React.FC<RequestListProps> = ({
         ))}
       </div>
 
-      {/* สรุปและปุ่มบันทึกทั้งหมด */}
-      <div className="flex justify-between items-center mt-6">
-        <div className="text-sm text-gray-600">
-          รวม {requests.length} รายการรอการบันทึก
-        </div>
+      {/* Footer with submit */}
+      <div className="flex justify-between items-center px-5 py-4 border-t border-slate-100 bg-slate-50/50">
+        <span className="text-sm text-slate-500">
+          รวม <strong className="text-slate-700">{requests.length}</strong> รายการรอบันทึก
+        </span>
         <FormButton
           variant="success"
           onClick={onSubmitAll}
           isLoading={submitStatus?.isLoading}
-          icon="📋"
         >
-          บันทึกคำขอทั้งหมด
+          <span className="inline-flex items-center gap-2">
+            <Send className="w-4 h-4" />
+            บันทึกคำขอทั้งหมด
+          </span>
         </FormButton>
       </div>
     </div>
@@ -100,69 +132,48 @@ const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   return (
-    <div className="bg-white p-4 rounded-md shadow-sm border border-gray-200">
-      <div className="flex justify-between items-start">
-        {/* หมายเลขลำดับ */}
-        <div className="flex-shrink-0 mr-3">
-          <div className="w-8 h-8 bg-blue-100 text-blue-800 rounded-full flex items-center justify-center text-sm font-semibold">
-            {index + 1}
-          </div>
+    <div className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors group">
+      {/* หมายเลขลำดับ */}
+      <div className="flex-shrink-0 mt-0.5">
+        <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-xs font-bold">
+          {index + 1}
         </div>
-
-        <div className="flex-1">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-            <div>
-              <span className="font-medium text-gray-600">หม้อแปลง:</span>{" "}
-              <span className="text-gray-900 font-medium">
-                {request.transformerNumber}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">วันที่:</span>{" "}
-              <span className="text-gray-900 font-medium">
-                {formatDate(request.outageDate)}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">เวลา:</span>{" "}
-              <span className="text-gray-900 font-medium">
-                {request.startTime} - {request.endTime}
-              </span>
-            </div>
-            <div>
-              <span className="font-medium text-gray-600">สถานที่:</span>{" "}
-              <span className="text-gray-900">{request.gisDetails}</span>
-            </div>
-            {request.area && (
-              <div className="md:col-span-2">
-                <span className="font-medium text-gray-600">พื้นที่ไฟดับ:</span>{" "}
-                <span className="text-gray-900">{request.area}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ปุ่มลบ */}
-        <button
-          onClick={() => onRemove(index)}
-          className="ml-4 p-2 text-red-600 hover:bg-red-50 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50"
-          title="ลบรายการนี้"
-        >
-          <svg
-            className="w-4 h-4"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
       </div>
+
+      {/* ข้อมูล */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <span className="text-sm font-semibold text-slate-800 truncate">
+            {request.transformerNumber}
+          </span>
+          <span className="text-xs text-slate-400">|</span>
+          <span className="text-xs text-slate-500">
+            {formatDate(request.outageDate)}
+          </span>
+          <span className="text-xs text-slate-400">|</span>
+          <span className="text-xs text-slate-500">
+            {request.startTime} - {request.endTime}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          {request.gisDetails && <span className="truncate">{request.gisDetails}</span>}
+          {request.area && (
+            <>
+              <span className="text-slate-300">-</span>
+              <span className="truncate text-slate-400">{request.area}</span>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ปุ่มลบ */}
+      <button
+        onClick={() => onRemove(index)}
+        className="flex-shrink-0 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 cursor-pointer"
+        title="ลบรายการนี้"
+      >
+        <X className="w-4 h-4" />
+      </button>
     </div>
   );
 };

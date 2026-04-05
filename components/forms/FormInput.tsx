@@ -13,13 +13,16 @@ interface FormInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const FormInput = React.forwardRef<HTMLInputElement, FormInputProps>(
-  ({ error, icon, className = "", ...props }, ref) => {
+  ({ error, icon, className = "", id, name, ...props }, ref) => {
     return (
       <div className="relative">
         <input
           ref={ref}
+          id={id || name}
+          name={name}
           {...props}
           aria-invalid={Boolean(error)}
+          aria-describedby={error ? `${id || name}-error` : undefined}
           data-invalid={Boolean(error) || undefined}
           className={`${formControlBaseClass} ${
             error ? formControlErrorClass : formControlDefaultClass

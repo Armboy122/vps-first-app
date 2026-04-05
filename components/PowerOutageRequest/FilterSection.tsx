@@ -1,11 +1,5 @@
 "use client";
 import React, { useCallback, memo } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faFilter,
-  faChevronDown,
-  faChevronUp,
-} from "@fortawesome/free-solid-svg-icons";
 
 interface FilterSectionProps {
   statusFilter: string[];
@@ -16,6 +10,18 @@ interface FilterSectionProps {
   setShowPastOutageDates: (show: boolean) => void;
 }
 
+const statusChips = [
+  { value: "CONFIRM", label: "อนุมัติแล้ว", activeClass: "bg-emerald-100 text-emerald-800 ring-emerald-300" },
+  { value: "NOT", label: "รอการอนุมัติ", activeClass: "bg-amber-100 text-amber-800 ring-amber-300" },
+  { value: "CANCELLED", label: "ยกเลิก", activeClass: "bg-red-100 text-red-800 ring-red-300" },
+];
+
+const omsChips = [
+  { value: "NOT_ADDED", label: "ยังไม่ดำเนินการ", activeClass: "bg-slate-200 text-slate-800 ring-slate-400" },
+  { value: "PROCESSED", label: "ดำเนินการแล้ว", activeClass: "bg-blue-100 text-blue-800 ring-blue-300" },
+  { value: "CANCELLED", label: "ยกเลิก OMS", activeClass: "bg-red-100 text-red-800 ring-red-300" },
+];
+
 export const FilterSection = memo(
   ({
     statusFilter,
@@ -25,8 +31,6 @@ export const FilterSection = memo(
     showPastOutageDates,
     setShowPastOutageDates,
   }: FilterSectionProps) => {
-    const [isCollapsed, setIsCollapsed] = React.useState(false);
-
     const handleStatusFilterChange = useCallback(
       (status: string) => {
         if (statusFilter.includes(status)) {
@@ -53,104 +57,69 @@ export const FilterSection = memo(
       setShowPastOutageDates(!showPastOutageDates);
     }, [showPastOutageDates, setShowPastOutageDates]);
 
-    const statusOptions = [
-      {
-        value: "CONFIRM",
-        label: "อนุมัติดับไฟ",
-        color: "bg-green-100 text-green-800 border-green-200",
-      },
-      {
-        value: "CANCELLED",
-        label: "ยกเลิก",
-        color: "bg-red-100 text-red-800 border-red-200",
-      },
-      {
-        value: "NOT",
-        label: "รออนุมัติ",
-        color: "bg-yellow-100 text-yellow-800 border-yellow-200",
-      },
-    ];
-
-    const omsStatusOptions = [
-      {
-        value: "NOT_ADDED",
-        label: "ยังไม่ดำเนินการ",
-        color: "bg-gray-100 text-gray-800 border-gray-200",
-      },
-      {
-        value: "PROCESSED",
-        label: "ดำเนินการแล้ว",
-        color: "bg-blue-100 text-blue-800 border-blue-200",
-      },
-      {
-        value: "CANCELLED",
-        label: "ยกเลิก",
-        color: "bg-red-100 text-red-800 border-red-200",
-      },
-    ];
-
     return (
-      <div className="mb-6 flex flex-wrap gap-4 bg-white p-4 rounded-lg shadow-md">
-        <div>
-          <div className="text-gray-700 font-medium mb-2">
-            สถานะคำของานดับไฟ
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {["CONFIRM", "NOT", "CANCELLED"].map((status) => (
-              <label key={status} className="flex items-center mr-4">
-                <input
-                  type="checkbox"
-                  className="mr-1 h-4 w-4 text-blue-600"
-                  checked={statusFilter.includes(status)}
-                  onChange={() => handleStatusFilterChange(status)}
-                />
-                <span>
-                  {status === "CONFIRM"
-                    ? "อนุมัติแล้ว"
-                    : status === "NOT"
-                      ? "รอการอนุมัติ"
-                      : "ยกเลิก"}
-                </span>
-              </label>
-            ))}
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        {/* สถานะคำขอ */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">สถานะคำขอ</span>
+          <div className="flex gap-1.5 flex-wrap">
+            {statusChips.map((chip) => {
+              const isActive = statusFilter.includes(chip.value);
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => handleStatusFilterChange(chip.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+                    isActive
+                      ? chip.activeClass
+                      : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-        <div>
-          <div className="text-gray-700 font-medium mb-2">
-            สถานะการลงข้อมูลในระบบ OMS
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {["NOT_ADDED", "PROCESSED", "CANCELLED"].map((status) => (
-              <label key={status} className="flex items-center mr-4">
-                <input
-                  type="checkbox"
-                  className="mr-1 h-4 w-4 text-blue-600"
-                  checked={omsStatusFilter.includes(status)}
-                  onChange={() => handleOmsStatusFilterChange(status)}
-                />
-                <span>
-                  {status === "NOT_ADDED"
-                    ? "ยังไม่ได้เพิ่ม"
-                    : status === "PROCESSED"
-                      ? "ดำเนินการแล้ว"
-                      : "ยกเลิก"}
-                </span>
-              </label>
-            ))}
+
+        <div className="hidden sm:block w-px h-5 bg-slate-200" />
+
+        {/* สถานะ OMS */}
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">OMS</span>
+          <div className="flex gap-1.5 flex-wrap">
+            {omsChips.map((chip) => {
+              const isActive = omsStatusFilter.includes(chip.value);
+              return (
+                <button
+                  key={chip.value}
+                  onClick={() => handleOmsStatusFilterChange(chip.value)}
+                  className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+                    isActive
+                      ? chip.activeClass
+                      : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              );
+            })}
           </div>
         </div>
-        <div>
-          <div className="text-gray-700 font-medium mb-2">การกรองตามวันที่</div>
-          <label className="flex items-center">
-            <input
-              type="checkbox"
-              className="mr-1 h-4 w-4 text-blue-600"
-              checked={showPastOutageDates}
-              onChange={handlePastOutageDatesChange}
-            />
-            <span>แสดงรายการที่เลยวันดับไฟไปแล้ว</span>
-          </label>
-        </div>
+
+        <div className="hidden sm:block w-px h-5 bg-slate-200" />
+
+        {/* แสดงรายการเก่า */}
+        <button
+          onClick={handlePastOutageDatesChange}
+          className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+            showPastOutageDates
+              ? "bg-violet-100 text-violet-800 ring-violet-300"
+              : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+          }`}
+        >
+          รายการที่เลยกำหนด
+        </button>
       </div>
     );
   },

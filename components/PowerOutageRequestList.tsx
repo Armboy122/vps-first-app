@@ -2,7 +2,7 @@
 import { useState, useCallback, useEffect } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
 import { updatePowerOutageRequest } from "@/app/api/action/powerOutageRequest";
-import UpdatePowerOutageRequestModal from "./UpdateRequesr";
+import UpdatePowerOutageRequestModal from "./UpdateRequest";
 import { ConfirmDialog, LoadingSpinner } from "@/components/ui";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
@@ -104,7 +104,13 @@ const EmptyState = ({ message }: { message: string }) => (
   </div>
 );
 
-const NoSearchResults = ({ searchTerm }: { searchTerm: string }) => (
+const NoSearchResults = ({
+  searchTerm,
+  hasActiveFilters,
+}: {
+  searchTerm: string;
+  hasActiveFilters: boolean;
+}) => (
   <div className="flex flex-col items-center justify-center py-16 text-gray-500">
     <svg
       className="w-16 h-16 mb-4 text-gray-300"
@@ -119,8 +125,24 @@ const NoSearchResults = ({ searchTerm }: { searchTerm: string }) => (
         d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
       />
     </svg>
-    <p className="text-lg font-medium">ไม่พบผลลัพธ์สำหรับ &ldquo;{searchTerm}&rdquo;</p>
-    <p className="text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือล้างตัวกรองออก</p>
+    {searchTerm ? (
+      <>
+        <p className="text-lg font-medium">
+          ไม่พบผลลัพธ์สำหรับ &ldquo;{searchTerm}&rdquo;
+        </p>
+        <p className="text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือล้างตัวกรองออก</p>
+      </>
+    ) : hasActiveFilters ? (
+      <>
+        <p className="text-lg font-medium">ไม่พบรายการที่ตรงกับตัวกรองที่เลือก</p>
+        <p className="text-sm mt-1">ลองเปลี่ยนสถานะหรือช่วงวันที่ที่ต้องการ</p>
+      </>
+    ) : (
+      <>
+        <p className="text-lg font-medium">ไม่พบรายการ</p>
+        <p className="text-sm mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา</p>
+      </>
+    )}
   </div>
 );
 
@@ -244,6 +266,11 @@ export default function PowerOutageRequestList() {
           updatedData: data,
           success: true,
         });
+        setActionFeedback({
+          variant: "success",
+          title: "อัปเดตคำขอเรียบร้อย",
+          message: `แก้ไขคำขอของหม้อแปลง ${editingRequest.transformerNumber} สำเร็จ`,
+        });
         setEditingRequest(null);
         await loadRequests();
       } else {
@@ -255,14 +282,22 @@ export default function PowerOutageRequestList() {
             data,
           },
         );
-        console.error("เกิดข้อผิดพลาดในการอัปเดตคำขอดับไฟ:", result.error);
+        setActionFeedback({
+          variant: "error",
+          title: "อัปเดตคำขอไม่สำเร็จ",
+          message: result.error || "เกิดข้อผิดพลาดในการอัปเดตคำขอ กรุณาลองใหม่อีกครั้ง",
+        });
       }
     } catch (error) {
       logError("power_outage_request_update_error", error as Error, {
         requestId: editingRequest.id,
         data,
       });
-      console.error("Error updating power outage request:", error);
+      setActionFeedback({
+        variant: "error",
+        title: "อัปเดตคำขอไม่สำเร็จ",
+        message: "เกิดข้อผิดพลาดที่ไม่คาดคิด กรุณาลองใหม่อีกครั้ง",
+      });
     }
   };
 
@@ -363,10 +398,22 @@ export default function PowerOutageRequestList() {
             transformerNumber: confirmAction.transformerNumber,
           },
         );
-        console.error("เกิดข้อผิดพลาดในการลบคำขอ:", result.error);
+        setActionFeedback({
+          variant: "error",
+          title: "ลบคำขอไม่สำเร็จ",
+          message: result.error || "เกิดข้อผิดพลาดในการลบคำขอ กรุณาลองใหม่อีกครั้ง",
+        });
+        setConfirmAction(null);
         return;
       }
 
+      setActionFeedback({
+        variant: "success",
+        title: "ลบคำขอเรียบร้อย",
+        message: confirmAction.transformerNumber
+          ? `ลบคำขอของหม้อแปลง ${confirmAction.transformerNumber} แล้ว`
+          : "ลบคำขอเรียบร้อยแล้ว",
+      });
       setConfirmAction(null);
       return;
     }
@@ -440,7 +487,11 @@ export default function PowerOutageRequestList() {
         oldStatus: request?.omsStatus,
         newStatus,
       });
-      console.error(`Failed to update OMS Status: ${result.error}`);
+      setActionFeedback({
+        variant: "error",
+        title: "อัปเดตสถานะ OMS ไม่สำเร็จ",
+        message: result.error || "เกิดข้อผิดพลาดในการเปลี่ยนสถานะ OMS กรุณาลองใหม่",
+      });
     }
   };
 
@@ -474,7 +525,11 @@ export default function PowerOutageRequestList() {
           newStatus,
         },
       );
-      console.error(`Failed to update Status Request: ${result.error}`);
+      setActionFeedback({
+        variant: "error",
+        title: "อัปเดตสถานะอนุมัติไม่สำเร็จ",
+        message: result.error || "เกิดข้อผิดพลาดในการเปลี่ยนสถานะอนุมัติ กรุณาลองใหม่",
+      });
     }
   };
 
@@ -511,39 +566,41 @@ export default function PowerOutageRequestList() {
     );
 
   return (
-    <div className="container mx-auto px-4 py-6">
-      {/* Search Section */}
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow-md mb-6">
-        <SearchSection
-          searchTerm={searchTerm}
-          setSearchTerm={setSearchTerm}
-          startDate={filters.startDate}
-          setStartDate={(value) => updateFilter("startDate", value)}
-          endDate={filters.endDate}
-          setEndDate={(value) => updateFilter("endDate", value)}
-          workCenterFilter={filters.workCenterFilter}
-          setWorkCenterFilter={(value) =>
-            updateFilter("workCenterFilter", value)
-          }
-          workCenters={workCenters}
-          isAdmin={isAdmin}
-          isViewer={isViewer}
-          branchFilter={filters.branchFilter}
-          setBranchFilter={(value) => updateFilter("branchFilter", value)}
-        />
+    <div className="space-y-5">
+      {/* Unified Search + Filter Card */}
+      <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="p-4 md:p-5">
+          <SearchSection
+            searchTerm={searchTerm}
+            setSearchTerm={setSearchTerm}
+            startDate={filters.startDate}
+            setStartDate={(value) => updateFilter("startDate", value)}
+            endDate={filters.endDate}
+            setEndDate={(value) => updateFilter("endDate", value)}
+            workCenterFilter={filters.workCenterFilter}
+            setWorkCenterFilter={(value) =>
+              updateFilter("workCenterFilter", value)
+            }
+            workCenters={workCenters}
+            isAdmin={isAdmin}
+            isViewer={isViewer}
+            branchFilter={filters.branchFilter}
+            setBranchFilter={(value) => updateFilter("branchFilter", value)}
+          />
+        </div>
+        <div className="border-t border-slate-100 bg-slate-50/50 px-4 md:px-5 py-3">
+          <FilterSection
+            statusFilter={filters.statusFilter}
+            setStatusFilter={(value) => updateFilter("statusFilter", value)}
+            omsStatusFilter={filters.omsStatusFilter}
+            setOmsStatusFilter={(value) => updateFilter("omsStatusFilter", value)}
+            showPastOutageDates={filters.showPastOutageDates}
+            setShowPastOutageDates={(value) =>
+              updateFilter("showPastOutageDates", value)
+            }
+          />
+        </div>
       </div>
-
-      {/* Filter Section */}
-      <FilterSection
-        statusFilter={filters.statusFilter}
-        setStatusFilter={(value) => updateFilter("statusFilter", value)}
-        omsStatusFilter={filters.omsStatusFilter}
-        setOmsStatusFilter={(value) => updateFilter("omsStatusFilter", value)}
-        showPastOutageDates={filters.showPastOutageDates}
-        setShowPastOutageDates={(value) =>
-          updateFilter("showPastOutageDates", value)
-        }
-      />
 
       {/* OMS Status Summary - admin and viewer only */}
       {(isAdmin || isViewer) && (
@@ -554,7 +611,7 @@ export default function PowerOutageRequestList() {
         />
       )}
 
-      {/* Bulk Actions Section */}
+      {/* Action Bar */}
       <BulkActions
         isUser={isUser}
         isAdmin={isAdmin}
@@ -566,41 +623,47 @@ export default function PowerOutageRequestList() {
         onDismissActionFeedback={() => setActionFeedback(null)}
       />
 
-      {/* Loading state */}
+      {/* Data Section */}
       {loading ? (
         <LoadingSpinner minHeight={256} />
       ) : requests.length === 0 ? (
-        // Empty states
-        searchTerm || filters.statusFilter.length > 0 || filters.omsStatusFilter.length > 0 ? (
-          <NoSearchResults searchTerm={searchTerm} />
+        searchTerm || filters.statusFilter.length > 0 || filters.omsStatusFilter.length > 0 || filters.startDate || filters.endDate ? (
+          <NoSearchResults
+            searchTerm={searchTerm}
+            hasActiveFilters={
+              filters.statusFilter.length > 0 ||
+              filters.omsStatusFilter.length > 0 ||
+              !!filters.startDate ||
+              !!filters.endDate
+            }
+          />
         ) : (
           <EmptyState message="ยังไม่มีคำขอดับไฟในระบบ" />
         )
+      ) : isMobile ? (
+        <div className="space-y-3">
+          {requests.map((request) => (
+            <MobileCard
+              key={request.id}
+              request={request}
+              isAdmin={isAdmin}
+              isUser={isUser}
+              isViewer={isViewer}
+              isSupervisor={isSupervisor}
+              userWorkCenterId={userWorkCenterId}
+              selectedRequests={selectedRequests}
+              onToggleSelect={handleSelectRequest}
+              handleEdit={handleEdit}
+              handleDelete={handleDeleteConfirm}
+              handleEditOmsStatus={handleEditOmsStatus}
+              handleEditStatusRequest={handleEditStatusRequest}
+            />
+          ))}
+        </div>
       ) : (
-        // Mobile or Desktop View
-        isMobile ? (
-          <div className="space-y-4">
-            {requests.map((request) => (
-              <MobileCard
-                key={request.id}
-                request={request}
-                isAdmin={isAdmin}
-                isUser={isUser}
-                isViewer={isViewer}
-                isSupervisor={isSupervisor}
-                userWorkCenterId={userWorkCenterId}
-                selectedRequests={selectedRequests}
-                onToggleSelect={handleSelectRequest}
-                handleEdit={handleEdit}
-                handleDelete={handleDeleteConfirm}
-                handleEditOmsStatus={handleEditOmsStatus}
-                handleEditStatusRequest={handleEditStatusRequest}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="overflow-x-auto bg-white rounded-lg shadow-md border border-gray-200">
-            <table className="min-w-full bg-white">
+        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
               <TableHeader
                 selectAll={selectAll}
                 onToggleSelectAll={handleSelectAll}
@@ -608,7 +671,7 @@ export default function PowerOutageRequestList() {
                 isViewer={isViewer}
                 isSupervisor={isSupervisor}
               />
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-slate-100">
                 {requests.map((request) => (
                   <TableRow
                     key={request.id}
@@ -629,7 +692,7 @@ export default function PowerOutageRequestList() {
               </tbody>
             </table>
           </div>
-        )
+        </div>
       )}
 
       {/* Pagination Controls */}

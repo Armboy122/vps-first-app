@@ -30,12 +30,16 @@ export function TransformerRow({ transformer, onEdit }: TransformerRowProps) {
     return () => clearTimeout(timer);
   }, [deleteSuccess]);
 
-  // Delete mutation
+  // Delete mutation — ตรวจ result.success เพื่อจับ server-action-level errors
   const deleteMutation = useMutation({
     mutationFn: (id: number) => deleteTransformer(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transformers"] });
+    onSuccess: (result) => {
       setShowDeleteDialog(false);
+      if (result && !result.success) {
+        setDeleteError(result.error || "เกิดข้อผิดพลาดในการลบหม้อแปลง");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["transformers"] });
       setDeleteError(null);
       setDeleteSuccess("ลบหม้อแปลงเรียบร้อยแล้ว");
     },

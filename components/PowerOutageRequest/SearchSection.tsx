@@ -1,14 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faSearch,
-  faCalendarAlt,
-  faBuilding,
-  faTimes,
-  faInfoCircle,
-  faCodeBranch,
-} from "@fortawesome/free-solid-svg-icons";
+import { Search, Calendar, Building2, X, Info, GitBranch, SlidersHorizontal } from "lucide-react";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
 
 interface WorkCenter {
@@ -189,18 +181,15 @@ export const SearchSection = memo(
               placeholder="ค้นหาหมายเลขหม้อแปลง, บริเวณ, หรือผู้สร้างคำขอ..."
               value={searchTerm}
               onChange={handleSearchTermChange}
-              className="w-full pl-10 pr-10 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm text-gray-700"
+              className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white text-slate-700 text-sm placeholder:text-slate-400 transition-all"
             />
-            <FontAwesomeIcon
-              icon={faSearch}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             {searchTerm && (
               <button
                 onClick={clearSearchTerm}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                <FontAwesomeIcon icon={faTimes} />
+                <X className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -208,17 +197,18 @@ export const SearchSection = memo(
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleAdvancedSearch}
-                className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors"
               >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
                 {isAdvancedSearch ? "ซ่อนตัวกรองขั้นสูง" : "แสดงตัวกรองขั้นสูง"}
               </button>
 
               <button
-                className="text-gray-500 hover:text-gray-700"
+                className="text-slate-400 hover:text-slate-600 transition-colors"
                 onClick={toggleSearchInfo}
                 aria-label="คำแนะนำการค้นหา"
               >
-                <FontAwesomeIcon icon={faInfoCircle} />
+                <Info className="w-4 h-4" />
               </button>
 
               {searchInfoOpen && (
@@ -253,16 +243,13 @@ export const SearchSection = memo(
         </div>
 
         {isAdvancedSearch && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-3 border-t border-gray-200">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 pt-3">
             <div>
               <label
                 htmlFor="startDate"
-                className="text-sm font-medium text-gray-700 mb-1 flex items-center"
+                className="text-sm font-medium text-slate-600 mb-1 flex items-center"
               >
-                <FontAwesomeIcon
-                  icon={faCalendarAlt}
-                  className="mr-2 text-gray-500"
-                />
+                <Calendar className="w-4 h-4 mr-2 text-slate-400" />
                 วันที่เริ่มต้น
               </label>
               <input
@@ -270,19 +257,16 @@ export const SearchSection = memo(
                 id="startDate"
                 value={startDate}
                 onChange={handleStartDateChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
               />
             </div>
 
             <div>
               <label
                 htmlFor="endDate"
-                className="text-sm font-medium text-gray-700 mb-1 flex items-center"
+                className="text-sm font-medium text-slate-600 mb-1 flex items-center"
               >
-                <FontAwesomeIcon
-                  icon={faCalendarAlt}
-                  className="mr-2 text-gray-500"
-                />
+                <Calendar className="w-4 h-4 mr-2 text-slate-400" />
                 วันที่สิ้นสุด
               </label>
               <input
@@ -290,7 +274,7 @@ export const SearchSection = memo(
                 id="endDate"
                 value={endDate}
                 onChange={handleEndDateChange}
-                className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
               />
             </div>
 
@@ -299,19 +283,16 @@ export const SearchSection = memo(
                 <div>
                   <label
                     htmlFor="workCenter"
-                    className="text-sm font-medium text-gray-700 mb-1 flex items-center"
+                    className="text-sm font-medium text-slate-600 mb-1 flex items-center"
                   >
-                    <FontAwesomeIcon
-                      icon={faBuilding}
-                      className="mr-2 text-gray-500"
-                    />
+                    <Building2 className="w-4 h-4 mr-2 text-slate-400" />
                     จุดรวมงาน
                   </label>
                   <select
                     id="workCenter"
                     value={workCenterFilter}
                     onChange={handleWorkCenterChange}
-                    className="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
                   >
                     <option value="">ทุกจุดรวมงาน</option>
                     {workCenterOptions}
@@ -323,10 +304,7 @@ export const SearchSection = memo(
                     htmlFor="branch"
                     className="text-sm font-medium text-gray-700 mb-1 flex items-center"
                   >
-                    <FontAwesomeIcon
-                      icon={faCodeBranch}
-                      className="mr-2 text-gray-500"
-                    />
+                    <GitBranch className="w-4 h-4 mr-2 text-slate-400" />
                     สาขา
                   </label>
                   <select
@@ -334,7 +312,7 @@ export const SearchSection = memo(
                     value={branchFilter}
                     onChange={handleBranchChange}
                     disabled={!workCenterFilter}
-                    className={`w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm ${!workCenterFilter ? "bg-gray-100 cursor-not-allowed" : ""}`}
+                    className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all ${!workCenterFilter ? "bg-slate-100 cursor-not-allowed text-slate-400" : "bg-slate-50 focus:bg-white"}`}
                   >
                     <option value="">ทุกสาขา</option>
                     {branchOptions}

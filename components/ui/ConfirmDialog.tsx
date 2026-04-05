@@ -92,7 +92,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     >
       <Stack gap="lg">
         <Alert
-          color={isDestructive ? "red" : "blue"}
+          color={isDestructive ? "red" : "pea"}
           variant="light"
           radius="md"
           icon={
@@ -103,7 +103,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             )
           }
         >
-          <Text size="sm" lh={1.6}>
+          <Text size="sm" lh={1.6} id="confirm-dialog-description">
             {message}
           </Text>
         </Alert>
@@ -118,7 +118,7 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
             {cancelLabel}
           </Button>
           <Button
-            color={isDestructive ? "red" : "blue"}
+            color={isDestructive ? "red" : "pea"}
             onClick={handleConfirm}
             loading={isSubmitting}
             radius="md"

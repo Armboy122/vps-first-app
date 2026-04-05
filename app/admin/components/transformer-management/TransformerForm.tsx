@@ -17,23 +17,34 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
     gisDetails: transformer?.gisDetails || "",
   });
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  /** server-action-level error ที่ไม่ throw แต่ส่ง { success: false } กลับมา */
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const queryClient = useQueryClient();
   const isEditing = !!transformer;
 
-  // Mutations
+  // Mutations — ตรวจ result.success เพื่อจับ server-action-level errors
   const createMutation = useMutation({
     mutationFn: (data: typeof formData) => createTransformer(data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && !result.success) {
+        setServerError(result.error || "เกิดข้อผิดพลาดในการสร้างหม้อแปลง");
+        return;
+      }
+      setServerError(null);
       queryClient.invalidateQueries({ queryKey: ["transformers"] });
-      // ปิด form หลังจาก 500ms เพื่อให้ผู้ใช้เห็นว่าการบันทึกสำเร็จ
       setTimeout(() => onSuccess(), 500);
     },
   });
 
   const updateMutation = useMutation({
     mutationFn: (data: typeof formData) => updateTransformer(transformer!.id, data),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      if (result && !result.success) {
+        setServerError(result.error || "เกิดข้อผิดพลาดในการแก้ไขหม้อแปลง");
+        return;
+      }
+      setServerError(null);
       queryClient.invalidateQueries({ queryKey: ["transformers"] });
       setTimeout(() => onSuccess(), 500);
     },
@@ -42,7 +53,7 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
   // Handle form submission
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     // Validate data
     const validation = validateTransformerData(formData);
     if (!validation.isValid) {
@@ -51,6 +62,7 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
     }
 
     setValidationErrors([]);
+    setServerError(null);
 
     // Submit based on mode
     if (isEditing) {
@@ -136,7 +148,7 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
           )}
 
           {/* Success feedback */}
-          {isSuccess && (
+          {isSuccess && !serverError && (
             <FeedbackBanner
               variant="success"
               title="บันทึกสำเร็จ"
@@ -148,8 +160,17 @@ export function TransformerForm({ transformer, onCancel, onSuccess }: Transforme
             />
           )}
 
-          {/* Mutation Errors */}
-          {(createMutation.error || updateMutation.error) && (
+          {/* Server-action error (returned success: false without throwing) */}
+          {serverError && (
+            <FeedbackBanner
+              variant="error"
+              title="ไม่สามารถบันทึกข้อมูลได้"
+              message={serverError}
+            />
+          )}
+
+          {/* Network / thrown errors */}
+          {(createMutation.error || updateMutation.error) && !serverError && (
             <FeedbackBanner
               variant="error"
               title="ไม่สามารถบันทึกข้อมูลได้"

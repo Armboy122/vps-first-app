@@ -39,8 +39,8 @@ export const FormField: React.FC<FormFieldProps> = ({
       </label>
       {children}
       {error && (
-        <p className={formErrorClass}>
-          <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-none" />
+        <p id={`${name}-error`} role="alert" className={formErrorClass}>
+          <ExclamationTriangleIcon className="mt-0.5 h-4 w-4 flex-none" aria-hidden="true" />
           {error.message}
         </p>
       )}

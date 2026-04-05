@@ -53,6 +53,7 @@ export function TabsList({
 }: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      role="tablist"
       className={`inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white/80 p-1 shadow-sm backdrop-blur ${
         className ?? ""
       }`}
@@ -69,13 +70,18 @@ interface TabsTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement>
   value: string;
 }
 
-export function TabsTrigger({ className, value, ...props }: TabsTriggerProps) {
+export function TabsTrigger({ className, value, children, ...props }: TabsTriggerProps) {
   const { activeTab, setActiveTab } = useTabsContext();
   const isActive = activeTab === value;
 
   return (
     <button
       type="button"
+      role="tab"
+      aria-selected={isActive}
+      aria-controls={`tabpanel-${value}`}
+      id={`tab-${value}`}
+      tabIndex={isActive ? 0 : -1}
       className={`inline-flex items-center justify-center whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(36,93,66,0.25)] disabled:pointer-events-none disabled:opacity-50 ${
         isActive
           ? "bg-pea-700 text-white shadow-sm"
@@ -83,7 +89,9 @@ export function TabsTrigger({ className, value, ...props }: TabsTriggerProps) {
       } ${className ?? ""}`}
       onClick={() => setActiveTab(value)}
       {...props}
-    />
+    >
+      {children}
+    </button>
   );
 }
 
@@ -99,7 +107,14 @@ export function TabsContent({ className, value, children, ...props }: TabsConten
   if (activeTab !== value) return null;
 
   return (
-    <div className={`mt-3 ${className ?? ""}`} {...props}>
+    <div
+      role="tabpanel"
+      id={`tabpanel-${value}`}
+      aria-labelledby={`tab-${value}`}
+      tabIndex={0}
+      className={`mt-3 ${className ?? ""}`}
+      {...props}
+    >
       {children}
     </div>
   );

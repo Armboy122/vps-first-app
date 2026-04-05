@@ -131,10 +131,18 @@ export default function PowerOutageCreatePage({
 
   // Fetch transformers and sync into Zustand store so ImprovedFormFields can read them
   // without needing them passed as props.
-  const { data: fetchedTransformers = [] } = useTransformers(transformerSearchTerm);
+  const { data: fetchedTransformers } = useTransformers(transformerSearchTerm);
+
   useEffect(() => {
-    setTransformers(fetchedTransformers);
-  }, [fetchedTransformers, setTransformers]);
+    if (transformerSearchTerm.length < 2) {
+      setTransformers([]);
+      return;
+    }
+
+    if (fetchedTransformers) {
+      setTransformers(fetchedTransformers);
+    }
+  }, [fetchedTransformers, setTransformers, transformerSearchTerm]);
 
   // =============================================
   // Calculated Values
@@ -205,48 +213,6 @@ export default function PowerOutageCreatePage({
   return (
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <div className="space-y-6">
-        {/* ฟอร์มหลัก */}
-        <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-6">
-          {/* ฟิลด์ต่างๆ ในฟอร์ม - Mantine Version */}
-          {/*
-           * ImprovedFormFields now fetches its own branches, transformers,
-           * timeError and computed date values internally — reducing prop drilling.
-           * Only RHF primitives and truly parent-owned data are passed here.
-           */}
-          <ImprovedFormFields
-            register={register}
-            control={control}
-            errors={errors}
-            role={role}
-            workCenters={workCenters}
-            onDateChange={handleDateChange}
-            onTransformerSearch={handleTransformerSearch}
-            onTransformerSelect={onTransformerSelect}
-          />
-
-          {/* ปุ่มสำหรับการดำเนินการ */}
-          <div className="flex justify-end space-x-4 mt-6">
-            <FormButton
-              type="button"
-              variant="secondary"
-              onClick={handleSubmit(onAddToList)}
-              disabled={!isDateValid}
-              icon="➕"
-            >
-              เพิ่มเข้ารายการ
-            </FormButton>
-
-            <FormButton
-              type="submit"
-              variant="primary"
-              disabled={!isDateValid}
-              icon="💾"
-            >
-              บันทึกคำขอนี้
-            </FormButton>
-          </div>
-        </form>
-
         {/* ข้อความสถานะและคำเตือน */}
         <StatusMessages
           timeError={timeError}
@@ -256,9 +222,45 @@ export default function PowerOutageCreatePage({
           minSelectableDate={minSelectableDate}
         />
 
+        {/* ฟอร์มหลัก */}
+        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+          <form onSubmit={handleSubmit(onSubmit)} className="p-5 md:p-6 space-y-6">
+            <ImprovedFormFields
+              register={register}
+              control={control}
+              errors={errors}
+              role={role}
+              workCenters={workCenters}
+              onDateChange={handleDateChange}
+              onTransformerSearch={handleTransformerSearch}
+              onTransformerSelect={onTransformerSelect}
+            />
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4 border-t border-slate-100">
+              <FormButton
+                type="button"
+                variant="secondary"
+                onClick={handleSubmit(onAddToList)}
+                disabled={!isDateValid}
+              >
+                เพิ่มเข้ารายการ
+              </FormButton>
+
+              <FormButton
+                type="submit"
+                variant="primary"
+                disabled={!isDateValid}
+              >
+                บันทึกคำขอนี้
+              </FormButton>
+            </div>
+          </form>
+        </div>
+
         {/* นำเข้าข้อมูลจาก CSV */}
-        <div className="bg-white border border-gray-200 rounded-lg shadow-sm">
-          <div className="p-6">
+        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+          <div className="p-5 md:p-6">
             <CSVImport
               role={role}
               workCenters={workCenters}

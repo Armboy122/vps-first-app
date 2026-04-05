@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import { getPowerOutageRequests } from "@/app/api/action/powerOutageRequest";
@@ -19,6 +19,19 @@ export function ExportDataComponent() {
   const [exportSuccess, setExportSuccess] = useState<string | null>(null);
   /** ข้อความแจ้งเตือนข้อผิดพลาดหลัง export */
   const [exportError, setExportError] = useState<string | null>(null);
+
+  // Auto-dismiss success/error messages
+  useEffect(() => {
+    if (!exportSuccess) return;
+    const timer = setTimeout(() => setExportSuccess(null), 5000);
+    return () => clearTimeout(timer);
+  }, [exportSuccess]);
+
+  useEffect(() => {
+    if (!exportError) return;
+    const timer = setTimeout(() => setExportError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [exportError]);
 
   // Fetch work centers for filter
   const { data: workCenters = [] } = useQuery({
@@ -254,6 +267,15 @@ export function ExportDataComponent() {
             variant="success"
             title="ส่งออกข้อมูลสำเร็จ"
             message={exportSuccess}
+            action={
+              <button
+                type="button"
+                onClick={() => setExportSuccess(null)}
+                className="text-sm font-medium text-emerald-700 hover:text-emerald-900 cursor-pointer"
+              >
+                ปิด
+              </button>
+            }
           />
         )}
         {exportError && (
@@ -262,6 +284,15 @@ export function ExportDataComponent() {
             variant="error"
             title="ส่งออกข้อมูลไม่สำเร็จ"
             message={exportError}
+            action={
+              <button
+                type="button"
+                onClick={() => setExportError(null)}
+                className="text-sm font-medium text-rose-700 hover:text-rose-900 cursor-pointer"
+              >
+                ปิด
+              </button>
+            }
           />
         )}
 

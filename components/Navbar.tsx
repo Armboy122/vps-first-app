@@ -106,9 +106,11 @@ const Navbar = () => {
 
           <button
             onClick={() => setIsMenuOpen((value) => !value)}
+            aria-expanded={isMenuOpen}
+            aria-controls="mobile-nav-menu"
             className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-900/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pea-500 focus-visible:ring-offset-2 md:hidden"
           >
-            <span className="sr-only">Open main menu</span>
+            <span className="sr-only">{isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}</span>
             {!isMenuOpen ? (
               <Bars3Icon className="h-5 w-5" aria-hidden="true" />
             ) : (
@@ -119,7 +121,7 @@ const Navbar = () => {
       </div>
 
       {isMenuOpen && (
-        <div className="border-t border-slate-200/80 bg-white/95 px-4 pb-4 pt-3 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl md:hidden">
+        <div id="mobile-nav-menu" className="border-t border-slate-200/80 bg-white/95 px-4 pb-4 pt-3 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-2">
             {navItems.map((item) => {
               const active = isActivePath(item.path);

@@ -34,8 +34,8 @@ export const LoadingSpinner = ({
     aria-live="polite"
   >
     <Stack gap={6} align="center">
-      <Loader size={size} color="var(--app-pea)" />
-      <Text fw={600} size="sm" style={{ color: "var(--app-text)" }}>
+      <Loader size={size} color="pea" />
+      <Text fw={600} size="sm" c="dark">
         {label}
       </Text>
       {description && (

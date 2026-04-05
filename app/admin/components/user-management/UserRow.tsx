@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Role } from "@prisma/client";
 import { User } from "../../types/admin.types";
@@ -13,6 +13,7 @@ interface UserRowProps {
 
 export function UserRow({ user }: UserRowProps) {
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const roleMenuRef = useRef<HTMLDivElement>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     type: "delete" | "resetPassword" | null;
@@ -31,6 +32,18 @@ export function UserRow({ user }: UserRowProps) {
 
   const queryClient = useQueryClient();
 
+  // ปิด role menu เมื่อคลิกนอก dropdown
+  useEffect(() => {
+    if (!isRoleMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (roleMenuRef.current && !roleMenuRef.current.contains(e.target as Node)) {
+        setIsRoleMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isRoleMenuOpen]);
+
   // ลบ success message อัตโนมัติหลังจาก 3 วินาที
   useEffect(() => {
     if (!successMessage) return;
@@ -44,13 +57,21 @@ export function UserRow({ user }: UserRowProps) {
     return () => clearTimeout(timer);
   }, [actionError]);
 
-  // Mutations
+  /** helper: ปิด confirm dialog กลับเป็น idle */
+  const closeConfirmDialog = () =>
+    setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+
+  // Mutations — ทุกตัวตรวจ `result.success` เพื่อจับ server-action-level errors
   const updateRoleMutation = useMutation({
     mutationFn: ({ userId, newRole }: { userId: number; newRole: Role }) =>
       updateUserRole(userId, newRole),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users"] });
+    onSuccess: (result) => {
       setIsRoleMenuOpen(false);
+      if (result && !result.success) {
+        setActionError(result.error || "ไม่สามารถเปลี่ยน Role ได้");
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: ["users"] });
       setActionError(null);
       setSuccessMessage("เปลี่ยน Role เรียบร้อยแล้ว");
     },
@@ -62,27 +83,35 @@ export function UserRow({ user }: UserRowProps) {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (userId: number) => resetUserPassword(userId),
-    onSuccess: () => {
-      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+    onSuccess: (result) => {
+      closeConfirmDialog();
+      if (result && !result.success) {
+        setActionError(result.error || "ไม่สามารถรีเซ็ตรหัสผ่านได้");
+        return;
+      }
       setActionError(null);
       setSuccessMessage("รีเซ็ตรหัสผ่านเรียบร้อยแล้ว — รหัสผ่านใหม่คือรหัสพนักงาน");
     },
     onError: (error: Error) => {
-      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+      closeConfirmDialog();
       setActionError(error.message || "ไม่สามารถรีเซ็ตรหัสผ่านได้");
     },
   });
 
   const deleteUserMutation = useMutation({
     mutationFn: (userId: number) => deleteUser(userId),
-    onSuccess: () => {
+    onSuccess: (result) => {
+      closeConfirmDialog();
+      if (result && !result.success) {
+        setActionError(result.error || "ไม่สามารถลบผู้ใช้ได้");
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ["users"] });
-      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
       setActionError(null);
       setSuccessMessage("ลบผู้ใช้เรียบร้อยแล้ว");
     },
     onError: (error: Error) => {
-      setConfirmDialog({ isOpen: false, type: null, title: "", message: "" });
+      closeConfirmDialog();
       setActionError(error.message || "ไม่สามารถลบผู้ใช้ได้");
     },
   });
@@ -132,6 +161,15 @@ export function UserRow({ user }: UserRowProps) {
               variant="success"
               title="สำเร็จ"
               message={successMessage}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setSuccessMessage(null)}
+                  className="text-sm font-medium text-emerald-700 hover:text-emerald-900 cursor-pointer"
+                >
+                  ปิด
+                </button>
+              }
             />
           </td>
         </tr>
@@ -143,6 +181,15 @@ export function UserRow({ user }: UserRowProps) {
               variant="error"
               title="ดำเนินการไม่สำเร็จ"
               message={actionError}
+              action={
+                <button
+                  type="button"
+                  onClick={() => setActionError(null)}
+                  className="text-sm font-medium text-rose-700 hover:text-rose-900 cursor-pointer"
+                >
+                  ปิด
+                </button>
+              }
             />
           </td>
         </tr>
@@ -158,10 +205,12 @@ export function UserRow({ user }: UserRowProps) {
 
         {/* Role with Dropdown */}
         <td className="px-6 py-4 whitespace-nowrap">
-          <div className="relative">
+          <div className="relative" ref={roleMenuRef}>
             <button
               onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              aria-haspopup="listbox"
+              aria-expanded={isRoleMenuOpen}
+              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer ${
                 ROLE_COLORS[user.role]
               } hover:opacity-80 transition-opacity`}
               disabled={updateRoleMutation.isPending}
@@ -172,13 +221,19 @@ export function UserRow({ user }: UserRowProps) {
 
             {/* Role Dropdown Menu */}
             {isRoleMenuOpen && (
-              <div className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200">
+              <div
+                role="listbox"
+                aria-label="เลือกบทบาท"
+                className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200"
+              >
                 <div className="py-1">
                   {Object.entries(ROLE_TRANSLATIONS).map(([role, label]) => (
                     <button
                       key={role}
+                      role="option"
+                      aria-selected={user.role === role}
                       onClick={() => handleRoleChange(role as Role)}
-                      className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 transition-colors ${
+                      className={`block w-full text-left px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${
                         user.role === role ? "bg-blue-50 text-blue-700" : "text-gray-700"
                       }`}
                       disabled={updateRoleMutation.isPending}

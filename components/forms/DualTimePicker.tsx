@@ -4,8 +4,6 @@ import { Controller, Control, FieldError } from "react-hook-form";
 import {
   formControlBaseClass,
   formControlDefaultClass,
-  formControlErrorClass,
-  formErrorClass,
   formLabelClass,
 } from "./styles";
 
@@ -150,13 +148,16 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
             <div className="grid grid-cols-2 gap-4">
               {/* ช่องเลือกชั่วโมง */}
               <div className="space-y-2">
+                <label htmlFor={`${name}-hour`} className="sr-only">ชั่วโมง</label>
                 <select
+                  id={`${name}-hour`}
                   value={hour}
                   onChange={(e) => handleHourChange(e.target.value)}
                   disabled={disabled}
+                  aria-label="เลือกชั่วโมง"
                   className={`${formControlBaseClass} ${formControlDefaultClass} text-center font-medium ${disabled ? "bg-slate-100" : ""}`}
                 >
-                  <option value="">--</option>
+                  <option value="">-- ชม. --</option>
                   {filteredHourOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -167,13 +168,16 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
 
               {/* ช่องเลือกนาที */}
               <div className="space-y-2">
+                <label htmlFor={`${name}-minute`} className="sr-only">นาที</label>
                 <select
+                  id={`${name}-minute`}
                   value={minute}
                   onChange={(e) => handleMinuteChange(e.target.value)}
                   disabled={disabled || !hour}
+                  aria-label="เลือกนาที"
                   className={`${formControlBaseClass} ${formControlDefaultClass} text-center font-medium ${disabled || !hour ? "bg-slate-100" : ""}`}
                 >
-                  <option value="">--</option>
+                  <option value="">-- น. --</option>
                   {filteredMinuteOptions.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -186,8 +190,7 @@ export const DualTimePicker: React.FC<DualTimePickerProps> = ({
             {/* Helper Text */}
             <div className="text-center">
               {!hour && !minute && (
-                <p className={formErrorClass}>
-                  <span className="font-semibold">ขั้นตอน</span>
+                <p className="text-xs leading-6 text-slate-500">
                   เลือกชั่วโมงก่อน แล้วเลือกนาที
                 </p>
               )}

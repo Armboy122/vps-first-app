@@ -18,6 +18,7 @@
 
 import { create } from "zustand";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
+import { FORM_MESSAGES } from "@/app/power-outage-requests/create/constants/form.constants";
 
 interface Branch {
   id: number;
@@ -29,6 +30,17 @@ interface Transformer {
   transformerNumber: string;
   gisDetails: string;
 }
+
+const areTransformersEqual = (
+  current: Transformer[],
+  next: Transformer[],
+) =>
+  current.length === next.length &&
+  current.every(
+    (transformer, index) =>
+      transformer.transformerNumber === next[index]?.transformerNumber &&
+      transformer.gisDetails === next[index]?.gisDetails,
+  );
 
 interface SubmitStatus {
   success: boolean;
@@ -109,7 +121,12 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>(
 
     // การตั้งค่าข้อมูลพื้นฐาน
     setBranches: (branches) => set({ branches }),
-    setTransformers: (transformers) => set({ transformers }),
+    setTransformers: (transformers) =>
+      set((state) =>
+        areTransformersEqual(state.transformers, transformers)
+          ? state
+          : { transformers },
+      ),
     setSubmitStatus: (submitStatus) => set({ submitStatus }),
     setTimeError: (timeError) => set({ timeError }),
     
@@ -156,7 +173,7 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>(
         requests: newRequests,
         submitStatus: {
           success: true,
-          message: "คำขอถูกเพิ่มเข้าสู่รายการแล้ว (เรียงตามวันที่และเวลา)",
+          message: FORM_MESSAGES.SUCCESS.ADDED_TO_LIST,
         },
       });
     },
@@ -167,7 +184,7 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>(
         requests: requests.filter((_, i) => i !== index),
         submitStatus: {
           success: true,
-          message: "ลบรายการออกจากรายการรอบันทึกแล้ว",
+          message: FORM_MESSAGES.SUCCESS.REMOVED_FROM_LIST,
         },
       });
     },
@@ -177,7 +194,7 @@ export const usePowerOutageFormStore = create<PowerOutageFormState>(
         requests: [],
         submitStatus: {
           success: true,
-          message: "ล้างรายการทั้งหมดแล้ว",
+          message: FORM_MESSAGES.SUCCESS.CLEARED_ALL,
         },
       });
     },

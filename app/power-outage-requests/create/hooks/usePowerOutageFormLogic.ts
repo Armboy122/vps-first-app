@@ -8,6 +8,7 @@ import {
 } from "@/app/api/action/powerOutageRequest";
 import { validateDateAndTime } from "@/lib/utils/dateUtils";
 import { usePowerOutageFormStore } from "@/stores/powerOutageFormStore";
+import { FORM_MESSAGES } from "../constants/form.constants";
 import {
   logUserAction,
   logFormInteraction,
@@ -105,7 +106,7 @@ export const usePowerOutageFormLogic = ({
         setTimeError(validation.error || "");
         showErrorModal({
           type: "error",
-          title: "ข้อมูลไม่ถูกต้อง",
+          title: FORM_MESSAGES.ERROR.INVALID_DATA,
           message: validation.error || "กรุณาตรวจสอบข้อมูลและลองใหม่อีกครั้ง",
         });
         logError(
@@ -127,7 +128,7 @@ export const usePowerOutageFormLogic = ({
 
           setSubmitStatus({
             success: true,
-            message: "คำขอถูกบันทึกเรียบร้อยแล้ว",
+            message: FORM_MESSAGES.SUCCESS.SINGLE_REQUEST,
           });
           reset();
           router.push("/power-outage-requests");
@@ -139,7 +140,7 @@ export const usePowerOutageFormLogic = ({
           );
           showErrorModal({
             type: "error",
-            title: "ไม่สามารถบันทึกคำขอได้",
+            title: FORM_MESSAGES.ERROR.SAVE_FAILED,
             message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอ กรุณาลองใหม่อีกครั้ง",
           });
         }
@@ -147,7 +148,7 @@ export const usePowerOutageFormLogic = ({
         logError("power_outage_request_create_error", error as Error, { data });
         showErrorModal({
           type: "error",
-          title: "เกิดข้อผิดพลาดในการเชื่อมต่อ",
+          title: FORM_MESSAGES.ERROR.CONNECTION_ERROR,
           message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง",
         });
       }
@@ -203,7 +204,7 @@ export const usePowerOutageFormLogic = ({
       logError("bulk_submit_attempted_empty_list", "No requests in list");
       showErrorModal({
         type: "warning",
-        title: "ไม่มีคำขอในรายการ",
+        title: FORM_MESSAGES.ERROR.NO_REQUESTS,
         message: "กรุณาเพิ่มคำขอเข้ารายการก่อนทำการบันทึก",
       });
       return;
@@ -238,7 +239,7 @@ export const usePowerOutageFormLogic = ({
           success: true,
           message:
             result.message ||
-            `บันทึกคำขอสำเร็จทั้งหมด ${result.successCount} รายการ`,
+            `${FORM_MESSAGES.SUCCESS.MULTIPLE_REQUESTS} ${result.successCount} รายการ`,
         });
 
         setTimeout(() => router.back(), 1500);
@@ -251,7 +252,7 @@ export const usePowerOutageFormLogic = ({
         // แสดง Modal สำหรับ bulk submit errors
         showErrorModal({
           type: "error",
-          title: "ไม่สามารถบันทึกคำขอได้",
+          title: FORM_MESSAGES.ERROR.SAVE_FAILED,
           message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอหลายรายการ",
           validationErrors: result.validationErrors || [],
           showDetails: !!result.validationErrors?.length,
@@ -264,7 +265,7 @@ export const usePowerOutageFormLogic = ({
 
       showErrorModal({
         type: "error",
-        title: "เกิดข้อผิดพลาดในการเชื่อมต่อ",
+        title: FORM_MESSAGES.ERROR.CONNECTION_ERROR,
         message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง",
       });
     }

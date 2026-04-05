@@ -1,14 +1,5 @@
 "use client";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faChartBar,
-  faExclamationCircle,
-  faCheckCircle,
-  faBan,
-  faCalendarDay,
-  faCalendarTimes,
-  faInfoCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import { AlertTriangle, Clock, CalendarClock, CalendarCheck2, BarChart3, Info } from "lucide-react";
 import { useMemo, memo } from "react";
 import { getThailandDateAtMidnight } from "@/lib/date-utils";
 
@@ -111,17 +102,14 @@ export const OMSStatusSummary = memo(
     // ถ้ากรองแล้วไม่มีข้อมูล ไม่ต้องแสดง summary
     if (showFilteredSummary && filteredRequests.length === 0) {
       return (
-        <div className="mb-6 bg-white rounded-lg shadow-md p-4">
-          <div className="flex items-center mb-3">
-            <FontAwesomeIcon
-              icon={faInfoCircle}
-              className="text-blue-600 mr-2"
-            />
-            <h2 className="text-lg font-semibold text-gray-800">
+        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <Info className="w-4 h-4 text-blue-500" />
+            <h2 className="text-sm font-semibold text-slate-700">
               ไม่พบข้อมูลตามเงื่อนไขที่กำหนด
             </h2>
           </div>
-          <p className="text-gray-600">
+          <p className="text-sm text-slate-500">
             กรุณาปรับเปลี่ยนเงื่อนไขการค้นหาเพื่อดูข้อมูลสรุป
           </p>
         </div>
@@ -129,78 +117,76 @@ export const OMSStatusSummary = memo(
     }
 
     return (
-      <div className="mb-6 bg-white rounded-lg shadow-md p-4">
-        <div className="flex items-center mb-3 justify-between">
-          <div className="flex items-center">
-            <FontAwesomeIcon icon={faChartBar} className="text-blue-600 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-800">
-              สรุปสถานะการลงข้อมูลในระบบ OMS
+      <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4 text-blue-600" />
+            <h2 className="text-sm font-semibold text-slate-800">
+              สรุปสถานะ OMS
             </h2>
           </div>
           {summaryData.isFiltered && (
-            <div className="text-sm text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
-              กำลังแสดงข้อมูลตามการกรอง ({filteredRequests.length} รายการ)
-            </div>
+            <span className="text-xs text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full font-medium">
+              กรองแล้ว {filteredRequests.length} รายการ
+            </span>
           )}
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* เหลือเฉพาะการแสดงสถานะที่ต้องการ */}
-
-          {/* รายการเร่งด่วน (ภายใน 5 วัน) */}
-          <div className="bg-red-50 rounded-lg p-4 border-l-4 border-red-500">
-            <div className="text-red-800 font-medium mb-2 flex items-center">
-              <FontAwesomeIcon icon={faCalendarDay} className="mr-2" />
-              เร่งด่วน (0-5 วัน)
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* เร่งด่วน */}
+          <div className="rounded-xl bg-gradient-to-br from-red-50 to-red-100/50 p-4 ring-1 ring-red-200/60">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-red-500/10">
+                <AlertTriangle className="w-4 h-4 text-red-600" />
+              </div>
+              <span className="text-xs font-semibold text-red-700">เร่งด่วน</span>
             </div>
-            <div className="text-2xl font-bold text-red-900 mb-1">
+            <div className="text-2xl font-bold text-red-900">
               {summaryData.urgentItems}
             </div>
-            <div className="text-sm text-red-700">
-              รายการที่ต้องดำเนินการด่วน
-            </div>
+            <div className="text-xs text-red-600 mt-0.5">0-5 วัน</div>
           </div>
 
-          {/* รายการเร่งด่วนปานกลาง (6-7 วัน) */}
-          <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
-            <div className="text-yellow-800 font-medium mb-2 flex items-center">
-              <FontAwesomeIcon icon={faCalendarDay} className="mr-2" />
-              เร่งด่วนปานกลาง (6-7 วัน)
+          {/* ปานกลาง */}
+          <div className="rounded-xl bg-gradient-to-br from-amber-50 to-amber-100/50 p-4 ring-1 ring-amber-200/60">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-amber-500/10">
+                <Clock className="w-4 h-4 text-amber-600" />
+              </div>
+              <span className="text-xs font-semibold text-amber-700">ปานกลาง</span>
             </div>
-            <div className="text-2xl font-bold text-yellow-900 mb-1">
+            <div className="text-2xl font-bold text-amber-900">
               {summaryData.mediumUrgentItems}
             </div>
-            <div className="text-sm text-yellow-700">
-              รายการที่ต้องดำเนินการเร็วๆ นี้
-            </div>
+            <div className="text-xs text-amber-600 mt-0.5">6-7 วัน</div>
           </div>
 
-          {/* รายการปกติ (8-15 วัน) */}
-          <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-            <div className="text-green-800 font-medium mb-2 flex items-center">
-              <FontAwesomeIcon icon={faCalendarDay} className="mr-2" />
-              ปกติ (8-15 วัน)
+          {/* ปกติ */}
+          <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 ring-1 ring-emerald-200/60">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-500/10">
+                <CalendarClock className="w-4 h-4 text-emerald-600" />
+              </div>
+              <span className="text-xs font-semibold text-emerald-700">ปกติ</span>
             </div>
-            <div className="text-2xl font-bold text-green-900 mb-1">
+            <div className="text-2xl font-bold text-emerald-900">
               {summaryData.normalItems}
             </div>
-            <div className="text-sm text-green-700">
-              รายการที่มีเวลาดำเนินการปกติ
-            </div>
+            <div className="text-xs text-emerald-600 mt-0.5">8-15 วัน</div>
           </div>
 
-          {/* รายการในอนาคต (มากกว่า 15 วัน) */}
-          <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
-            <div className="text-green-800 font-medium mb-2 flex items-center">
-              <FontAwesomeIcon icon={faCalendarDay} className="mr-2" />
-              ในอนาคต (มากกว่า 15 วัน)
+          {/* อนาคต */}
+          <div className="rounded-xl bg-gradient-to-br from-blue-50 to-blue-100/50 p-4 ring-1 ring-blue-200/60">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center justify-center w-7 h-7 rounded-lg bg-blue-500/10">
+                <CalendarCheck2 className="w-4 h-4 text-blue-600" />
+              </div>
+              <span className="text-xs font-semibold text-blue-700">อนาคต</span>
             </div>
-            <div className="text-2xl font-bold text-green-900 mb-1">
+            <div className="text-2xl font-bold text-blue-900">
               {summaryData.futureitems}
             </div>
-            <div className="text-sm text-green-700">
-              รายการที่ยังไม่เร่งด่วน
-            </div>
+            <div className="text-xs text-blue-600 mt-0.5">&gt;15 วัน</div>
           </div>
         </div>
       </div>

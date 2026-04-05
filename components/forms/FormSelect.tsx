@@ -21,14 +21,17 @@ interface FormSelectProps
 
 export const FormSelect = React.forwardRef<HTMLSelectElement, FormSelectProps>(
   (
-    { error, options, placeholder = "เลือกตัวเลือก", className = "", ...props },
+    { error, options, placeholder = "เลือกตัวเลือก", className = "", id, name, ...props },
     ref,
   ) => {
     return (
       <select
         ref={ref}
+        id={id || name}
+        name={name}
         {...props}
         aria-invalid={Boolean(error)}
+        aria-describedby={error ? `${id || name}-error` : undefined}
         data-invalid={Boolean(error) || undefined}
         className={`${formControlBaseClass} ${
           error ? formControlErrorClass : formControlDefaultClass

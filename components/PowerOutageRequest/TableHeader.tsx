@@ -17,58 +17,38 @@ export const TableHeader = memo(
     isViewer,
     isSupervisor,
   }: TableHeaderProps) => {
+    const thClass = "py-3 px-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap";
+
     return (
-      <thead className="bg-gray-100">
+      <thead className="bg-slate-50/80 border-b border-slate-200">
         <tr>
           {!isViewer && (
-            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th className={thClass}>
               <input
                 type="checkbox"
                 checked={selectAll}
                 onChange={onToggleSelectAll}
-                className="form-checkbox h-5 w-5 text-blue-600"
+                className="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 cursor-pointer"
               />
             </th>
           )}
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            วันที่ดับไฟ
-          </th>
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            เวลา
-          </th>
+          <th className={thClass}>วันที่ดับไฟ</th>
+          <th className={thClass}>เวลา</th>
           {(isAdmin || isViewer) && (
             <>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                จุดรวมงาน
-              </th>
-              <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                สาขา
-              </th>
+              <th className={thClass}>จุดรวมงาน</th>
+              <th className={thClass}>สาขา</th>
             </>
           )}
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            หมายเลขหม้อแปลง
-          </th>
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            บริเวณ
-          </th>
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            สถานะ OMS
-          </th>
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            สถานะอนุมัติ
-          </th>
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            ผู้สร้างคำขอ
-          </th>
+          <th className={thClass}>หมายเลขหม้อแปลง</th>
+          <th className={thClass}>บริเวณ</th>
+          <th className={thClass}>สถานะ OMS</th>
+          <th className={thClass}>สถานะอนุมัติ</th>
+          <th className={thClass}>ผู้สร้างคำขอ</th>
           {!isViewer && !isSupervisor && (
-            <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              การดำเนินการ
-            </th>
+            <th className={thClass}>การดำเนินการ</th>
           )}
-          <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            วันที่สร้างเอกสาร
-          </th>
+          <th className={thClass}>วันที่สร้าง</th>
         </tr>
       </thead>
     );

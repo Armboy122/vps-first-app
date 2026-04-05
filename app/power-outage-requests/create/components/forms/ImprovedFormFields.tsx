@@ -26,6 +26,7 @@ import {
   Autocomplete,
   Loader
 } from "@mantine/core";
+import { CalendarDays, Building2, MapPin } from "lucide-react";
 import { DatePickerInput } from "@mantine/dates";
 import dayjs from "dayjs";
 
@@ -127,6 +128,29 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
     return value;
   };
 
+  /**
+   * Calculate the minimum allowed end-time string given the current start time.
+   * Returns "06:30" as fallback when no start time is set.
+   */
+  const getMinEndTime = (startTime: string | undefined): string => {
+    if (!startTime) return "06:30";
+    const [hour, min] = startTime.split(':').map(Number);
+    const totalMinutes = hour * 60 + min + 30;
+    const newHour = Math.floor(totalMinutes / 60);
+    const newMin = totalMinutes % 60;
+    return `${newHour.toString().padStart(2, '0')}:${newMin.toString().padStart(2, '0')}`;
+  };
+
+  /**
+   * Check whether the gap between start and end is less than 30 minutes.
+   */
+  const isEndTimeTooClose = (startTime: string | undefined, endTime: string | undefined): boolean => {
+    if (!startTime || !endTime) return false;
+    const [startHour, startMin] = startTime.split(':').map(Number);
+    const [endHour, endMin] = endTime.split(':').map(Number);
+    return (endHour * 60 + endMin) <= (startHour * 60 + startMin) + 29;
+  };
+
   const workCenterOptions =
     workCenters?.map((wc) => ({ value: wc.id.toString(), label: wc.name })) || [];
   const branchOptions = branches.map((branch) => ({
@@ -148,19 +172,25 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   return (
     <Stack gap="xl">
       {/* ส่วนที่ 1: ข้อมูลวันที่และเวลา */}
-      <Paper shadow="xs" p="md" radius="md">
-        <Group mb="md">
-          <div>
-            <Title order={4} c="blue">📅 กำหนดวันที่และเวลา</Title>
-            <Text size="sm" c="dimmed">ระบุวันที่และช่วงเวลาที่ต้องการดับไฟ</Text>
-          </div>
+      <Paper shadow="xs" p="md" radius="md" withBorder>
+        <Group mb="md" justify="space-between">
+          <Group gap="sm">
+            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-50 ring-1 ring-blue-200/60">
+              <CalendarDays className="w-5 h-5 text-blue-600" />
+            </div>
+            <div>
+              <Title order={4} c="dark">กำหนดวันที่และเวลา</Title>
+              <Text size="sm" c="dimmed">ระบุวันที่และช่วงเวลาที่ต้องการดับไฟ</Text>
+            </div>
+          </Group>
           {daysFromToday !== null && (
             <Badge
               color={daysFromToday > 10 ? "green" : "red"}
               size="lg"
               variant="light"
+              radius="md"
             >
-              {daysFromToday > 10 ? `✅ ${daysFromToday} วัน` : `❌ ${daysFromToday} วัน`}
+              {daysFromToday > 10 ? `${daysFromToday} วัน` : `${daysFromToday} วัน (ไม่ถึงกำหนด)`}
             </Badge>
           )}
         </Group>
@@ -234,27 +264,12 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
               control={control}
               label="เวลาสิ้นสุด *"
               error={errors.endTime}
-              minTime={(() => {
-                if (!watchedStartTime) return "06:30";
-                // คำนวณเวลาขั้นต่ำ (เวลาเริ่มต้น + 30 นาที)
-                const [hour, min] = watchedStartTime.split(':').map(Number);
-                const totalMinutes = hour * 60 + min + 30;
-                const newHour = Math.floor(totalMinutes / 60);
-                const newMin = totalMinutes % 60;
-                return `${newHour.toString().padStart(2, '0')}:${newMin.toString().padStart(2, '0')}`;
-              })()}
+              minTime={getMinEndTime(watchedStartTime)}
               maxTime="20:00"
             />
-            {watchedStartTime && watchedEndTime && (() => {
-              // แปลงเวลาเป็นนาทีเพื่อเปรียบเทียบ
-              const [startHour, startMin] = watchedStartTime.split(':').map(Number);
-              const [endHour, endMin] = watchedEndTime.split(':').map(Number);
-              const startMinutes = startHour * 60 + startMin;
-              const endMinutes = endHour * 60 + endMin;
-              return endMinutes <= startMinutes + 29; // ต้องมากกว่า 30 นาที
-            })() && (
+            {isEndTimeTooClose(watchedStartTime, watchedEndTime) && (
               <Alert color="red" mt={4}>
-                ⚠️ เวลาสิ้นสุดต้องมากกว่าเวลาเริ่มต้นอย่างน้อย 30 นาที
+                เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที (ขั้นต่ำ: {getMinEndTime(watchedStartTime)} น.)
               </Alert>
             )}
           </Grid.Col>
@@ -262,11 +277,14 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
       </Paper>
 
       {/* ส่วนที่ 2: ข้อมูลสถานที่ */}
-      <Paper shadow="xs" p="md" radius="md">
+      <Paper shadow="xs" p="md" radius="md" withBorder>
         <Group mb="md">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-50 ring-1 ring-amber-200/60">
+            <Building2 className="w-5 h-5 text-amber-600" />
+          </div>
           <div>
-            <Title order={4} c="orange">🏢 ข้อมูลสถานที่</Title>
-            <Text size="sm" c="dimmed">ระบุสถานที่ที่ต้องการดับไฟ</Text>
+            <Title order={4} c="dark">ข้อมูลสถานที่</Title>
+            <Text size="sm" c="dimmed">ระบุจุดรวมงาน สาขา และหม้อแปลง</Text>
           </div>
         </Group>
 
@@ -409,10 +427,13 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
       </Paper>
 
       {/* ส่วนที่ 3: รายละเอียดเพิ่มเติม */}
-      <Paper shadow="xs" p="md" radius="md">
+      <Paper shadow="xs" p="md" radius="md" withBorder>
         <Group mb="md">
+          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-emerald-50 ring-1 ring-emerald-200/60">
+            <MapPin className="w-5 h-5 text-emerald-600" />
+          </div>
           <div>
-            <Title order={4} c="green">📍 รายละเอียดเพิ่มเติม</Title>
+            <Title order={4} c="dark">รายละเอียดเพิ่มเติม</Title>
             <Text size="sm" c="dimmed">ข้อมูลเสริมสำหรับการดับไฟ</Text>
           </div>
         </Group>
@@ -438,7 +459,7 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
 
       {/* แสดง Time Error ถ้ามี */}
       {timeError && (
-        <Alert color="red" title="ข้อผิดพลาดเวลา">
+        <Alert color="red" title="ข้อผิดพลาดเวลา" radius="md" variant="light">
           {timeError}
         </Alert>
       )}

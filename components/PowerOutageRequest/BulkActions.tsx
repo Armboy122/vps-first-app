@@ -1,13 +1,6 @@
 "use client";
 import Link from "next/link";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faPlus,
-  faPrint,
-  faFilter,
-  faCheck,
-  faExclamationTriangle,
-} from "@fortawesome/free-solid-svg-icons";
+import { Plus, Printer, CheckSquare, ChevronDown } from "lucide-react";
 import PrintAnnouncement from "../print";
 import { Request } from "@prisma/client";
 import { ActionFeedback, ActionFeedbackState } from "./ActionFeedback";
@@ -38,7 +31,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
   }
 
   return (
-    <div className="mb-6 bg-white rounded-lg shadow-md p-4">
+    <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 p-4">
       {actionFeedback && (
         <ActionFeedback
           variant={actionFeedback.variant}
@@ -53,57 +46,57 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
           {(isUser || isAdmin) && (
             <Link
               href="/power-outage-requests/create"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
+              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm cursor-pointer"
             >
-              <FontAwesomeIcon icon={faPlus} className="mr-2" />
+              <Plus className="w-4 h-4" />
               สร้างคำขอดับไฟใหม่
             </Link>
           )}
 
           {selectedRequests.length > 0 ? (
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="relative">
                 <select
                   onChange={(e) =>
                     handleBulkStatusChange(e.target.value as Request)
                   }
-                  className="appearance-none bg-white border border-gray-300 text-gray-700 py-2 pl-4 pr-10 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium"
+                  className="appearance-none bg-white border border-slate-200 text-slate-700 py-2 pl-3.5 pr-9 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 font-medium cursor-pointer transition-all"
+                  defaultValue=""
                 >
-                  <option value="">เปลี่ยนสถานะที่เลือก</option>
+                  <option value="" disabled>
+                    เปลี่ยนสถานะ ({selectedRequests.length})
+                  </option>
                   <option value="CONFIRM">อนุมัติดับไฟ</option>
                   <option value="CANCELLED">ยกเลิก</option>
                   <option value="NOT">รออนุมัติ</option>
                 </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                  <FontAwesomeIcon icon={faFilter} className="text-gray-400" />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2">
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </div>
               </div>
 
               <button
                 onClick={handlePrintSelected}
-                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded-lg transition duration-300 flex items-center"
+                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-3.5 rounded-lg transition-colors cursor-pointer"
               >
-                <FontAwesomeIcon icon={faPrint} className="mr-2" />
-                พิมพ์เอกสาร
+                <Printer className="w-4 h-4" />
+                พิมพ์ ({selectedRequests.length})
               </button>
             </div>
           ) : (
-            <div className="text-gray-500 italic flex items-center">
-              <FontAwesomeIcon
-                icon={faExclamationTriangle}
-                className="mr-2 text-yellow-500"
-              />
-              เลือกรายการก่อนจึงจะพิมพ์เอกสารหรือเปลี่ยนสถานะพร้อมกันได้
-            </div>
+            <p className="text-sm text-slate-400">
+              เลือกรายการจากตารางเพื่อเปลี่ยนสถานะหรือพิมพ์เอกสารพร้อมกัน
+            </p>
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm">
-            <FontAwesomeIcon icon={faCheck} className="mr-2" />
-            <span className="font-medium">{selectedRequests.length}</span>
-            <span className="ml-1">รายการที่เลือก</span>
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {selectedRequests.length > 0 && (
+            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-medium">
+              <CheckSquare className="w-3.5 h-3.5" />
+              <span>{selectedRequests.length} รายการที่เลือก</span>
+            </div>
+          )}
           <PrintAnnouncement />
         </div>
       </div>
