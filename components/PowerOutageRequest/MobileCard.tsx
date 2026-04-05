@@ -1,20 +1,25 @@
 "use client";
-import { useState } from "react";
+
+import { useCallback, useState } from "react";
 import { OMSStatus, Request } from "@prisma/client";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faEdit,
-  faTrash,
+  faCalendarAlt,
   faChevronDown,
   faChevronUp,
-  faCalendarAlt,
   faClock,
+  faEdit,
   faMapMarkerAlt,
+  faTrash,
   faUser,
-  faBuilding,
-  faCodeBranch,
 } from "@fortawesome/free-solid-svg-icons";
-import { getThailandDateAtMidnight } from "@/lib/date-utils";
+import {
+  type StatusChipMeta,
+  type StatusInfo,
+  getOmsStatusMeta,
+  getRequestStatusMeta,
+  getUrgencyStatus,
+} from "@/lib/utils/status-utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -52,6 +57,24 @@ interface MobileCardProps {
   handleEditStatusRequest: (id: number, status: Request) => void;
 }
 
+const StatusBadge = ({ meta }: { meta: StatusChipMeta }) => (
+  <span
+    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold shadow-sm ${meta.chipClass}`}
+  >
+    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${meta.dotClass}`} />
+    {meta.label}
+  </span>
+);
+
+const PriorityChip = ({ statusInfo }: { statusInfo: StatusInfo }) => (
+  <span
+    className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide shadow-sm ${statusInfo.badgeClass}`}
+  >
+    <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${statusInfo.dotClass}`} />
+    {statusInfo.primaryLabel}
+  </span>
+);
+
 export const MobileCard: React.FC<MobileCardProps> = ({
   request,
   isAdmin,
@@ -67,275 +90,206 @@ export const MobileCard: React.FC<MobileCardProps> = ({
   handleEditStatusRequest,
 }) => {
   const [expanded, setExpanded] = useState(false);
-
-  const getCardBackgroundColor = (
-    outageDate: Date,
-    omsStatus: string,
-    statusRequest: string,
-  ) => {
-    const today = getThailandDateAtMidnight();
-    const diffDays = Math.ceil(
-      (outageDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24),
-    );
-
-    if (statusRequest === "NOT" && diffDays < 15 && diffDays > 0) {
-      return "bg-red-400 border-l-4 border-red-500";
-    }
-    if (statusRequest === "CONFIRM" && omsStatus === "PROCESSED") {
-      return "bg-blue-400 border-l-4 border-blue-500";
-    }
-    if (
-      statusRequest === "CONFIRM" &&
-      omsStatus === "NOT_ADDED" &&
-      diffDays < 0
-    ) {
-      return "bg-gradient-to-r from-white via-red-500 to-white border-l-4 border-red-500";
-    }
-
-    if (
-      omsStatus === "NOT_ADDED" &&
-      statusRequest !== "NOT" &&
-      statusRequest !== "CANCELLED"
-    ) {
-      if (diffDays <= 5 && diffDays >= 0)
-        return "bg-red-400 border-l-4 border-red-500";
-      if (diffDays <= 7 && diffDays > 0)
-        return "bg-yellow-400 border-l-4 border-yellow-500";
-      if (diffDays <= 15 && diffDays > 0)
-        return "bg-green-400 border-l-4 border-green-500";
-    }
-
-    return "bg-white border-l-4 border-gray-300";
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case "CONFIRM":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-            อนุมัติดับไฟ
-          </span>
-        );
-      case "CANCELLED":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            ยกเลิก
-          </span>
-        );
-      case "NOT":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-            รออนุมัติ
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const getOmsStatusLabel = (status: string) => {
-    switch (status) {
-      case "NOT_ADDED":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            ยังไม่ดำเนินการ
-          </span>
-        );
-      case "PROCESSED":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-            ดำเนินการแล้ว
-          </span>
-        );
-      case "CANCELLED":
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            ยกเลิก
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-            {status}
-          </span>
-        );
-    }
-  };
-
-  const bgColor = getCardBackgroundColor(
+  const statusInfo = getUrgencyStatus(
     request.outageDate,
     request.omsStatus,
     request.statusRequest,
   );
+  const requestStatusMeta = getRequestStatusMeta(request.statusRequest);
+  const omsStatusMeta = getOmsStatusMeta(request.omsStatus);
+  const showTimelineHint = statusInfo.daysLabel !== statusInfo.primaryLabel;
 
   const canEdit =
     isAdmin ||
     (isUser && request.workCenter.id === userWorkCenterId && !isViewer);
 
+  const formatThaiDate = useCallback((date: Date) => {
+    try {
+      return date.toLocaleDateString("th-TH", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      });
+    } catch {
+      return "-";
+    }
+  }, []);
+
+  const formatThaiTime = useCallback((date: Date) => {
+    try {
+      return date.toLocaleTimeString("th-TH", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch {
+      return "-";
+    }
+  }, []);
+
   return (
-    <div className={`mb-4 rounded-lg shadow-md overflow-hidden ${bgColor}`}>
+    <div
+      className={`mb-4 overflow-hidden rounded-xl shadow-sm ring-1 ring-slate-200/60 transition-all duration-200 ${statusInfo.borderClass} ${statusInfo.bgClass}`}
+    >
       <div className="p-4">
-        <div className="flex justify-between items-start">
-          <div className="flex items-start space-x-3">
-            {!isViewer && (
-              <input
-                type="checkbox"
-                checked={selectedRequests.includes(request.id)}
-                onChange={() => onToggleSelect(request.id)}
-                disabled={
-                  !(
-                    isAdmin ||
-                    (isUser && request.workCenter.id === userWorkCenterId)
-                  )
-                }
-                className="form-checkbox h-5 w-5 text-blue-600 mt-1"
-              />
-            )}
-            <div>
-              <div className="flex items-center space-x-2">
-                <h3 className="font-bold text-gray-800 text-lg">
-                  {request.transformerNumber}
-                </h3>
-                {getStatusLabel(request.statusRequest)}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start gap-2">
+              {!isViewer && (
+                <input
+                  type="checkbox"
+                  checked={selectedRequests.includes(request.id)}
+                  onChange={() => onToggleSelect(request.id)}
+                  disabled={
+                    !(isAdmin || (isUser && request.workCenter.id === userWorkCenterId))
+                  }
+                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 shadow-sm transition-all focus:ring-blue-500"
+                />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-start gap-2">
+                  <h3 className="truncate text-[17px] font-extrabold tracking-tight text-slate-900">
+                    {request.transformerNumber}
+                  </h3>
+                  <PriorityChip statusInfo={statusInfo} />
+                </div>
+                <div
+                  className={`mt-2 inline-flex items-center gap-2 text-[11px] font-semibold ${statusInfo.summaryTextClass}`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${statusInfo.dotClass}`} />
+                  <span>{statusInfo.secondaryLabel}</span>
+                </div>
               </div>
-              <div className="flex items-center mt-1 text-sm text-gray-600">
-                <FontAwesomeIcon icon={faCalendarAlt} className="mr-1" />
-                <span>{request.outageDate.toLocaleDateString("th-TH")}</span>
+            </div>
+
+            <div className="mt-3 space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center text-[14px] font-bold text-slate-800">
+                  <FontAwesomeIcon
+                    icon={faCalendarAlt}
+                    className={`mr-2 w-3.5 ${statusInfo.color === "red" ? "text-red-500" : "text-slate-400"}`}
+                  />
+                  <span className="truncate">{formatThaiDate(request.outageDate)}</span>
+                </div>
+                <div className="flex shrink-0 items-center text-[13px] font-semibold text-slate-500">
+                  <FontAwesomeIcon icon={faClock} className="mr-2 w-3.5 text-slate-400" />
+                  {formatThaiTime(request.startTime)} - {formatThaiTime(request.endTime)}
+                </div>
               </div>
-              <div className="flex items-center mt-1 text-sm text-gray-600">
-                <FontAwesomeIcon icon={faClock} className="mr-1" />
-                <span>
-                  {request.startTime.toLocaleTimeString("th-TH", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}{" "}
-                  -
-                  {request.endTime.toLocaleTimeString("th-TH", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-              {request.area && (
-                <div className="flex items-center mt-1 text-sm text-gray-600">
-                  <FontAwesomeIcon icon={faMapMarkerAlt} className="mr-1" />
-                  <span className="truncate max-w-[200px]">{request.area}</span>
+
+              {showTimelineHint && (
+                <div className={`text-[11px] font-semibold ${statusInfo.summaryTextClass}`}>
+                  {statusInfo.daysLabel}
                 </div>
               )}
+
+              <div className="flex items-center rounded-lg border border-slate-100 bg-white/70 p-2 text-[13px] font-medium text-slate-500">
+                <FontAwesomeIcon
+                  icon={faMapMarkerAlt}
+                  className="mr-2 w-3.5 flex-shrink-0 text-slate-400"
+                />
+                <span className="truncate">{request.area || "ไม่ระบุบริเวณ"}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <StatusBadge meta={requestStatusMeta} />
+              <StatusBadge meta={omsStatusMeta} />
             </div>
           </div>
+
           <button
             onClick={() => setExpanded(!expanded)}
-            className="text-gray-500 hover:text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-full p-2 transition-colors"
+            className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200"
             aria-label={expanded ? "ย่อ" : "ขยาย"}
           >
-            <FontAwesomeIcon icon={expanded ? faChevronUp : faChevronDown} />
+            <FontAwesomeIcon icon={expanded ? faChevronUp : faChevronDown} size="sm" />
           </button>
         </div>
 
         {expanded && (
-          <div className="mt-4 space-y-4 pt-4 border-t border-gray-200">
-            {(isAdmin || isViewer) && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-gray-500 flex items-center">
-                    <FontAwesomeIcon icon={faBuilding} className="mr-1" />
-                    จุดรวมงาน
-                  </p>
-                  <p className="text-gray-800 font-medium">
-                    {request.workCenter.name}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm text-gray-500 flex items-center">
-                    <FontAwesomeIcon icon={faCodeBranch} className="mr-1" />
-                    สาขา
-                  </p>
-                  <p className="text-gray-800 font-medium">
-                    {request.branch.shortName}
-                  </p>
-                </div>
+          <div className="mt-4 space-y-4 border-t border-slate-100 pt-4">
+            <div className="grid grid-cols-2 gap-3 rounded-lg border border-slate-100 bg-white/70 p-3">
+              <div>
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  หน่วยงาน
+                </span>
+                <p className="text-[13px] font-bold leading-tight text-slate-800">
+                  {request.workCenter.name}
+                </p>
+                <p className="mt-1 inline-block rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 text-[11px] font-bold text-slate-500">
+                  {request.branch.shortName}
+                </p>
               </div>
-            )}
-
-            <div>
-              <p className="text-sm text-gray-500 flex items-center">
-                <FontAwesomeIcon icon={faUser} className="mr-1" />
-                ผู้สร้างคำขอ
-              </p>
-              <p className="text-gray-800 font-medium">
-                {request.createdBy.fullName}
-              </p>
+              <div>
+                <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  ผู้สร้างคำขอ
+                </span>
+                <p className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
+                  <FontAwesomeIcon icon={faUser} size="xs" className="text-slate-300" />
+                  {request.createdBy.fullName}
+                </p>
+                <p className="mt-1 ml-4 text-[10px] text-slate-400">
+                  {formatThaiDate(request.createdAt)}
+                </p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <p className="text-sm text-gray-500 mb-1">สถานะ OMS</p>
-                <div className="flex items-center space-x-2 mb-2">
-                  {getOmsStatusLabel(request.omsStatus)}
-                </div>
-                {(isAdmin || isSupervisor) && (
+            <div className="grid grid-cols-1 gap-3">
+              {(isAdmin || isSupervisor) && request.omsStatus === "NOT_ADDED" && (
+                <div>
+                  <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    ปรับสถานะ OMS
+                  </span>
                   <select
                     value={request.omsStatus}
                     onChange={(e) =>
-                      handleEditOmsStatus(
-                        request.id,
-                        e.target.value as OMSStatus,
-                      )
+                      handleEditOmsStatus(request.id, e.target.value as OMSStatus)
                     }
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold shadow-sm transition-all hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
                   >
                     <option value="NOT_ADDED">ยังไม่ดำเนินการ</option>
                     <option value="PROCESSED">ดำเนินการแล้ว</option>
                     <option value="CANCELLED">ยกเลิก</option>
                   </select>
-                )}
-              </div>
-
-              <div>
-                <p className="text-sm text-gray-500 mb-1">สถานะอนุมัติ</p>
-                <div className="flex items-center space-x-2 mb-2">
-                  {getStatusLabel(request.statusRequest)}
                 </div>
-                {(isAdmin ||
-                  (isUser && request.workCenter.id === userWorkCenterId)) && (
-                  <select
-                    value={request.statusRequest}
-                    onChange={(e) =>
-                      handleEditStatusRequest(
-                        request.id,
-                        e.target.value as Request,
-                      )
-                    }
-                    className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  >
-                    <option value="CONFIRM">อนุมัติดับไฟ</option>
-                    <option value="CANCELLED">ยกเลิก</option>
-                    <option value="NOT">รออนุมัติ</option>
-                  </select>
+              )}
+
+              {(isAdmin || (isUser && request.workCenter.id === userWorkCenterId)) &&
+                request.statusRequest === "NOT" && (
+                  <div>
+                    <span className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                      ปรับสถานะอนุมัติ
+                    </span>
+                    <select
+                      value={request.statusRequest}
+                      onChange={(e) =>
+                        handleEditStatusRequest(request.id, e.target.value as Request)
+                      }
+                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold shadow-sm transition-all hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    >
+                      <option value="NOT">รออนุมัติ</option>
+                      <option value="CONFIRM">อนุมัติดับไฟ</option>
+                      <option value="CANCELLED">ยกเลิก</option>
+                    </select>
+                  </div>
                 )}
-              </div>
             </div>
 
             {canEdit && (
-              <div className="flex space-x-2 pt-2">
+              <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => handleEdit(request)}
-                  className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition duration-300 flex items-center justify-center"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-bold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-slate-50 hover:text-blue-600 active:bg-slate-100"
                 >
-                  <FontAwesomeIcon icon={faEdit} className="mr-2" />
-                  แก้ไข
+                  <FontAwesomeIcon icon={faEdit} />
+                  แก้ไขข้อมูล
                 </button>
                 <button
                   onClick={() => handleDelete(request.id)}
-                  className="flex-1 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300 flex items-center justify-center"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-[12px] font-bold text-red-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-100 active:bg-red-200"
                 >
-                  <FontAwesomeIcon icon={faTrash} className="mr-2" />
-                  ลบ
+                  <FontAwesomeIcon icon={faTrash} />
+                  ลบคำขอ
                 </button>
               </div>
             )}

@@ -86,21 +86,24 @@ const REQUEST_STATUS_LABELS: Record<Request, string> = {
 
 // Empty state components
 const EmptyState = ({ message }: { message: string }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-    <svg
-      className="w-16 h-16 mb-4 text-gray-300"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
-      />
-    </svg>
-    <p className="text-lg font-medium">{message}</p>
+  <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60">
+    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-4 ring-1 ring-slate-100">
+      <svg
+        className="w-8 h-8 text-slate-300"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"
+        />
+      </svg>
+    </div>
+    <p className="text-slate-500 font-bold text-lg">{message}</p>
+    <p className="text-slate-400 text-sm mt-1">รายการคำขอดับไฟจะแสดงที่นี่เมื่อมีการสร้างข้อมูล</p>
   </div>
 );
 
@@ -111,36 +114,38 @@ const NoSearchResults = ({
   searchTerm: string;
   hasActiveFilters: boolean;
 }) => (
-  <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-    <svg
-      className="w-16 h-16 mb-4 text-gray-300"
-      fill="none"
-      stroke="currentColor"
-      viewBox="0 0 24 24"
-    >
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={1.5}
-        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-      />
-    </svg>
+  <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60">
+    <div className="w-16 h-16 bg-blue-50 rounded-full flex items-center justify-center mb-4 ring-1 ring-blue-100">
+      <svg
+        className="w-8 h-8 text-blue-400"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1.5}
+          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+        />
+      </svg>
+    </div>
     {searchTerm ? (
       <>
-        <p className="text-lg font-medium">
+        <p className="text-slate-700 font-bold text-lg">
           ไม่พบผลลัพธ์สำหรับ &ldquo;{searchTerm}&rdquo;
         </p>
-        <p className="text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือล้างตัวกรองออก</p>
+        <p className="text-slate-400 text-sm mt-1">ลองค้นหาด้วยคำอื่น หรือล้างตัวกรองออก</p>
       </>
     ) : hasActiveFilters ? (
       <>
-        <p className="text-lg font-medium">ไม่พบรายการที่ตรงกับตัวกรองที่เลือก</p>
-        <p className="text-sm mt-1">ลองเปลี่ยนสถานะหรือช่วงวันที่ที่ต้องการ</p>
+        <p className="text-slate-700 font-bold text-lg">ไม่พบรายการที่ตรงกับตัวกรอง</p>
+        <p className="text-slate-400 text-sm mt-1">ลองเปลี่ยนสถานะหรือช่วงวันที่ที่ต้องการ</p>
       </>
     ) : (
       <>
-        <p className="text-lg font-medium">ไม่พบรายการ</p>
-        <p className="text-sm mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา</p>
+        <p className="text-slate-700 font-bold text-lg">ไม่พบรายการ</p>
+        <p className="text-slate-400 text-sm mt-1">ลองเปลี่ยนเงื่อนไขการค้นหา</p>
       </>
     )}
   </div>
@@ -164,6 +169,7 @@ export default function PowerOutageRequestList() {
   const {
     requests,
     allRequests,
+    baseRequests,
     loading,
     error,
     searchTerm,
@@ -602,14 +608,11 @@ export default function PowerOutageRequestList() {
         </div>
       </div>
 
-      {/* OMS Status Summary - admin and viewer only */}
-      {(isAdmin || isViewer) && (
-        <OMSStatusSummary
-          requests={allRequests}
-          filteredRequests={allRequests}
-          showFilteredSummary={true}
-        />
-      )}
+      <OMSStatusSummary
+        requests={baseRequests}
+        filteredRequests={allRequests}
+        showFilteredSummary={true}
+      />
 
       {/* Action Bar */}
       <BulkActions

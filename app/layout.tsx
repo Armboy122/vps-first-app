@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Sans_Thai, Noto_Serif_Thai } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/Providers";
-import Navbar from "@/components/Navbar";
+import AppShell from "@/components/AppShell";
 
 import { LogViewer, LogViewerShortcut } from "@/components/dev/LogViewer";
 
@@ -44,23 +44,7 @@ export default function RootLayout({
             <div className="absolute -right-20 top-44 h-80 w-80 rounded-full bg-[radial-gradient(circle,_rgba(15,23,42,0.08),_transparent_72%)] blur-3xl" />
           </div>
 
-          {/* ---- Navigation ---- */}
-          <Navbar />
-
-          {/* ---- Main content (offset by fixed navbar height) ---- */}
-          <main className="relative z-10 flex-grow pt-20">
-            {children}
-          </main>
-
-          {/* ---- Footer ---- */}
-          <footer className="relative z-10 border-t border-slate-200/80 bg-white/70 text-center text-sm text-slate-500 backdrop-blur-xl">
-            <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-              <p className="font-medium text-slate-600">
-                ระบบจัดการคำขอดับไฟ
-              </p>
-              <p>&copy; 2024-2026 PeaTransformer</p>
-            </div>
-          </footer>
+          <AppShell>{children}</AppShell>
 
           {/* ---- Dev tools (development only) ---- */}
           {process.env.NODE_ENV === "development" && <LogViewer />}

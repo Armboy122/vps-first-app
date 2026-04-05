@@ -17,38 +17,34 @@ export const TableHeader = memo(
     isViewer,
     isSupervisor,
   }: TableHeaderProps) => {
-    const thClass = "py-3 px-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap";
+    const thClass = "py-4 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap";
 
     return (
-      <thead className="bg-slate-50/80 border-b border-slate-200">
+      <thead className="bg-slate-50/50 border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm">
         <tr>
           {!isViewer && (
-            <th className={thClass}>
-              <input
-                type="checkbox"
-                checked={selectAll}
-                onChange={onToggleSelectAll}
-                className="form-checkbox h-4 w-4 text-blue-600 rounded border-slate-300 cursor-pointer"
-              />
+            <th className="py-4 px-4 w-10">
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  checked={selectAll}
+                  onChange={onToggleSelectAll}
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                />
+              </div>
             </th>
           )}
-          <th className={thClass}>วันที่ดับไฟ</th>
-          <th className={thClass}>เวลา</th>
+          <th className={thClass}>หม้อแปลง / สถานะ</th>
+          <th className={thClass}>วัน-เวลาดับไฟ</th>
           {(isAdmin || isViewer) && (
-            <>
-              <th className={thClass}>จุดรวมงาน</th>
-              <th className={thClass}>สาขา</th>
-            </>
+            <th className={thClass}>หน่วยงาน (จุดรวมงาน/สาขา)</th>
           )}
-          <th className={thClass}>หมายเลขหม้อแปลง</th>
-          <th className={thClass}>บริเวณ</th>
-          <th className={thClass}>สถานะ OMS</th>
           <th className={thClass}>สถานะอนุมัติ</th>
-          <th className={thClass}>ผู้สร้างคำขอ</th>
+          <th className={thClass}>สถานะ OMS</th>
+          <th className={thClass}>ผู้สร้าง / วันที่สร้าง</th>
           {!isViewer && !isSupervisor && (
-            <th className={thClass}>การดำเนินการ</th>
+            <th className={`${thClass} text-center`}>จัดการ</th>
           )}
-          <th className={thClass}>วันที่สร้าง</th>
         </tr>
       </thead>
     );

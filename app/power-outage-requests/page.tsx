@@ -1,44 +1,37 @@
 import PowerOutageRequestList from "@/components/PowerOutageRequestList";
-import { Zap, ChevronRight, Home } from "lucide-react";
-import Link from "next/link";
+import { CalendarDays, Zap } from "lucide-react";
 
 export default function PowerOutageRequestPage() {
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Modern gradient header */}
-      <div className="bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 border-b border-slate-700/50">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 pt-4 pb-2 text-sm text-slate-400">
-            <Link href="/" className="flex items-center gap-1 hover:text-white transition-colors">
-              <Home className="w-3.5 h-3.5" />
-              <span>หน้าหลัก</span>
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-slate-200">รายการคำขอดับไฟ</span>
-          </nav>
-
-          {/* Title section */}
-          <div className="flex items-center justify-between pb-6 pt-2">
-            <div className="flex items-center gap-4">
-              <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/15 ring-1 ring-amber-500/25">
-                <Zap className="w-6 h-6 text-amber-400" />
+    <div className="min-h-screen">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <div className="mb-6 overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/80 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl">
+          <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-amber-200/80 bg-amber-50 shadow-sm">
+                <Zap className="h-6 w-6 text-amber-600" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-white tracking-tight">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pea-700">
+                  Outage Operations
+                </p>
+                <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
                   รายการคำขอดับไฟ
                 </h1>
-                <p className="text-sm text-slate-400 mt-0.5">
-                  จัดการและติดตามสถานะคำขอดับไฟทั้งหมด
+                <p className="mt-1 text-sm text-slate-500">
+                  ติดตามสถานะงานคงค้าง งานที่อนุมัติแล้ว และความคืบหน้าการลง
+                  OMS ในมุมมองเดียว
                 </p>
               </div>
             </div>
+
+            <div className="flex items-center gap-2 self-start rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 shadow-sm sm:self-center">
+              <CalendarDays className="h-4 w-4 text-slate-400" />
+              <span className="font-medium">มุมมองงานรายวัน</span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <PowerOutageRequestList />
       </div>
     </div>

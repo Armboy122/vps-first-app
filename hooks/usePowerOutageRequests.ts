@@ -225,6 +225,7 @@ export const usePowerOutageRequests = (
     // Data
     requests: currentItems,
     allRequests: filteredRequests,
+    baseRequests: rawRequests,
     loading,
     error,
 
