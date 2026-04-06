@@ -1,3 +1,5 @@
+name: peas3-uat
+
 x-logging: &default-logging
   options:
     max-size: "10m"
