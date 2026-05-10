@@ -16,6 +16,10 @@ const TAB_CONFIG: Record<string, TabConfig> = {
     label: "จัดการหม้อแปลง",
     description: "เพิ่ม แก้ไข ลบ และนำเข้าจาก CSV",
   },
+  [ADMIN_TABS.BUSINESS_CALENDAR]: {
+    label: "ปฏิทินวันทำการ",
+    description: "วันหยุด, วันทำงานพิเศษ, และนำเข้า CSV",
+  },
   [ADMIN_TABS.EXPORT]: {
     label: "ส่งออกข้อมูล",
     description: "ดาวน์โหลดคำขอตัดไฟเป็นไฟล์ CSV",
@@ -27,7 +31,7 @@ export function NavigationTabs() {
 
   return (
     <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex space-x-8">
+      <nav className="-mb-px flex flex-wrap gap-x-8 gap-y-2">
         {Object.entries(TAB_CONFIG).map(([tabKey, config]) => {
           const isActive = activeTab === tabKey;
           return (

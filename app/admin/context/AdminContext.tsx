@@ -11,6 +11,7 @@ import {
   AdminContextType,
   UserSearchParams,
   TransformerSearchParams,
+  BusinessCalendarSearchParams,
 } from "../types/admin.types";
 import { USERS_PER_PAGE, ADMIN_TABS } from "../constants/admin.constants";
 
@@ -36,6 +37,16 @@ export function AdminProvider({ children }: AdminProviderProps) {
       page: 1,
       limit: USERS_PER_PAGE,
       search: "",
+    });
+
+  // สถานะสำหรับการค้นหาและการแบ่งหน้าปฏิทินวันทำการ
+  const [businessCalendarSearchParams, setBusinessCalendarSearchParams] =
+    useState<BusinessCalendarSearchParams>({
+      page: 1,
+      limit: USERS_PER_PAGE,
+      search: "",
+      type: "",
+      includeInactive: false,
     });
 
   // สถานะของแท็บที่เปิดอยู่
@@ -82,11 +93,35 @@ export function AdminProvider({ children }: AdminProviderProps) {
     [],
   );
 
+  // ฟังก์ชันสำหรับอัปเดตพารามิเตอร์การค้นหาปฏิทินวันทำการ
+  const updateBusinessCalendarSearchParams = useCallback(
+    (newParams: Partial<BusinessCalendarSearchParams>) => {
+      setBusinessCalendarSearchParams((prev) => {
+        const updatedParams = { ...prev, ...newParams };
+
+        if (
+          (newParams.search !== undefined && newParams.search !== prev.search) ||
+          (newParams.type !== undefined && newParams.type !== prev.type) ||
+          (newParams.includeInactive !== undefined &&
+            newParams.includeInactive !== prev.includeInactive) ||
+          (newParams.limit !== undefined && newParams.limit !== prev.limit)
+        ) {
+          updatedParams.page = 1;
+        }
+
+        return updatedParams;
+      });
+    },
+    [],
+  );
+
   const value: AdminContextType = {
     searchParams,
     updateSearchParams,
     transformerSearchParams,
     updateTransformerSearchParams,
+    businessCalendarSearchParams,
+    updateBusinessCalendarSearchParams,
     activeTab,
     setActiveTab,
   };

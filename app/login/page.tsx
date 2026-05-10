@@ -83,7 +83,7 @@ export default function LoginPage() {
           <h2 className="mt-5 text-2xl font-bold text-slate-900">
             กำลังตรวจสอบสิทธิ์
           </h2>
-          <p className="mt-2 text-sm text-slate-500">
+          <p className="mt-2 text-sm text-slate-600">
             กรุณารอสักครู่ ระบบกำลังเตรียมพื้นที่ทำงานให้คุณ
           </p>
         </div>
@@ -141,6 +141,7 @@ export default function LoginPage() {
                       width={400}
                       height={300}
                       className="h-auto w-full rounded-xl"
+                      priority
                     />
                   </div>
                 </div>
@@ -156,7 +157,7 @@ export default function LoginPage() {
                         <p className="text-sm font-semibold text-white">
                           {h.title}
                         </p>
-                        <p className="mt-0.5 text-xs leading-relaxed text-pea-200/70">
+                        <p className="mt-0.5 text-sm leading-relaxed text-pea-200/80">
                           {h.description}
                         </p>
                       </div>
@@ -190,7 +191,7 @@ export default function LoginPage() {
                   <h2 className="text-2xl font-bold tracking-tight text-slate-900">
                     เข้าสู่ระบบ
                   </h2>
-                  <p className="mt-2 text-sm leading-6 text-slate-500">
+                  <p className="mt-2 text-[15px] leading-relaxed text-slate-600">
                     ใช้รหัสพนักงานและรหัสผ่านเพื่อเข้าสู่พื้นที่ปฏิบัติการ
                   </p>
                 </div>
@@ -199,7 +200,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <label
                       htmlFor="employee-id"
-                      className="text-sm font-semibold text-slate-700"
+                      className="text-[15px] font-semibold text-slate-800"
                     >
                       รหัสพนักงาน
                     </label>
@@ -211,7 +212,7 @@ export default function LoginPage() {
                         type="text"
                         required
                         autoComplete="username"
-                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-[15px] text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
+                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-base text-slate-900 shadow-sm transition-all placeholder:text-slate-500 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
                         placeholder="เช่น 540123"
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
@@ -223,7 +224,7 @@ export default function LoginPage() {
                   <div className="space-y-1.5">
                     <label
                       htmlFor="password"
-                      className="text-sm font-semibold text-slate-700"
+                      className="text-[15px] font-semibold text-slate-800"
                     >
                       รหัสผ่าน
                     </label>
@@ -235,7 +236,7 @@ export default function LoginPage() {
                         type="password"
                         required
                         autoComplete="current-password"
-                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-[15px] text-slate-900 shadow-sm transition-all placeholder:text-slate-400 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
+                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-base text-slate-900 shadow-sm transition-all placeholder:text-slate-500 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
                         placeholder="กรอกรหัสผ่าน"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -259,7 +260,7 @@ export default function LoginPage() {
                       />
                       <span className="font-medium">จดจำฉัน</span>
                     </label>
-                    <div className="inline-flex items-center gap-1.5 text-xs text-slate-400">
+                    <div className="inline-flex items-center gap-1.5 text-sm text-slate-500">
                       <LockKeyhole className="h-3 w-3" />
                       SSL Encrypted
                     </div>
@@ -273,7 +274,7 @@ export default function LoginPage() {
 
                   <button
                     type="submit"
-                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-pea-700 px-4 py-3 text-sm font-semibold text-white shadow-pea transition-all hover:bg-pea-800 hover:shadow-pea-lg focus:outline-none focus:ring-2 focus:ring-pea-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-pea-700 px-4 py-3 text-base font-semibold text-white shadow-pea transition-all hover:bg-pea-800 hover:shadow-pea-lg focus:outline-none focus:ring-2 focus:ring-pea-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -290,7 +291,7 @@ export default function LoginPage() {
                   </button>
                 </form>
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
                   <ShieldCheck className="h-3.5 w-3.5" />
                   <span>สำหรับพนักงาน กฟภ. เท่านั้น</span>
                 </div>

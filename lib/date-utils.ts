@@ -6,8 +6,17 @@
  * from "@/lib/date-utils" continue to work without modification.
  */
 export {
+  type DateInput,
   getThailandDate,
   getThailandDateAtMidnight,
+  DATE_ONLY_FORMAT,
+  toDateOnlyKey,
+  createDateOnlyUtc,
+  createThailandDateOnly,
+  isWeekendDate,
+  isWeekendOnlyBusinessDay,
+  addWeekendOnlyBusinessDays,
+  countWeekendOnlyBusinessDaysBetween,
   getDaysDifference,
   isDateInFuture,
   createThailandDateTime,

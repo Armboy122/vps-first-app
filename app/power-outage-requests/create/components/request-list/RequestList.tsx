@@ -36,17 +36,17 @@ export const RequestList: React.FC<RequestListProps> = ({
             <ListChecks className="w-4 h-4 text-blue-600" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">
+            <h3 className="text-base font-bold text-slate-900">
               รายการคำขอที่รอบันทึก
             </h3>
-            <p className="text-xs text-slate-500">
-              {requests.length} รายการ - เรียงตามวันที่อัตโนมัติ
+            <p className="text-sm text-slate-600">
+              {requests.length} รายการ — เรียงตามวันที่อัตโนมัติ
             </p>
           </div>
         </div>
         {confirmingClear ? (
           <div className="flex items-center gap-2">
-            <span className="text-xs text-red-600 font-medium">ยืนยันลบทั้งหมด?</span>
+            <span className="text-sm text-red-600 font-semibold">ยืนยันลบทั้งหมด?</span>
             <FormButton
               variant="danger"
               size="sm"
@@ -68,7 +68,7 @@ export const RequestList: React.FC<RequestListProps> = ({
         ) : (
           <button
             onClick={() => setConfirmingClear(true)}
-            className="inline-flex items-center gap-1.5 text-xs text-red-600 hover:text-red-700 font-medium transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-sm text-red-600 hover:text-red-700 font-medium transition-colors cursor-pointer"
           >
             <Trash2 className="w-3.5 h-3.5" />
             ล้างทั้งหมด
@@ -90,8 +90,8 @@ export const RequestList: React.FC<RequestListProps> = ({
 
       {/* Footer with submit */}
       <div className="flex justify-between items-center px-5 py-4 border-t border-slate-100 bg-slate-50/50">
-        <span className="text-sm text-slate-500">
-          รวม <strong className="text-slate-700">{requests.length}</strong> รายการรอบันทึก
+        <span className="text-[15px] text-slate-600">
+          รวม <strong className="text-slate-900">{requests.length}</strong> รายการรอบันทึก
         </span>
         <FormButton
           variant="success"
@@ -132,10 +132,10 @@ const RequestCard: React.FC<RequestCardProps> = ({
   };
 
   return (
-    <div className="flex items-start gap-3 px-5 py-3 hover:bg-slate-50/50 transition-colors group">
+    <div className="flex items-start gap-3 px-5 py-3.5 hover:bg-slate-50/50 transition-colors group">
       {/* หมายเลขลำดับ */}
       <div className="flex-shrink-0 mt-0.5">
-        <div className="w-7 h-7 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-xs font-bold">
+        <div className="w-8 h-8 bg-blue-100 text-blue-700 rounded-lg flex items-center justify-center text-sm font-bold">
           {index + 1}
         </div>
       </div>
@@ -143,24 +143,24 @@ const RequestCard: React.FC<RequestCardProps> = ({
       {/* ข้อมูล */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-sm font-semibold text-slate-800 truncate">
+          <span className="text-[15px] font-semibold text-slate-900 truncate">
             {request.transformerNumber}
           </span>
-          <span className="text-xs text-slate-400">|</span>
-          <span className="text-xs text-slate-500">
+          <span className="text-sm text-slate-400">|</span>
+          <span className="text-sm text-slate-600">
             {formatDate(request.outageDate)}
           </span>
-          <span className="text-xs text-slate-400">|</span>
-          <span className="text-xs text-slate-500">
+          <span className="text-sm text-slate-400">|</span>
+          <span className="text-sm text-slate-600">
             {request.startTime} - {request.endTime}
           </span>
         </div>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
           {request.gisDetails && <span className="truncate">{request.gisDetails}</span>}
           {request.area && (
             <>
-              <span className="text-slate-300">-</span>
-              <span className="truncate text-slate-400">{request.area}</span>
+              <span className="text-slate-400">-</span>
+              <span className="truncate text-slate-500">{request.area}</span>
             </>
           )}
         </div>

@@ -3,6 +3,7 @@ import {
   differenceInDays,
   isAfter,
   isEqual,
+  addDays,
 } from "date-fns";
 import { th } from "date-fns/locale";
 import dayjs from "dayjs";
@@ -35,6 +36,108 @@ export function getThailandDateAtMidnight(): Date {
   const today = getThailandDate();
   today.setHours(0, 0, 0, 0);
   return today;
+}
+
+export type DateInput = Date | string;
+
+export const DATE_ONLY_FORMAT = "yyyy-MM-dd";
+
+function formatThailandDateKey(date: Date): string {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Bangkok",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const dateParts = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return `${dateParts.year}-${dateParts.month}-${dateParts.day}`;
+}
+
+export function toDateOnlyKey(date: DateInput): string {
+  if (typeof date === "string") {
+    const trimmedDate = date.trim();
+    const dateOnlyMatch = trimmedDate.match(/^(\d{4}-\d{2}-\d{2})/);
+
+    if (dateOnlyMatch) {
+      return dateOnlyMatch[1];
+    }
+
+    const parsedDate = new Date(trimmedDate);
+    if (isNaN(parsedDate.getTime())) {
+      throw new Error(`Invalid date value: ${date}`);
+    }
+
+    return formatThailandDateKey(parsedDate);
+  }
+
+  if (isNaN(date.getTime())) {
+    throw new Error("Invalid date value");
+  }
+
+  return formatThailandDateKey(date);
+}
+
+export function createDateOnlyUtc(date: DateInput): Date {
+  return new Date(`${toDateOnlyKey(date)}T00:00:00.000Z`);
+}
+
+export function createThailandDateOnly(date: DateInput): Date {
+  return new Date(`${toDateOnlyKey(date)}T00:00:00+07:00`);
+}
+
+export function isWeekendDate(date: DateInput): boolean {
+  const day = createThailandDateOnly(date).getDay();
+  return day === 0 || day === 6;
+}
+
+export function isWeekendOnlyBusinessDay(date: DateInput): boolean {
+  return !isWeekendDate(date);
+}
+
+export function addWeekendOnlyBusinessDays(
+  startDate: DateInput,
+  businessDays: number,
+): Date {
+  if (businessDays < 0) {
+    throw new Error("businessDays must be zero or greater");
+  }
+
+  let currentDate = createThailandDateOnly(startDate);
+  let addedBusinessDays = 0;
+
+  while (addedBusinessDays < businessDays) {
+    currentDate = addDays(currentDate, 1);
+    if (isWeekendOnlyBusinessDay(currentDate)) {
+      addedBusinessDays += 1;
+    }
+  }
+
+  return currentDate;
+}
+
+export function countWeekendOnlyBusinessDaysBetween(
+  startDate: DateInput,
+  endDate: DateInput,
+): number {
+  let currentDate = createThailandDateOnly(startDate);
+  const targetDate = createThailandDateOnly(endDate);
+  let businessDays = 0;
+
+  if (targetDate <= currentDate) {
+    return 0;
+  }
+
+  while (currentDate < targetDate) {
+    currentDate = addDays(currentDate, 1);
+    if (isWeekendOnlyBusinessDay(currentDate)) {
+      businessDays += 1;
+    }
+  }
+
+  return businessDays;
 }
 
 /**

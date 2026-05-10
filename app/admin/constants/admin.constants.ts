@@ -27,6 +27,7 @@ export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 export const ADMIN_TABS = {
   USERS: "users",
   TRANSFORMERS: "transformers", 
+  BUSINESS_CALENDAR: "business-calendar",
   EXPORT: "export",
 } as const;
 

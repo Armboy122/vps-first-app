@@ -9,6 +9,6 @@ export default withAuth({
 export const config = {
   matcher: [
     // ตรวจสอบทุกหน้า ยกเว้นหน้าที่ระบุ
-    "/((?!api|_next/static|_next/image|favicon.ico|login).*)",
+    "/((?!api|_next/static|_next/image|favicon.ico|login|.*\\.(?:png|jpg|jpeg|gif|svg|webp|ico)$).*)",
   ],
 };

@@ -1,16 +1,13 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import {
-  getThailandDateAtMidnight,
-  getDaysDifference,
-  isDateInFuture,
-} from "@/lib/date-utils";
+import { isDateInFuture } from "@/lib/date-utils";
 import {
   cacheOMSStatusByWorkCenter,
   cacheOMSStatusDistribution,
   clearOMSCache,
 } from "@/lib/cache-utils";
+import { getOmsUrgencyBucketCounts } from "@/lib/utils/status-utils";
 
 /**
  * ดึงข้อมูลการกระจายสถานะ OMS ตามจุดรวมงาน พร้อมกับแคชข้อมูลไว้
@@ -18,8 +15,6 @@ import {
  */
 export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(
   async () => {
-    const today = getThailandDateAtMidnight();
-
     const workCenters = await prisma.workCenter.findMany({
       include: {
         powerOutageRequests: {
@@ -33,39 +28,22 @@ export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(
     });
 
     const result = workCenters.map((wc) => {
-      // กรองเฉพาะรายการที่ statusRequest = CONFIRM และ omsStatus = NOT_ADDED
-      const pendingRequests = wc.powerOutageRequests.filter(
-        (r) => r.statusRequest === "CONFIRM" && r.omsStatus === "NOT_ADDED",
+      const urgencyBuckets = getOmsUrgencyBucketCounts(
+        wc.powerOutageRequests,
       );
-
-      // ฟังก์ชันสำหรับคำนวณความแตกต่างของวันและจัดกลุ่มตามช่วงเวลา
-      const getRequestsInDateRange = (
-        minDays: number | null,
-        maxDays: number | null,
-      ): number => {
-        return pendingRequests.filter((r) => {
-          const outageDate = new Date(r.outageDate);
-          const diffDays = getDaysDifference(outageDate, today);
-
-          if (minDays !== null && maxDays !== null) {
-            return diffDays >= minDays && diffDays <= maxDays;
-          } else if (minDays !== null) {
-            return diffDays >= minDays;
-          } else if (maxDays !== null) {
-            return diffDays <= maxDays;
-          }
-          return false;
-        }).length;
-      };
 
       return {
         workCenterId: wc.id,
         workCenterName: wc.name,
-        PROCESSED_OVER_15_DAYS: getRequestsInDateRange(16, null),
-        PROCESSED_8_TO_15_DAYS: getRequestsInDateRange(8, 15),
-        PROCESSED_6_TO_7_DAYS: getRequestsInDateRange(6, 7),
-        PROCESSED_1_TO_5_DAYS: getRequestsInDateRange(1, 5),
-        PROCESSED_OVERDUE: getRequestsInDateRange(null, 0),
+        PROCESSED_OVER_15_BUSINESS_DAYS:
+          urgencyBuckets.OVER_15_BUSINESS_DAYS,
+        PROCESSED_8_TO_15_BUSINESS_DAYS:
+          urgencyBuckets.BUSINESS_DAYS_8_TO_15,
+        PROCESSED_4_TO_7_BUSINESS_DAYS:
+          urgencyBuckets.BUSINESS_DAYS_4_TO_7,
+        PROCESSED_WITHIN_3_BUSINESS_DAYS:
+          urgencyBuckets.WITHIN_3_BUSINESS_DAYS,
+        PROCESSED_OVERDUE: urgencyBuckets.OVERDUE,
       };
     });
 
@@ -90,9 +68,6 @@ export const getOMSStatusByWorkCenter = cacheOMSStatusByWorkCenter(async () => {
       },
     },
   });
-
-  // สร้างวันที่ปัจจุบันในไทม์โซน UTC+7
-  const today = getThailandDateAtMidnight();
 
   return omsStatusByWorkCenter.map((wc) => {
     // กรองเฉพาะรายการที่ statusRequest === 'CONFIRM'

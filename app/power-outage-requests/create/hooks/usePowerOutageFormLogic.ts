@@ -1,7 +1,12 @@
 import { useCallback } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
+import {
+  BusinessDayCalendarConfig,
+  PowerOutageRequestInput,
+  PowerOutageRequestSchema,
+  validateOutageBusinessDate,
+} from "@/lib/validations/powerOutageRequest";
 import {
   createPowerOutageRequest,
   createMultiplePowerOutageRequests,
@@ -18,6 +23,7 @@ import {
 interface UsePowerOutageFormLogicProps {
   form: UseFormReturn<PowerOutageRequestInput>;
   minSelectableDate: string;
+  calendarConfig?: BusinessDayCalendarConfig;
   setTimeError: (error: string | null) => void;
   addRequest: (request: PowerOutageRequestInput) => void;
   resetStore: () => void;
@@ -32,6 +38,7 @@ interface UsePowerOutageFormLogicProps {
 export const usePowerOutageFormLogic = ({
   form,
   minSelectableDate,
+  calendarConfig,
   setTimeError,
   addRequest,
   resetStore,
@@ -41,13 +48,58 @@ export const usePowerOutageFormLogic = ({
   const { setValue, reset } = form;
   const { setSubmitStatus, showErrorModal } = usePowerOutageFormStore();
 
+  const validateRequestForCreateFlow = useCallback(
+    (data: PowerOutageRequestInput) => {
+      const schemaValidation = PowerOutageRequestSchema.safeParse(data);
+      if (!schemaValidation.success) {
+        return {
+          isValid: false,
+          error: schemaValidation.error.errors
+            .map((err) => err.message)
+            .join(", "),
+        };
+      }
+
+      const dateValidation = validateOutageBusinessDate(
+        data.outageDate,
+        new Date(),
+        calendarConfig,
+      );
+
+      if (!dateValidation.isValid) {
+        return {
+          isValid: false,
+          error: `${dateValidation.error} (วันที่เร็วที่สุด: ${dateValidation.minDate.toLocaleDateString("th-TH")})`,
+        };
+      }
+
+      return validateDateAndTime(
+        data.outageDate,
+        minSelectableDate,
+        data.startTime,
+        data.endTime,
+      );
+    },
+    [calendarConfig, minSelectableDate],
+  );
+
   /**
    * จัดการการเปลี่ยนแปลงวันที่
    */
   const handleDateChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
       const selectedDate = event.target.value;
-      const validation = validateDateAndTime(selectedDate, minSelectableDate);
+      const businessDateValidation = validateOutageBusinessDate(
+        selectedDate,
+        new Date(),
+        calendarConfig,
+      );
+      const validation = businessDateValidation.isValid
+        ? { isValid: true }
+        : {
+            isValid: false,
+            error: `${businessDateValidation.error} (วันที่เร็วที่สุด: ${businessDateValidation.minDate.toLocaleDateString("th-TH")})`,
+          };
 
       logFormInteraction("outage_date_changed", {
         selectedDate,
@@ -63,7 +115,7 @@ export const usePowerOutageFormLogic = ({
 
       setValue("outageDate", selectedDate);
     },
-    [setValue, minSelectableDate, setTimeError],
+    [calendarConfig, setValue, setTimeError],
   );
 
   /**
@@ -87,12 +139,7 @@ export const usePowerOutageFormLogic = ({
    */
   const onSubmit = useCallback(
     async (data: PowerOutageRequestInput) => {
-      const validation = validateDateAndTime(
-        data.outageDate,
-        minSelectableDate,
-        data.startTime,
-        data.endTime,
-      );
+      const validation = validateRequestForCreateFlow(data);
 
       logFormInteraction("power_outage_request_submit_attempted", {
         isValid: validation.isValid,
@@ -153,7 +200,14 @@ export const usePowerOutageFormLogic = ({
         });
       }
     },
-    [minSelectableDate, setTimeError, setSubmitStatus, showErrorModal, reset, router],
+    [
+      validateRequestForCreateFlow,
+      setTimeError,
+      setSubmitStatus,
+      showErrorModal,
+      reset,
+      router,
+    ],
   );
 
   /**
@@ -161,12 +215,7 @@ export const usePowerOutageFormLogic = ({
    */
   const onAddToList = useCallback(
     (data: PowerOutageRequestInput) => {
-      const validation = validateDateAndTime(
-        data.outageDate,
-        minSelectableDate,
-        data.startTime,
-        data.endTime,
-      );
+      const validation = validateRequestForCreateFlow(data);
 
       logFormInteraction("power_outage_request_add_to_list_attempted", {
         isValid: validation.isValid,
@@ -193,7 +242,13 @@ export const usePowerOutageFormLogic = ({
       addRequest(data);
       reset();
     },
-    [minSelectableDate, setTimeError, addRequest, reset, requests.length],
+    [
+      validateRequestForCreateFlow,
+      setTimeError,
+      addRequest,
+      reset,
+      requests.length,
+    ],
   );
 
   /**

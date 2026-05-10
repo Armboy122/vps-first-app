@@ -11,7 +11,7 @@
   --app-surface-strong: #ffffff;
   --app-border: rgba(15, 23, 42, 0.12);
   --app-text: #10212f;
-  --app-text-muted: #52616f;
+  --app-text-muted: #3d4d5c;
   --app-pea: #245d42;
   --app-pea-strong: #163826;
   --app-amber: #b85f0d;
@@ -35,7 +35,11 @@ body {
     radial-gradient(circle at 80% 12%, rgba(245, 158, 11, 0.06), transparent 24%),
     linear-gradient(180deg, rgba(248, 250, 248, 0.92), rgba(243, 246, 244, 1));
   font-family: var(--font-sans), "IBM Plex Sans Thai", "Noto Sans Thai", sans-serif;
+  font-size: 16px;
+  line-height: 1.65;
   text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body::before {
@@ -88,6 +92,39 @@ h6,
 
 .app-muted {
   color: var(--app-text-muted);
+}
+
+/* ============================================
+   Global typography: readability & Thai text
+   ============================================ */
+
+/* Ensure form inputs are at least 16px to prevent iOS zoom */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
+
+/* Improve Thai text readability globally */
+p, li, td, th, label, span, div {
+  line-height: 1.65;
+}
+
+/* Prevent overly faint text — minimum contrast overrides */
+.text-slate-400 {
+  color: #7c8a97 !important;
+}
+
+.text-slate-500 {
+  color: #556270 !important;
+}
+
+.text-gray-400 {
+  color: #7c8a97 !important;
+}
+
+.text-gray-500 {
+  color: #556270 !important;
 }
 
 .app-scrollbar::-webkit-scrollbar {

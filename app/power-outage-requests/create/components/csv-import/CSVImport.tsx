@@ -14,13 +14,18 @@
  */
 
 import React, { useState, useRef } from "react";
-import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
+import {
+  addBusinessDays,
+  PowerOutageRequestInput,
+} from "@/lib/validations/powerOutageRequest";
 import { FormButton } from "@/components/forms";
 import dayjs from "dayjs";
+import * as XLSX from "xlsx";
 import {
   parseCSVLine,
   validateAndTransformCSVRows,
   type CSVValidationError,
+  type CSVRow,
 } from "../../utils/csvValidation";
 
 interface CSVImportProps {
@@ -79,8 +84,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
     try {
       // ตรวจสอบไฟล์ก่อน
-      if (!file.name.match(/\.(csv)$/i)) {
-        throw new Error("กรุณาเลือกไฟล์ CSV (.csv)");
+      if (!file.name.match(/\.(csv|xlsx|xls)$/i)) {
+        throw new Error("รองรับไฟล์ .xlsx, .xls หรือ .csv");
       }
 
       // ตรวจสอบขนาดไฟล์ (10MB)
@@ -89,50 +94,95 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         throw new Error("ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 10MB)");
       }
 
-      // อ่านไฟล์ CSV
-      const text = await file.text();
-      const lines = text.split("\n").filter(line => line.trim());
+      let rows: CSVRow[] = [];
+      const isExcel = file.name.match(/\.(xlsx|xls)$/i);
 
-      if (lines.length === 0) {
-        throw new Error("ไฟล์ว่างเปล่า");
-      }
+      if (isExcel) {
+        // ===== อ่านไฟล์ Excel (.xlsx / .xls) =====
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+        const sheetName = workbook.SheetNames[0];
+        if (!sheetName) throw new Error("ไม่พบ sheet ในไฟล์ Excel");
 
-      // ตรวจสอบจำนวนแถว
-      const maxRows = 1000;
-      if (lines.length > maxRows + 1) { // +1 สำหรับ header
-        throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
-      }
+        const sheet = workbook.Sheets[sheetName];
+        // raw: true เพื่อได้ค่าดิบของวันที่/เวลา แล้วแปลงใน parser
+        const jsonData: any[][] = XLSX.utils.sheet_to_json(sheet, {
+          header: 1,
+          raw: true,
+          defval: "",
+        });
 
-      // Parse header line (not validated beyond existence — template download handles format)
-      const headerLine = lines[0];
-      void parseCSVLine(headerLine); // ensure header parses without error
+        if (jsonData.length < 2) throw new Error("ไฟล์ว่างเปล่าหรือมีแค่ header");
 
-      // Parse data rows into CSVRow objects
-      const rows: import("../../utils/csvValidation").CSVRow[] = [];
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-
-        const values = parseCSVLine(line);
-
-        const row: import("../../utils/csvValidation").CSVRow = {
-          outageDate: values[0]?.replace(/"/g, "") || "",
-          startTime: values[1]?.replace(/"/g, "") || "",
-          endTime: values[2]?.replace(/"/g, "") || "",
-        };
-
-        let colIndex = 3;
-        if (role === "ADMIN") {
-          row.workCenterName = values[colIndex]?.replace(/"/g, "") || "";
-          row.branchName = values[colIndex + 1]?.replace(/"/g, "") || "";
-          colIndex += 2;
+        const maxRows = 1000;
+        if (jsonData.length > maxRows + 1) {
+          throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
         }
 
-        row.transformerNumber = values[colIndex]?.replace(/"/g, "") || "";
-        row.gisDetails = values[colIndex + 1]?.replace(/"/g, "") || "";
-        row.area = values[colIndex + 2]?.replace(/"/g, "") || "";
+        // Skip header (row 0), parse data rows
+        for (let i = 1; i < jsonData.length; i++) {
+          const values = jsonData[i].map((v: any) => String(v ?? ""));
+          const hasData = values.some((v: string) => v.trim() !== "");
+          if (!hasData) continue;
 
-        rows.push(row);
+          const row: CSVRow = {
+            outageDate: values[0] || "",
+            startTime: values[1] || "",
+            endTime: values[2] || "",
+          };
+
+          let colIndex = 3;
+          if (role === "ADMIN") {
+            row.workCenterName = values[colIndex] || "";
+            row.branchName = values[colIndex + 1] || "";
+            colIndex += 2;
+          }
+
+          row.transformerNumber = values[colIndex] || "";
+          row.gisDetails = values[colIndex + 1] || "";
+          row.area = values[colIndex + 2] || "";
+
+          rows.push(row);
+        }
+      } else {
+        // ===== อ่านไฟล์ CSV =====
+        const text = await file.text();
+        const lines = text.split("\n").filter(line => line.trim());
+
+        if (lines.length === 0) throw new Error("ไฟล์ว่างเปล่า");
+
+        const maxRows = 1000;
+        if (lines.length > maxRows + 1) {
+          throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
+        }
+
+        void parseCSVLine(lines[0]);
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i].trim();
+          if (!line) continue;
+
+          const values = parseCSVLine(line);
+
+          const row: CSVRow = {
+            outageDate: values[0]?.replace(/"/g, "") || "",
+            startTime: values[1]?.replace(/"/g, "") || "",
+            endTime: values[2]?.replace(/"/g, "") || "",
+          };
+
+          let colIndex = 3;
+          if (role === "ADMIN") {
+            row.workCenterName = values[colIndex]?.replace(/"/g, "") || "";
+            row.branchName = values[colIndex + 1]?.replace(/"/g, "") || "";
+            colIndex += 2;
+          }
+
+          row.transformerNumber = values[colIndex]?.replace(/"/g, "") || "";
+          row.gisDetails = values[colIndex + 1]?.replace(/"/g, "") || "";
+          row.area = values[colIndex + 2]?.replace(/"/g, "") || "";
+
+          rows.push(row);
+        }
       }
 
       // Delegate all validation logic to the utility function
@@ -157,8 +207,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         onImportData(validData);
       }
     } catch (error) {
-      console.error("Error reading CSV file:", error);
-      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถอ่านไฟล์ CSV ได้ กรุณาตรวจสอบรูปแบบไฟล์";
+      console.error("Error reading file:", error);
+      const errorMessage = error instanceof Error ? error.message : "ไม่สามารถอ่านไฟล์ได้ กรุณาตรวจสอบรูปแบบไฟล์";
       setValidationErrors([
         {
           row: 0,
@@ -177,6 +227,13 @@ export const CSVImport: React.FC<CSVImportProps> = ({
   };
 
   const downloadTemplate = () => {
+    const firstBusinessSample = dayjs(addBusinessDays(new Date(), 12)).format(
+      "YYYY-MM-DD",
+    );
+    const secondBusinessSample = dayjs(addBusinessDays(new Date(), 15)).format(
+      "YYYY-MM-DD",
+    );
+
     const headers = [
       "วันที่ดับไฟ",
       "เวลาเริ่มต้น",
@@ -189,7 +246,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
     const sampleData = [
       [
-        dayjs().add(15, "day").format("YYYY-MM-DD"), // วันที่ที่ถูกต้องตามเงื่อนไข
+        firstBusinessSample,
         "08:00",
         "12:00",
         ...(role === "ADMIN" ? ["จุดรวมงานตัวอย่าง", "สาขาตัวอย่าง"] : []),
@@ -198,7 +255,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         "หมู่บ้านเจริญสุข",
       ],
       [
-        dayjs().add(20, "day").format("YYYY-MM-DD"),
+        secondBusinessSample,
         "14:00",
         "17:30",
         ...(role === "ADMIN" ? ["นราธิวาส", "เมือง"] : []),
@@ -208,21 +265,26 @@ export const CSVImport: React.FC<CSVImportProps> = ({
       ],
     ];
 
-    const csvContent = [headers, ...sampleData]
-      .map((row) => row.map(cell => `"${cell}"`).join(","))
-      .join("\n");
+    // สร้างไฟล์ .xlsx ด้วย SheetJS
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
 
-    const blob = new Blob(["\uFEFF" + csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "template_power_outage_request.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    // ตั้งความกว้างคอลัมน์ให้อ่านง่าย
+    ws["!cols"] = headers.map(() => ({ wch: 22 }));
+
+    // ตั้ง format ให้คอลัมน์เวลาเป็น text เพื่อไม่ให้ Excel แปลงเป็นตัวเลข
+    const timeColIndexes = [1, 2]; // startTime, endTime
+    for (let r = 1; r <= sampleData.length; r++) {
+      for (const c of timeColIndexes) {
+        const cellRef = XLSX.utils.encode_cell({ r, c });
+        if (ws[cellRef]) {
+          ws[cellRef].t = "s"; // force text type
+        }
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "คำขอดับไฟ");
+    XLSX.writeFile(wb, "template_power_outage_request.xlsx");
   };
 
   const resultTone = !importResults
@@ -309,32 +371,32 @@ export const CSVImport: React.FC<CSVImportProps> = ({
       <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700 shadow-sm">
+            <div className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700 shadow-sm">
               CSV Import
             </div>
             <div>
               <h3 className="text-xl font-semibold text-emerald-900">
                 นำเข้าคำขอดับไฟจากไฟล์ CSV
               </h3>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-emerald-800/80">
+              <p className="mt-1 max-w-2xl text-sm leading-7 text-emerald-800">
                 เหมาะสำหรับการเพิ่มหลายรายการในรอบเดียว ระบบจะอ่านไฟล์,
                 ตรวจสอบความถูกต้องของแต่ละแถว และเพิ่มเฉพาะข้อมูลที่ผ่านเงื่อนไขให้ทันที
               </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 text-xs text-emerald-800/80 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-2 text-sm text-emerald-800 sm:grid-cols-3">
             <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
               <p className="font-semibold text-emerald-900">สูงสุด 1,000 แถว</p>
-              <p>รองรับงาน batch แบบปลอดภัย</p>
+              <p className="text-emerald-700">รองรับงาน batch แบบปลอดภัย</p>
             </div>
             <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
               <p className="font-semibold text-emerald-900">ไฟล์ไม่เกิน 10MB</p>
-              <p>ช่วยให้ parse และตรวจสอบได้เร็ว</p>
+              <p className="text-emerald-700">ช่วยให้ parse และตรวจสอบได้เร็ว</p>
             </div>
             <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
               <p className="font-semibold text-emerald-900">เพิ่มเฉพาะแถวที่ผ่าน</p>
-              <p>แถวที่ผิดจะถูกสรุปให้แก้ง่าย</p>
+              <p className="text-emerald-700">แถวที่ผิดจะถูกสรุปให้แก้ง่าย</p>
             </div>
           </div>
         </div>
@@ -347,7 +409,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             disabled={isProcessing}
             className="bg-green-600 hover:bg-green-700 text-white"
           >
-            {isProcessing ? "กำลังประมวลผล..." : "📂 เลือกไฟล์ CSV"}
+            {isProcessing ? "กำลังประมวลผล..." : "📂 เลือกไฟล์ Excel / CSV"}
           </FormButton>
 
           <FormButton
@@ -356,20 +418,20 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             onClick={downloadTemplate}
             className="border-green-300 text-green-600 bg-white hover:bg-green-50"
           >
-            📋 ดาวน์โหลดแม่แบบ CSV
+            📋 ดาวน์โหลดแม่แบบ
           </FormButton>
         </div>
 
         <input
           ref={fileInputRef}
           type="file"
-          accept=".csv"
+          accept=".csv,.xlsx,.xls"
           onChange={handleFileSelect}
           className="hidden"
         />
 
         {lastFileName && (
-          <div className="mt-4 inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-xs font-medium text-emerald-800 shadow-sm">
+          <div className="mt-4 inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-sm font-medium text-emerald-800 shadow-sm">
             ไฟล์ล่าสุด: {lastFileName}
           </div>
         )}
@@ -384,18 +446,18 @@ export const CSVImport: React.FC<CSVImportProps> = ({
                 <h4 className="text-lg font-semibold text-sky-900">
                   กำลังตรวจสอบไฟล์ CSV
                 </h4>
-                <p className="mt-1 text-sm leading-6 text-sky-800/80">
+                <p className="mt-1 text-sm leading-7 text-sky-800">
                   ระบบกำลังอ่านไฟล์, แปลงข้อมูลแต่ละแถว และเช็กเงื่อนไขก่อนเพิ่มเข้าฟอร์ม
                 </p>
                 {lastFileName && (
-                  <p className="mt-2 text-xs font-medium uppercase tracking-[0.18em] text-sky-700">
+                  <p className="mt-2 text-sm font-medium uppercase tracking-[0.14em] text-sky-700">
                     {lastFileName}
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="grid gap-2 text-xs text-sky-800/80 sm:grid-cols-3">
+            <div className="grid gap-2 text-sm text-sky-800 sm:grid-cols-3">
               <div className="rounded-xl border border-white/80 bg-white/80 px-3 py-2 shadow-sm">
                 1. อ่านไฟล์และแยกข้อมูล
               </div>
@@ -418,7 +480,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-2">
               <div
-                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${resultTone.badge}`}
+                className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold uppercase tracking-[0.14em] ${resultTone.badge}`}
               >
                 Import Summary
               </div>
@@ -434,7 +496,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
             {lastFileName && (
               <div className="rounded-xl border border-white/80 bg-white/90 px-4 py-3 text-sm text-slate-700 shadow-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
                   ไฟล์ที่ตรวจล่าสุด
                 </p>
                 <p className="mt-1 font-medium text-slate-900">{lastFileName}</p>
@@ -444,7 +506,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
           <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-slate-600">
                 รายการทั้งหมด
               </p>
               <p className="mt-2 text-3xl font-semibold text-slate-900">
@@ -455,24 +517,24 @@ export const CSVImport: React.FC<CSVImportProps> = ({
               </p>
             </div>
             <div className="rounded-2xl border border-emerald-200 bg-white/90 p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-emerald-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700">
                 เพิ่มเข้าฟอร์มแล้ว
               </p>
               <p className="mt-2 text-3xl font-semibold text-emerald-700">
                 {importResults.success}
               </p>
-              <p className="mt-2 text-sm text-emerald-800/80">
+              <p className="mt-2 text-sm text-emerald-800">
                 พร้อมให้ตรวจทานและบันทึกต่อ
               </p>
             </div>
             <div className="rounded-2xl border border-rose-200 bg-white/90 p-4 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-rose-600">
+              <p className="text-sm font-semibold uppercase tracking-[0.14em] text-rose-700">
                 ต้องกลับไปแก้ไข
               </p>
               <p className="mt-2 text-3xl font-semibold text-rose-700">
                 {importResults.errors}
               </p>
-              <p className="mt-2 text-sm text-rose-800/80">
+              <p className="mt-2 text-sm text-rose-800">
                 ระบบยังไม่เพิ่มรายการส่วนนี้ให้
               </p>
             </div>
@@ -480,10 +542,10 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
             <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-[15px] font-semibold text-slate-900">
                 สิ่งที่ควรทำต่อทันที
               </p>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+              <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
                 <li>ตรวจรายการที่ถูกเพิ่มในฟอร์มว่าถูกต้องครบถ้วน</li>
                 <li>หากมีข้อมูลบางส่วนไม่ผ่าน ให้แก้ไฟล์ CSV แล้วอัปโหลดรอบใหม่เฉพาะส่วนที่เหลือ</li>
                 <li>เมื่อพร้อมแล้วค่อยบันทึกคำขอทั้งหมดจากหน้าฟอร์มด้านบน</li>
@@ -491,10 +553,10 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             </div>
 
             <div className="rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-              <p className="text-sm font-semibold text-slate-900">
+              <p className="text-[15px] font-semibold text-slate-900">
                 แนวทางการอ่านผลลัพธ์
               </p>
-              <ul className="mt-3 space-y-2 text-sm leading-6 text-slate-700">
+              <ul className="mt-3 space-y-2 text-sm leading-7 text-slate-700">
                 <li>หาก &quot;ต้องกลับไปแก้ไข&quot; เป็น 0 แปลว่ารอบนี้พร้อมใช้งานทั้งหมด</li>
                 <li>หากมีทั้งสำเร็จและผิดพลาด แปลว่าเป็น partial import ไม่จำเป็นต้องเริ่มใหม่ทั้งไฟล์</li>
                 <li>รายละเอียดข้อผิดพลาดด้านล่างถูกตัดให้เห็นเฉพาะส่วนสำคัญก่อนเพื่ออ่านง่ายขึ้น</li>
@@ -554,7 +616,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             </div>
 
             <div
-              className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] ${
+              className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold uppercase tracking-[0.14em] ${
                 importResults.success > 0
                   ? "bg-amber-100 text-amber-700"
                   : "bg-rose-100 text-rose-700"
@@ -566,15 +628,15 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
           <div className="mt-4 overflow-hidden rounded-2xl border border-white/80 bg-white/90 shadow-sm">
             <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
+              <table className="min-w-full text-[15px]">
                 <thead className="bg-slate-100 text-slate-700">
                   <tr>
-                    <th className="px-4 py-3 text-left font-semibold">แถว</th>
-                    <th className="px-4 py-3 text-left font-semibold">ฟิลด์</th>
-                    <th className="px-4 py-3 text-left font-semibold">
+                    <th className="px-4 py-3 text-left font-semibold text-slate-800">แถว</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-800">ฟิลด์</th>
+                    <th className="px-4 py-3 text-left font-semibold text-slate-800">
                       อาการที่พบ
                     </th>
-                    <th className="px-4 py-3 text-left font-semibold">
+                    <th className="px-4 py-3 text-left font-semibold text-slate-800">
                       ค่าที่ระบบอ่านได้
                     </th>
                   </tr>
@@ -589,8 +651,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
                       <td className="px-4 py-3 text-slate-700">
                         {error.message}
                       </td>
-                      <td className="px-4 py-3 text-slate-500">
-                        <span className="inline-flex max-w-[220px] truncate rounded-full bg-slate-100 px-3 py-1 text-xs">
+                      <td className="px-4 py-3 text-slate-600">
+                        <span className="inline-flex max-w-[220px] truncate rounded-full bg-slate-100 px-3 py-1 text-sm">
                           {error.value ? String(error.value) : "-"}
                         </span>
                       </td>
@@ -609,8 +671,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           )}
 
           <div className="mt-4 rounded-2xl border border-white/80 bg-white/80 p-4 shadow-sm">
-            <p className="text-sm font-semibold text-slate-900">วิธีแก้เร็วที่สุด</p>
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-6 text-slate-700">
+            <p className="text-[15px] font-semibold text-slate-900">วิธีแก้เร็วที่สุด</p>
+            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm leading-7 text-slate-700">
               <li>แก้แถวที่ขึ้น error จากไฟล์ CSV ต้นฉบับ</li>
               <li>บันทึกไฟล์ใหม่เป็น CSV (UTF-8)</li>
               <li>อัปโหลดเฉพาะไฟล์ที่แก้แล้วอีกครั้ง ระบบจะเพิ่มเฉพาะรายการที่ผ่านให้เหมือนเดิม</li>
@@ -621,13 +683,13 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
       {/* คำแนะนำรูปแบบไฟล์ — collapsed by default to reduce visual noise */}
       <details className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 shadow-sm group">
-        <summary className="cursor-pointer select-none p-5 text-lg font-semibold text-sky-900 list-none flex items-center justify-between">
+        <summary className="cursor-pointer select-none p-5 text-lg font-bold text-sky-900 list-none flex items-center justify-between">
           <span>รูปแบบไฟล์ CSV ที่ระบบอ่านได้</span>
           <span className="ml-2 text-sky-500 transition-transform group-open:rotate-180" aria-hidden="true">
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
           </span>
         </summary>
-        <div className="px-5 pb-5 text-sm text-blue-700 space-y-1">
+        <div className="px-5 pb-5 text-sm text-blue-800 space-y-2 leading-7">
           <p>
             <strong>คอลัมน์ที่จำเป็น (เรียงตามลำดับ):</strong>
           </p>

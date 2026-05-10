@@ -1,5 +1,11 @@
 // Service Layer Exports
 export { PowerOutageRequestService } from "./powerOutageRequest.service";
+export {
+  BusinessCalendarService,
+  BusinessCalendarValidationError,
+  DEFAULT_BUSINESS_CALENDAR_SCOPE,
+  DEFAULT_MIN_LEAD_BUSINESS_DAYS,
+} from "./businessCalendar.service";
 export { TransformerService } from "./transformer.service";
 export { WorkCenterService } from "./workCenter.service";
 export { UserService } from "./user.service";
@@ -12,6 +18,12 @@ export type {
   PaginatedResult,
   CreatePowerOutageRequestData,
 } from "./powerOutageRequest.service";
+
+export type {
+  BusinessCalendarEntry,
+  BusinessCalendarOptions,
+  OutageDateValidationResult,
+} from "./businessCalendar.service";
 
 export type {
   WorkCenterWithBranches,

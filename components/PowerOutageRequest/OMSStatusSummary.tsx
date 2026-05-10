@@ -9,7 +9,11 @@ import {
   Clock3,
   Info,
 } from "lucide-react";
-import { getThailandDateAtMidnight } from "@/lib/date-utils";
+import {
+  getOmsUrgencyBucketCounts,
+  isApprovedPendingOmsRequest,
+  OMS_URGENCY_BUCKETS,
+} from "@/lib/utils/status-utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -59,11 +63,9 @@ export const OMSStatusSummary = memo(
   }: OMSStatusSummaryProps) => {
     const summaryData = useMemo(() => {
       const dataSource = showFilteredSummary ? filteredRequests : requests;
-      const today = getThailandDateAtMidnight();
 
       const approvedPendingOms = dataSource.filter(
-        (req) =>
-          req.statusRequest === "CONFIRM" && req.omsStatus === "NOT_ADDED",
+        isApprovedPendingOmsRequest,
       );
       const pendingApproval = dataSource.filter(
         (req) => req.statusRequest === "NOT",
@@ -77,33 +79,7 @@ export const OMSStatusSummary = memo(
           req.statusRequest === "CANCELLED" || req.omsStatus === "CANCELLED",
       );
 
-      const overdue = approvedPendingOms.filter(
-        (req) => new Date(req.outageDate) < today,
-      );
-      const urgentItems = approvedPendingOms.filter((req) => {
-        const outageDate = new Date(req.outageDate);
-        const diffTime = outageDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 0 && diffDays <= 3;
-      });
-      const mediumUrgentItems = approvedPendingOms.filter((req) => {
-        const outageDate = new Date(req.outageDate);
-        const diffTime = outageDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 4 && diffDays <= 7;
-      });
-      const normalItems = approvedPendingOms.filter((req) => {
-        const outageDate = new Date(req.outageDate);
-        const diffTime = outageDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays >= 8 && diffDays <= 15;
-      });
-      const futureItems = approvedPendingOms.filter((req) => {
-        const outageDate = new Date(req.outageDate);
-        const diffTime = outageDate.getTime() - today.getTime();
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays > 15;
-      });
+      const urgencyBucketCounts = getOmsUrgencyBucketCounts(dataSource);
 
       return {
         totalItems: dataSource.length,
@@ -111,11 +87,7 @@ export const OMSStatusSummary = memo(
         pendingApproval: pendingApproval.length,
         processedItems: processedItems.length,
         cancelledItems: cancelledItems.length,
-        overdue: overdue.length,
-        urgentItems: urgentItems.length,
-        mediumUrgentItems: mediumUrgentItems.length,
-        normalItems: normalItems.length,
-        futureItems: futureItems.length,
+        urgencyBucketCounts,
         isFiltered:
           showFilteredSummary && filteredRequests.length !== requests.length,
       };
@@ -168,37 +140,37 @@ export const OMSStatusSummary = memo(
 
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
             <SummaryCard
-              title="เลยกำหนด"
-              value={summaryData.overdue}
-              hint="ต้องรีบติดตาม"
+              title={OMS_URGENCY_BUCKETS[0].label}
+              value={summaryData.urgencyBucketCounts.OVERDUE}
+              hint={OMS_URGENCY_BUCKETS[0].hint}
               icon={AlertTriangle}
               tone="bg-red-50 text-red-900 ring-red-200/70"
             />
             <SummaryCard
-              title="ภายใน 3 วัน"
-              value={summaryData.urgentItems}
-              hint="งานเร่งด่วน"
+              title={OMS_URGENCY_BUCKETS[1].label}
+              value={summaryData.urgencyBucketCounts.WITHIN_3_BUSINESS_DAYS}
+              hint={OMS_URGENCY_BUCKETS[1].hint}
               icon={CalendarClock}
               tone="bg-orange-50 text-orange-900 ring-orange-200/70"
             />
             <SummaryCard
-              title="4-7 วัน"
-              value={summaryData.mediumUrgentItems}
-              hint="ควรเริ่มติดตาม"
+              title={OMS_URGENCY_BUCKETS[2].label}
+              value={summaryData.urgencyBucketCounts.BUSINESS_DAYS_4_TO_7}
+              hint={OMS_URGENCY_BUCKETS[2].hint}
               icon={Clock3}
               tone="bg-amber-50 text-amber-900 ring-amber-200/70"
             />
             <SummaryCard
-              title="8-15 วัน"
-              value={summaryData.normalItems}
-              hint="อยู่ในช่วงปกติ"
+              title={OMS_URGENCY_BUCKETS[3].label}
+              value={summaryData.urgencyBucketCounts.BUSINESS_DAYS_8_TO_15}
+              hint={OMS_URGENCY_BUCKETS[3].hint}
               icon={CalendarCheck2}
               tone="bg-emerald-50 text-emerald-900 ring-emerald-200/70"
             />
             <SummaryCard
-              title="มากกว่า 15 วัน"
-              value={summaryData.futureItems}
-              hint="ยังไม่เร่งด่วน"
+              title={OMS_URGENCY_BUCKETS[4].label}
+              value={summaryData.urgencyBucketCounts.OVER_15_BUSINESS_DAYS}
+              hint={OMS_URGENCY_BUCKETS[4].hint}
               icon={CalendarCheck2}
               tone="bg-blue-50 text-blue-900 ring-blue-200/70"
             />

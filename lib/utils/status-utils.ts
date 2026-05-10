@@ -1,4 +1,4 @@
-import { getDaysDifference, getThailandDateAtMidnight } from "./date.utils";
+import { getThailandDateAtMidnight } from "./date.utils";
 
 export type UrgencyLevel =
   | "CRITICAL"
@@ -32,6 +32,172 @@ export interface StatusInfo {
   daysLabel: string;
   priority: number;
 }
+
+export type OmsUrgencyBucketKey =
+  | "OVERDUE"
+  | "WITHIN_3_BUSINESS_DAYS"
+  | "BUSINESS_DAYS_4_TO_7"
+  | "BUSINESS_DAYS_8_TO_15"
+  | "OVER_15_BUSINESS_DAYS";
+
+export type OmsUrgencyBucketCounts = Record<OmsUrgencyBucketKey, number>;
+
+export interface OmsUrgencyBucketMeta {
+  key: OmsUrgencyBucketKey;
+  label: string;
+  hint: string;
+}
+
+interface OmsUrgencyRequestLike {
+  outageDate: Date | string;
+  omsStatus: string;
+  statusRequest: string;
+}
+
+export const OMS_URGENCY_BUCKETS: OmsUrgencyBucketMeta[] = [
+  {
+    key: "OVERDUE",
+    label: "เลยกำหนด",
+    hint: "ต้องรีบติดตาม",
+  },
+  {
+    key: "WITHIN_3_BUSINESS_DAYS",
+    label: "ภายใน 3 วันทำการ",
+    hint: "งานเร่งด่วน",
+  },
+  {
+    key: "BUSINESS_DAYS_4_TO_7",
+    label: "4-7 วันทำการ",
+    hint: "ควรเริ่มติดตาม",
+  },
+  {
+    key: "BUSINESS_DAYS_8_TO_15",
+    label: "8-15 วันทำการ",
+    hint: "อยู่ในช่วงปกติ",
+  },
+  {
+    key: "OVER_15_BUSINESS_DAYS",
+    label: "มากกว่า 15 วันทำการ",
+    hint: "ยังไม่เร่งด่วน",
+  },
+];
+
+const OMS_URGENCY_BUCKET_COUNT_TEMPLATE: OmsUrgencyBucketCounts = {
+  OVERDUE: 0,
+  WITHIN_3_BUSINESS_DAYS: 0,
+  BUSINESS_DAYS_4_TO_7: 0,
+  BUSINESS_DAYS_8_TO_15: 0,
+  OVER_15_BUSINESS_DAYS: 0,
+};
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const toDateAtMidnight = (date: Date | string): Date => {
+  const normalizedDate = new Date(date);
+  normalizedDate.setHours(0, 0, 0, 0);
+  return normalizedDate;
+};
+
+const addCalendarDays = (date: Date, days: number): Date => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const isWeekend = (date: Date): boolean => {
+  const day = date.getDay();
+  return day === 0 || day === 6;
+};
+
+const countWeekendOnlyBusinessDays = (startDate: Date, endDate: Date) => {
+  let count = 0;
+  let cursor = addCalendarDays(startDate, 1);
+
+  while (cursor.getTime() <= endDate.getTime()) {
+    if (!isWeekend(cursor)) {
+      count += 1;
+    }
+
+    cursor = addCalendarDays(cursor, 1);
+  }
+
+  return count;
+};
+
+/**
+ * Business-day difference for urgency buckets.
+ * Fallback rule: count Monday-Friday only until the DB-backed calendar service
+ * is available here.
+ */
+export const getBusinessDaysDifference = (
+  targetDate: Date | string,
+  baseDate: Date = getThailandDateAtMidnight(),
+): number => {
+  const target = toDateAtMidnight(targetDate);
+  const base = toDateAtMidnight(baseDate);
+  const calendarDiff = Math.round(
+    (target.getTime() - base.getTime()) / MS_PER_DAY,
+  );
+
+  if (calendarDiff === 0) {
+    return 0;
+  }
+
+  if (calendarDiff > 0) {
+    return countWeekendOnlyBusinessDays(base, target);
+  }
+
+  const overdueBusinessDays = countWeekendOnlyBusinessDays(target, base);
+  return -Math.max(overdueBusinessDays, 1);
+};
+
+export const getOmsUrgencyBucketKey = (
+  outageDate: Date | string,
+  baseDate: Date = getThailandDateAtMidnight(),
+): OmsUrgencyBucketKey => {
+  const diffBusinessDays = getBusinessDaysDifference(outageDate, baseDate);
+
+  if (diffBusinessDays < 0) {
+    return "OVERDUE";
+  }
+
+  if (diffBusinessDays <= 3) {
+    return "WITHIN_3_BUSINESS_DAYS";
+  }
+
+  if (diffBusinessDays <= 7) {
+    return "BUSINESS_DAYS_4_TO_7";
+  }
+
+  if (diffBusinessDays <= 15) {
+    return "BUSINESS_DAYS_8_TO_15";
+  }
+
+  return "OVER_15_BUSINESS_DAYS";
+};
+
+export const isApprovedPendingOmsRequest = (
+  request: OmsUrgencyRequestLike,
+): boolean =>
+  request.statusRequest === "CONFIRM" && request.omsStatus === "NOT_ADDED";
+
+export const getOmsUrgencyBucketCounts = (
+  requests: OmsUrgencyRequestLike[],
+  baseDate: Date = getThailandDateAtMidnight(),
+): OmsUrgencyBucketCounts => {
+  const counts = { ...OMS_URGENCY_BUCKET_COUNT_TEMPLATE };
+
+  requests.forEach((request) => {
+    if (!isApprovedPendingOmsRequest(request)) {
+      return;
+    }
+
+    const bucketKey = getOmsUrgencyBucketKey(request.outageDate, baseDate);
+    counts[bucketKey] += 1;
+  });
+
+  return counts;
+};
 
 export const getRequestStatusMeta = (status: string): StatusChipMeta => {
   switch (status) {
@@ -93,7 +259,7 @@ export const getOmsStatusMeta = (status: string): StatusChipMeta => {
 
 const getTimelineLabel = (diffDays: number, useUrgentTone = false) => {
   if (diffDays < 0) {
-    return `เลยกำหนด ${Math.abs(diffDays)} วัน`;
+    return `เลยกำหนด ${Math.abs(diffDays)} วันทำการ`;
   }
 
   if (diffDays === 0) {
@@ -101,10 +267,10 @@ const getTimelineLabel = (diffDays: number, useUrgentTone = false) => {
   }
 
   if (useUrgentTone && diffDays <= 3) {
-    return `ภายใน ${diffDays} วัน`;
+    return `ภายใน ${diffDays} วันทำการ`;
   }
 
-  return `อีก ${diffDays} วัน`;
+  return `อีก ${diffDays} วันทำการ`;
 };
 
 const createStatusInfo = (
@@ -129,10 +295,7 @@ export const getUrgencyStatus = (
   statusRequest: string,
 ): StatusInfo => {
   const today = getThailandDateAtMidnight();
-  const outageDateMidnight = new Date(outageDate);
-  outageDateMidnight.setHours(0, 0, 0, 0);
-
-  const diffDays = getDaysDifference(outageDateMidnight, today);
+  const diffDays = getBusinessDaysDifference(outageDate, today);
   const isCancelled =
     statusRequest === "CANCELLED" || omsStatus === "CANCELLED";
   const isCompleted =
@@ -195,7 +358,7 @@ export const getUrgencyStatus = (
     if (diffDays <= 3) {
       return createStatusInfo(diffDays, {
         level: "URGENT",
-        label: diffDays === 0 ? "วันนี้" : "ภายใน 3 วัน",
+        label: diffDays === 0 ? "วันนี้" : "ภายใน 3 วันทำการ",
         primaryLabel: getTimelineLabel(diffDays, true),
         secondaryLabel: "อนุมัติแล้ว แต่ยังไม่ลง OMS",
         color: "orange",
@@ -212,7 +375,7 @@ export const getUrgencyStatus = (
     if (diffDays <= 7) {
       return createStatusInfo(diffDays, {
         level: "WARNING",
-        label: "4-7 วัน",
+        label: "4-7 วันทำการ",
         primaryLabel: getTimelineLabel(diffDays),
         secondaryLabel: "อนุมัติแล้ว แต่ยังไม่ลง OMS",
         color: "amber",
@@ -228,7 +391,7 @@ export const getUrgencyStatus = (
     if (diffDays <= 15) {
       return createStatusInfo(diffDays, {
         level: "ATTENTION",
-        label: "8-15 วัน",
+        label: "8-15 วันทำการ",
         primaryLabel: getTimelineLabel(diffDays),
         secondaryLabel: "อนุมัติแล้ว แต่ยังไม่ลง OMS",
         color: "emerald",
@@ -243,7 +406,7 @@ export const getUrgencyStatus = (
 
     return createStatusInfo(diffDays, {
       level: "DEFAULT",
-      label: "มากกว่า 15 วัน",
+      label: "มากกว่า 15 วันทำการ",
       primaryLabel: getTimelineLabel(diffDays),
       secondaryLabel: "อนุมัติแล้ว แต่ยังไม่ลง OMS",
       color: "blue",

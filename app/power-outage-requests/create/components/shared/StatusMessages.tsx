@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import dayjs from "dayjs";
+import { MIN_OUTAGE_BUSINESS_DAYS } from "@/lib/validations/powerOutageRequest";
 
 interface StatusMessagesProps {
   timeError: string | null;
@@ -58,15 +59,17 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600 text-sm font-bold" aria-hidden="true">!</span>
             <div>
-              <p className="text-sm font-semibold text-red-800">ข้อผิดพลาดเกี่ยวกับเวลา</p>
-              <p className="mt-1 text-sm text-red-700">{timeError}</p>
+              <p className="text-[15px] font-bold text-red-800">ข้อผิดพลาดเกี่ยวกับเวลา</p>
+              <p className="mt-1 text-sm text-red-700 leading-relaxed">{timeError}</p>
             </div>
           </div>
         </div>
       )}
 
       {/* คำเตือนเมื่อวันที่ใกล้เกินไป -- ปุ่มถูก disable แล้วแต่ยังต้องอธิบายให้ชัด */}
-      {daysFromToday !== null && daysFromToday <= 10 && watchedOutageDate && (
+      {daysFromToday !== null &&
+        daysFromToday < MIN_OUTAGE_BUSINESS_DAYS &&
+        watchedOutageDate && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-sm" aria-hidden="true">
@@ -75,13 +78,13 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
               </svg>
             </span>
             <div>
-              <p className="text-sm font-semibold text-amber-800">
+              <p className="text-[15px] font-bold text-amber-800">
                 ยังไม่สามารถบันทึกคำขอได้
               </p>
-              <p className="mt-1 text-sm text-amber-700">
-                วันที่ที่เลือกห่างจากวันนี้เพียง <strong>{daysFromToday} วัน</strong> แต่ระบบกำหนดให้ล่วงหน้าอย่างน้อย 10 วัน
+              <p className="mt-1 text-sm text-amber-700 leading-relaxed">
+                วันที่ที่เลือกห่างจากวันนี้เพียง <strong>{daysFromToday} วันทำการ</strong> แต่ระบบกำหนดให้ล่วงหน้าอย่างน้อย {MIN_OUTAGE_BUSINESS_DAYS} วันทำการ
               </p>
-              <p className="mt-1 text-sm text-amber-700">
+              <p className="mt-1 text-sm text-amber-700 leading-relaxed">
                 กรุณาเลือกวันที่ตั้งแต่ <strong>{dayjs(minSelectableDate).format("DD/MM/YYYY")}</strong> เป็นต้นไป
               </p>
             </div>
@@ -110,11 +113,11 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
             )}
             <div className="flex-1">
               {submitStatus.message.includes("\n") ? (
-                <pre className="whitespace-pre-wrap text-sm font-medium">
+                <pre className="whitespace-pre-wrap text-[15px] font-medium">
                   {submitStatus.message}
                 </pre>
               ) : (
-                <p className="text-sm font-medium">{submitStatus.message}</p>
+                <p className="text-[15px] font-medium">{submitStatus.message}</p>
               )}
             </div>
           </div>

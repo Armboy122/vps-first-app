@@ -27,7 +27,7 @@ export default function AppShell({
       </main>
 
       {!hideChrome && (
-        <footer className="relative z-10 border-t border-slate-200/80 bg-white/70 text-center text-sm text-slate-500 backdrop-blur-xl">
+        <footer className="relative z-10 border-t border-slate-200/80 bg-white/70 text-center text-sm text-slate-600 backdrop-blur-xl">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
             <p className="font-medium text-slate-600">ระบบจัดการคำขอดับไฟ</p>
             <p>&copy; 2024-2026 PeaTransformer</p>

@@ -37,10 +37,10 @@ const RequestStatusBarChart = () => {
       // Filter out work centers with no data
       const filteredData = data.filter((item) => {
         const hasData =
-          item.PROCESSED_OVER_15_DAYS > 0 ||
-          item.PROCESSED_8_TO_15_DAYS > 0 ||
-          item.PROCESSED_6_TO_7_DAYS > 0 ||
-          item.PROCESSED_1_TO_5_DAYS > 0 ||
+          item.PROCESSED_OVER_15_BUSINESS_DAYS > 0 ||
+          item.PROCESSED_8_TO_15_BUSINESS_DAYS > 0 ||
+          item.PROCESSED_4_TO_7_BUSINESS_DAYS > 0 ||
+          item.PROCESSED_WITHIN_3_BUSINESS_DAYS > 0 ||
           item.PROCESSED_OVERDUE > 0;
         return hasData;
       });
@@ -49,23 +49,31 @@ const RequestStatusBarChart = () => {
         labels: filteredData.map((item) => item.workCenterName),
         datasets: [
           {
-            label: "มากกว่า 15 วัน",
-            data: filteredData.map((item) => item.PROCESSED_OVER_15_DAYS),
+            label: "มากกว่า 15 วันทำการ",
+            data: filteredData.map(
+              (item) => item.PROCESSED_OVER_15_BUSINESS_DAYS,
+            ),
             backgroundColor: "rgba(75, 192, 192, 0.9)",
           },
           {
-            label: "8-15 วัน",
-            data: filteredData.map((item) => item.PROCESSED_8_TO_15_DAYS),
+            label: "8-15 วันทำการ",
+            data: filteredData.map(
+              (item) => item.PROCESSED_8_TO_15_BUSINESS_DAYS,
+            ),
             backgroundColor: "rgba(54, 162, 235, 0.9)",
           },
           {
-            label: "6-7 วัน",
-            data: filteredData.map((item) => item.PROCESSED_6_TO_7_DAYS),
+            label: "4-7 วันทำการ",
+            data: filteredData.map(
+              (item) => item.PROCESSED_4_TO_7_BUSINESS_DAYS,
+            ),
             backgroundColor: "rgba(255, 206, 86, 0.9)",
           },
           {
-            label: "1-5 วัน",
-            data: filteredData.map((item) => item.PROCESSED_1_TO_5_DAYS),
+            label: "ภายใน 3 วันทำการ",
+            data: filteredData.map(
+              (item) => item.PROCESSED_WITHIN_3_BUSINESS_DAYS,
+            ),
             backgroundColor: "rgba(255, 159, 64, 0.9)",
           },
           {

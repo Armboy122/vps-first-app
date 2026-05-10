@@ -71,6 +71,47 @@ export interface CSVUploadProgress {
 }
 
 // =============================================================================
+// BUSINESS CALENDAR MANAGEMENT DOMAIN
+// รับผิดชอบ: จัดการวันหยุดและวันทำงานพิเศษที่ใช้คำนวณวันทำการ
+// Component tree: BusinessCalendarManagement → BusinessCalendarFilters / BusinessCalendarTable
+//                                       → BusinessCalendarForm / BusinessCalendarCSVImport
+// =============================================================================
+
+export type BusinessCalendarEntryType = "HOLIDAY" | "SPECIAL_WORKDAY";
+
+/** ข้อมูลวันทำการพิเศษ/วันหยุดสำหรับหน้า Admin */
+export interface BusinessCalendarDate {
+  id: number;
+  dateKey: string;
+  type: BusinessCalendarEntryType;
+  name: string;
+  scope: string;
+  note: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** พารามิเตอร์สำหรับการค้นหาและการแบ่งหน้าปฏิทินวันทำการ */
+export interface BusinessCalendarSearchParams {
+  page: number;
+  limit: number;
+  search: string;
+  type: "" | BusinessCalendarEntryType;
+  includeInactive: boolean;
+}
+
+/** Payload สำหรับสร้าง/แก้ไขรายการปฏิทินวันทำการ */
+export interface BusinessCalendarFormData {
+  date: string;
+  type: BusinessCalendarEntryType;
+  name: string;
+  scope: string;
+  note: string;
+  isActive: boolean;
+}
+
+// =============================================================================
 // EXPORT MANAGEMENT DOMAIN
 // รับผิดชอบ: ส่งออกคำขอตัดไฟเป็นไฟล์ CSV ตามเงื่อนไขที่กำหนด
 // Component tree: ExportDataComponent (standalone, ไม่มี sub-components)
@@ -98,6 +139,11 @@ export interface AdminContextType {
   transformerSearchParams: TransformerSearchParams;
   updateTransformerSearchParams: (
     newParams: Partial<TransformerSearchParams>,
+  ) => void;
+  /** Business Calendar Management: search params สำหรับการค้นหาและแบ่งหน้าปฏิทินวันทำการ */
+  businessCalendarSearchParams: BusinessCalendarSearchParams;
+  updateBusinessCalendarSearchParams: (
+    newParams: Partial<BusinessCalendarSearchParams>,
   ) => void;
   /** Navigation: tab ที่กำลังเปิดอยู่ใน Admin Panel */
   activeTab: string;

@@ -9,6 +9,10 @@ import {
   Prisma,
 } from "@prisma/client";
 import { getThailandDateAtMidnight } from "@/lib/date-utils";
+import {
+  BusinessCalendarService,
+  BusinessCalendarValidationError,
+} from "./businessCalendar.service";
 
 // Types
 export interface PowerOutageRequestWithRelations extends PowerOutageRequest {
@@ -148,6 +152,8 @@ export class PowerOutageRequestService {
   static async createRequest(
     data: CreatePowerOutageRequestData,
   ): Promise<PowerOutageRequest> {
+    await this.assertValidOutageDate(data.outageDate);
+
     return await prisma.powerOutageRequest.create({
       data: {
         ...data,
@@ -163,6 +169,19 @@ export class PowerOutageRequestService {
   static async createMultipleRequests(
     dataList: CreatePowerOutageRequestData[],
   ): Promise<PowerOutageRequest[]> {
+    const validationResults = await Promise.all(
+      dataList.map((data) =>
+        this.validateOutageDateWithCalendar(data.outageDate),
+      ),
+    );
+    const firstInvalidResult = validationResults.find(
+      (result) => !result.isValid,
+    );
+
+    if (firstInvalidResult?.error) {
+      throw new BusinessCalendarValidationError(firstInvalidResult.error);
+    }
+
     const requests = dataList.map((data) => ({
       ...data,
       omsStatus: "NOT_ADDED" as const,
@@ -244,19 +263,24 @@ export class PowerOutageRequestService {
     isValid: boolean;
     error?: string;
   } {
-    const today = getThailandDateAtMidnight();
-    const diffTime = outageDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return BusinessCalendarService.validateOutageDateWeekendOnly(outageDate);
+  }
 
-    if (diffDays < 10) {
-      return {
-        isValid: false,
-        error:
-          "ไม่สามารถสร้างคำขอดับไฟได้ เนื่องจากวันที่ดับไฟต้องมากกว่า 10 วันจากวันปัจจุบัน",
-      };
+  static async validateOutageDateWithCalendar(outageDate: Date): Promise<{
+    isValid: boolean;
+    error?: string;
+  }> {
+    return await BusinessCalendarService.validateOutageDate(outageDate);
+  }
+
+  private static async assertValidOutageDate(outageDate: Date): Promise<void> {
+    const validation = await this.validateOutageDateWithCalendar(outageDate);
+
+    if (!validation.isValid) {
+      throw new BusinessCalendarValidationError(
+        validation.error ?? "วันที่ดับไฟไม่ถูกต้อง",
+      );
     }
-
-    return { isValid: true };
   }
 
   /**

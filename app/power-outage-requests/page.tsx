@@ -12,13 +12,13 @@ export default function PowerOutageRequestPage() {
                 <Zap className="h-6 w-6 text-amber-600" />
               </div>
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pea-700">
+                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-pea-700">
                   Outage Operations
                 </p>
-                <h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-900">
+                <h1 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight text-slate-900">
                   รายการคำขอดับไฟ
                 </h1>
-                <p className="mt-1 text-sm text-slate-500">
+                <p className="mt-1 text-[15px] text-slate-600">
                   ติดตามสถานะงานคงค้าง งานที่อนุมัติแล้ว และความคืบหน้าการลง
                   OMS ในมุมมองเดียว
                 </p>

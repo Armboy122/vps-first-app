@@ -37,7 +37,7 @@ const Navbar = () => {
             className="flex min-w-0 items-center gap-3 rounded-2xl px-2 py-1 transition-colors hover:bg-slate-900/5"
           >
             <Image
-              src="/logo.png"
+              src="/peatransformer-logo.png"
               alt="PeaTransformer logo"
               width={56}
               height={40}
@@ -45,10 +45,10 @@ const Navbar = () => {
               priority
             />
             <div className="min-w-0">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-pea-700">
+              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pea-700">
                 PeaTransformer
               </p>
-              <p className="truncate text-sm font-semibold text-slate-900">
+              <p className="truncate text-[15px] font-semibold text-slate-900">
                 ระบบจัดการคำขอดับไฟ
               </p>
             </div>
@@ -62,7 +62,7 @@ const Navbar = () => {
                   key={item.path}
                   href={item.path}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-all duration-200 ${
+                  className={`rounded-full px-4 py-2 text-[15px] font-medium transition-all duration-200 ${
                     active
                       ? "bg-pea-700 text-white shadow-md shadow-pea-700/20"
                       : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
@@ -83,7 +83,7 @@ const Navbar = () => {
                   <span className="font-semibold text-slate-900">
                     {session.user?.name}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
                     {currentRole}
                   </span>
                 </div>
@@ -148,7 +148,7 @@ const Navbar = () => {
                     <p className="truncate font-semibold text-slate-900">
                       {session.user?.name}
                     </p>
-                    <p className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                    <p className="text-sm uppercase tracking-[0.14em] text-slate-600">
                       {currentRole}
                     </p>
                   </div>

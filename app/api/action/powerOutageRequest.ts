@@ -62,10 +62,13 @@ export async function createPowerOutageRequest(data: PowerOutageRequestInput) {
       validatedData.endTime,
     );
 
-    // ตรวจสอบวันที่ดับไฟ
-    const validation = PowerOutageRequestService.validateOutageDate(outageDate);
+    const validation =
+      await PowerOutageRequestService.validateOutageDateWithCalendar(outageDate);
     if (!validation.isValid) {
-      return { success: false, error: validation.error };
+      return {
+        success: false,
+        error: validation.error,
+      };
     }
 
     // สร้างคำขอดับไฟ
@@ -332,10 +335,12 @@ export async function createMultiplePowerOutageRequests(
       try {
         const validatedData = PowerOutageRequestSchema.parse(dataList[i]);
 
-        // ตรวจสอบวันที่สำหรับแต่ละรายการ
+        // ตรวจสอบวันที่สำหรับแต่ละรายการตามปฏิทินวันทำการจากฐานข้อมูล
         const outageDate = new Date(validatedData.outageDate);
         const validation =
-          PowerOutageRequestService.validateOutageDate(outageDate);
+          await PowerOutageRequestService.validateOutageDateWithCalendar(
+            outageDate,
+          );
 
         if (!validation.isValid) {
           validationErrors.push({

@@ -3,6 +3,7 @@
 import { AdminLayout } from "./components/layout/AdminLayout";
 import { UserManagement } from "./components/user-management/UserManagement";
 import { TransformerManagement } from "./components/transformer-management/TransformerManagement";
+import { BusinessCalendarManagement } from "./components/business-calendar/BusinessCalendarManagement";
 import { ExportDataComponent } from "./components/export/ExportDataComponent";
 import { useAdminContext } from "./context/AdminContext";
 import { ADMIN_TABS } from "./constants/admin.constants";
@@ -24,6 +25,8 @@ function AdminContent() {
         return <UserManagement />;
       case ADMIN_TABS.TRANSFORMERS:
         return <TransformerManagement />;
+      case ADMIN_TABS.BUSINESS_CALENDAR:
+        return <BusinessCalendarManagement />;
       case ADMIN_TABS.EXPORT:
         return <ExportDataComponent />;
       default:

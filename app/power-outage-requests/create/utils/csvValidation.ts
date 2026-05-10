@@ -14,9 +14,17 @@
  */
 
 import dayjs from "dayjs";
-import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
+import customParseFormat from "dayjs/plugin/customParseFormat";
+import {
+  getBusinessDaysUntilOutage,
+  getMinOutageBusinessDateString,
+  MIN_OUTAGE_BUSINESS_DAYS,
+  PowerOutageRequestInput,
+} from "@/lib/validations/powerOutageRequest";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
 import { searchTransformers } from "@/app/api/action/powerOutageRequest";
+
+dayjs.extend(customParseFormat);
 
 // ===================================================
 // Types
@@ -107,6 +115,28 @@ export const formatTime = (timeInput: string): string => {
     }
   }
 
+  // รูปแบบ HH:MM:SS (ตัด seconds ออก)
+  const timeWithSec = cleanTime.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
+  if (timeWithSec) {
+    const [, hours, minutes] = timeWithSec;
+    const h = parseInt(hours);
+    const m = parseInt(minutes);
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      return `${h.toString().padStart(2, "0")}:${minutes}`;
+    }
+  }
+
+  // Excel decimal fraction (0.333333 = 08:00, 0.5 = 12:00, 0.75 = 18:00)
+  const decimalVal = parseFloat(cleanTime);
+  if (!isNaN(decimalVal) && decimalVal > 0 && decimalVal < 1) {
+    const totalMinutes = Math.round(decimalVal * 24 * 60);
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
+      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    }
+  }
+
   // รูปแบบ HHMM หรือ HMM (เช่น 0800, 830)
   const numericTime = cleanTime.replace(/[^\d]/g, "");
   if (numericTime.length >= 3 && numericTime.length <= 4) {
@@ -152,11 +182,27 @@ export const parseDate = (dateInput: string): dayjs.Dayjs | null => {
   if (!dateInput?.trim()) return null;
 
   const cleanDate = dateInput.trim();
+
+  // Excel serial date number (e.g. 45800 → 2025-05-20)
+  // Excel epoch is 1900-01-01 with a known bug (treats 1900 as leap year)
+  const serialNum = parseFloat(cleanDate);
+  if (!isNaN(serialNum) && serialNum > 40000 && serialNum < 60000 && !cleanDate.includes('/') && !cleanDate.includes('-')) {
+    const excelEpoch = new Date(1899, 11, 30); // Excel day 0
+    const jsDate = new Date(excelEpoch.getTime() + serialNum * 86400000);
+    const parsed = dayjs(jsDate);
+    if (parsed.isValid()) return parsed;
+  }
+
+  // Standard formats
   const formats = ["YYYY-MM-DD", "DD/MM/YYYY", "DD-MM-YYYY", "YYYY/MM/DD"];
 
   for (const format of formats) {
     const parsed = dayjs(cleanDate, format, true);
     if (parsed.isValid()) {
+      // Handle Thai Buddhist year (พ.ศ.) — if year > 2400, subtract 543
+      if (parsed.year() > 2400) {
+        return parsed.subtract(543, "year");
+      }
       return parsed;
     }
   }
@@ -172,7 +218,7 @@ export const parseDate = (dateInput: string): dayjs.Dayjs | null => {
  * ตรวจสอบและแปลง array ของ CSVRow เป็น PowerOutageRequestInput[]
  *
  * ขั้นตอน:
- *  1. ตรวจสอบวันที่ดับไฟ (ต้องมากกว่าปัจจุบัน 10 วัน)
+ *  1. ตรวจสอบวันที่ดับไฟ (ต้องล่วงหน้าอย่างน้อย 10 วันทำการ)
  *  2. ตรวจสอบและแปลงเวลาเริ่มต้น/สิ้นสุด
  *  3. ตรวจสอบ transformer ผ่าน API
  *  4. ตรวจสอบ workCenter และ branch สำหรับ Admin
@@ -225,14 +271,14 @@ export const validateAndTransformCSVRows = async (
         value: row.outageDate,
       });
     } else {
-      const today = dayjs();
-      const minDate = today.add(10, "day");
+      const minDate = dayjs(getMinOutageBusinessDateString());
       if (parsedDate.isBefore(minDate, "day")) {
-        const daysFromToday = parsedDate.diff(today, "day");
+        const businessDaysFromToday =
+          getBusinessDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
         rowErrors.push({
           row: rowNumber,
           field: "วันที่ดับไฟ",
-          message: `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย 10 วัน — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้เพียง ${daysFromToday} วัน`,
+          message: `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้เพียง ${businessDaysFromToday} วันทำการ (วันที่เร็วที่สุด: ${minDate.format("DD/MM/YYYY")})`,
           value: row.outageDate,
         });
       }
@@ -279,13 +325,14 @@ export const validateAndTransformCSVRows = async (
     } else {
       const [endHour, endMin] = endTime.split(":").map(Number);
       const endMinutes = endHour * 60 + endMin;
+      const workingEndStart = 6 * 60 + 30; // 06:30
       const workingEnd = 20 * 60; // 20:00
 
-      if (endMinutes > workingEnd) {
+      if (endMinutes < workingEndStart || endMinutes > workingEnd) {
         rowErrors.push({
           row: rowNumber,
           field: "เวลาสิ้นสุด",
-          message: "เวลาสิ้นสุดต้องไม่เกิน 20:00 น.",
+          message: "เวลาสิ้นสุดต้องอยู่ในช่วง 06:30 - 20:00 น.",
           value: row.endTime,
         });
       }

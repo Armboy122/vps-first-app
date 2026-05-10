@@ -2,6 +2,160 @@
 
 import { z } from "zod";
 
+export const MIN_OUTAGE_BUSINESS_DAYS = 10;
+
+export interface BusinessDayCalendarConfig {
+  holidayDateKeys?: string[];
+  specialWorkdayDateKeys?: string[];
+}
+
+type DateInput = string | Date | null | undefined;
+
+const toLocalDateAtMidnight = (value: DateInput): Date | null => {
+  if (!value) return null;
+
+  const date =
+    typeof value === "string"
+      ? (() => {
+          const [year, month, day] = value.split("-").map(Number);
+          if (!year || !month || !day) return null;
+          return new Date(year, month - 1, day);
+        })()
+      : new Date(value.getFullYear(), value.getMonth(), value.getDate());
+
+  if (!date || Number.isNaN(date.getTime())) return null;
+  return date;
+};
+
+const toLocalDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const isOutageBusinessDay = (
+  value: DateInput,
+  calendarConfig?: BusinessDayCalendarConfig,
+): boolean => {
+  const date = toLocalDateAtMidnight(value);
+  if (!date) return false;
+
+  const dateKey = toLocalDateKey(date);
+  const holidayDateKeys = new Set(calendarConfig?.holidayDateKeys || []);
+  const specialWorkdayDateKeys = new Set(
+    calendarConfig?.specialWorkdayDateKeys || [],
+  );
+
+  if (specialWorkdayDateKeys.has(dateKey)) return true;
+  if (holidayDateKeys.has(dateKey)) return false;
+
+  const day = date.getDay();
+  return day !== 0 && day !== 6;
+};
+
+export const addBusinessDays = (
+  date: Date,
+  businessDays: number,
+  calendarConfig?: BusinessDayCalendarConfig,
+): Date => {
+  const result = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  let added = 0;
+
+  while (added < businessDays) {
+    result.setDate(result.getDate() + 1);
+    if (isOutageBusinessDay(result, calendarConfig)) added++;
+  }
+
+  return result;
+};
+
+export const getMinOutageBusinessDate = (
+  fromDate = new Date(),
+  calendarConfig?: BusinessDayCalendarConfig,
+): Date => {
+  const today = new Date(
+    fromDate.getFullYear(),
+    fromDate.getMonth(),
+    fromDate.getDate(),
+  );
+  return addBusinessDays(today, MIN_OUTAGE_BUSINESS_DAYS, calendarConfig);
+};
+
+export const getMinOutageBusinessDateString = (
+  fromDate = new Date(),
+  calendarConfig?: BusinessDayCalendarConfig,
+): string => {
+  const minDate = getMinOutageBusinessDate(fromDate, calendarConfig);
+  const year = minDate.getFullYear();
+  const month = String(minDate.getMonth() + 1).padStart(2, "0");
+  const day = String(minDate.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const getBusinessDaysUntilOutage = (
+  outageDate: DateInput,
+  fromDate = new Date(),
+  calendarConfig?: BusinessDayCalendarConfig,
+): number | null => {
+  const selectedDate = toLocalDateAtMidnight(outageDate);
+  const today = toLocalDateAtMidnight(fromDate);
+  if (!selectedDate || !today) return null;
+
+  let cursor = new Date(today);
+  let count = 0;
+
+  while (cursor < selectedDate) {
+    cursor.setDate(cursor.getDate() + 1);
+    if (isOutageBusinessDay(cursor, calendarConfig)) count++;
+  }
+
+  return count;
+};
+
+export const validateOutageBusinessDate = (
+  outageDate: DateInput,
+  fromDate = new Date(),
+  calendarConfig?: BusinessDayCalendarConfig,
+): { isValid: boolean; error?: string; minDate: Date; businessDays: number | null } => {
+  const selectedDate = toLocalDateAtMidnight(outageDate);
+  const minDate = getMinOutageBusinessDate(fromDate, calendarConfig);
+  const businessDays = getBusinessDaysUntilOutage(
+    outageDate,
+    fromDate,
+    calendarConfig,
+  );
+
+  if (!selectedDate || businessDays === null) {
+    return {
+      isValid: false,
+      error: "วันที่ดับไฟไม่ถูกต้อง",
+      minDate,
+      businessDays,
+    };
+  }
+
+  if (!isOutageBusinessDay(selectedDate, calendarConfig)) {
+    return {
+      isValid: false,
+      error: "วันที่ดับไฟต้องเป็นวันทำการ",
+      minDate,
+      businessDays,
+    };
+  }
+
+  if (selectedDate < minDate) {
+    return {
+      isValid: false,
+      error: `วันที่ดับไฟต้องล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ`,
+      minDate,
+      businessDays,
+    };
+  }
+
+  return { isValid: true, minDate, businessDays };
+};
+
 export const PowerOutageRequestSchema = z
   .object({
     outageDate: z
@@ -31,24 +185,27 @@ export const PowerOutageRequestSchema = z
   })
   .refine(
     (data) => {
-      // ตรวจสอบเวลาทำการ (06:00 - 20:00)
+      // ตรวจสอบเวลาทำการ (เริ่มได้ 06:00 - 19:30, สิ้นสุดไม่เกิน 20:00)
       const [startHour, startMin] = data.startTime.split(":").map(Number);
       const [endHour, endMin] = data.endTime.split(":").map(Number);
 
       const startTimeInMinutes = startHour * 60 + startMin;
       const endTimeInMinutes = endHour * 60 + endMin;
 
-      // เวลาทำการ 06:00 - 20:00
       const workingStart = 6 * 60; // 06:00
+      const latestStart = 19 * 60 + 30; // 19:30
       const workingEnd = 20 * 60; // 20:00
 
       return (
-        startTimeInMinutes >= workingStart && endTimeInMinutes <= workingEnd
+        startTimeInMinutes >= workingStart &&
+        startTimeInMinutes <= latestStart &&
+        endTimeInMinutes >= workingStart &&
+        endTimeInMinutes <= workingEnd
       );
     },
     {
       message:
-        "เวลาเริ่มต้นและสิ้นสุดต้องอยู่ในช่วง 06:00 - 20:00 น. เท่านั้น",
+        "เวลาเริ่มต้นต้องอยู่ในช่วง 06:00 - 19:30 น. และเวลาสิ้นสุดต้องอยู่ในช่วง 06:30 - 20:00 น.",
       path: ["startTime"],
     },
   )
