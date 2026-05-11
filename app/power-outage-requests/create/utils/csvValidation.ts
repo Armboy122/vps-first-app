@@ -17,8 +17,10 @@ import dayjs from "dayjs";
 import customParseFormat from "dayjs/plugin/customParseFormat";
 import {
   getBusinessDaysUntilOutage,
+  getCalendarDaysUntilOutage,
   getMinOutageBusinessDateString,
   MIN_OUTAGE_BUSINESS_DAYS,
+  MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE,
   PowerOutageRequestInput,
 } from "@/lib/validations/powerOutageRequest";
 import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
@@ -272,13 +274,19 @@ export const validateAndTransformCSVRows = async (
       });
     } else {
       const minDate = dayjs(getMinOutageBusinessDateString());
-      if (parsedDate.isBefore(minDate, "day")) {
-        const businessDaysFromToday =
-          getBusinessDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
+      const businessDaysFromToday =
+        getBusinessDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
+      const calendarDaysFromToday =
+        getCalendarDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
+      if (
+        parsedDate.isBefore(minDate, "day") ||
+        businessDaysFromToday < MIN_OUTAGE_BUSINESS_DAYS ||
+        calendarDaysFromToday <= MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE
+      ) {
         rowErrors.push({
           row: rowNumber,
           field: "วันที่ดับไฟ",
-          message: `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้เพียง ${businessDaysFromToday} วันทำการ (วันที่เร็วที่สุด: ${minDate.format("DD/MM/YYYY")})`,
+          message: `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ และมากกว่า ${MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้ ${businessDaysFromToday} วันทำการ / ${calendarDaysFromToday} วันปฏิทิน (วันที่เร็วที่สุด: ${minDate.format("DD/MM/YYYY")})`,
           value: row.outageDate,
         });
       }

@@ -31,8 +31,10 @@ import dayjs from "dayjs";
 import {
   BusinessDayCalendarConfig,
   getBusinessDaysUntilOutage,
+  getCalendarDaysUntilOutage,
   getMinOutageBusinessDateString,
   MIN_OUTAGE_BUSINESS_DAYS,
+  MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE,
 } from "@/lib/validations/powerOutageRequest";
 
 // Hooks — data is fetched/derived here to reduce prop drilling
@@ -85,6 +87,7 @@ interface ImprovedFormFieldsProps {
   specialWorkdayDateKeys?: string[];
   minSelectableDate?: string;
   daysFromToday?: number | null;
+  calendarDaysFromToday?: number | null;
 }
 
 export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
@@ -102,6 +105,7 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   specialWorkdayDateKeys = [],
   minSelectableDate: providedMinSelectableDate,
   daysFromToday: providedDaysFromToday,
+  calendarDaysFromToday: providedCalendarDaysFromToday,
 }) => {
   // =========================================
   // Data derived / fetched inside the component
@@ -137,6 +141,9 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   const daysFromToday =
     providedDaysFromToday ??
     getBusinessDaysUntilOutage(watchedOutageDate, new Date(), calendarConfig);
+  const calendarDaysFromToday =
+    providedCalendarDaysFromToday ??
+    getCalendarDaysUntilOutage(watchedOutageDate, new Date());
   const holidayDateKeySet = React.useMemo(
     () => new Set(holidayDateKeys),
     [holidayDateKeys],
@@ -281,14 +288,20 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
             )}
             {daysFromToday !== null && (
               <Badge
-                color={daysFromToday > 10 ? "green" : "red"}
+                color={
+                  daysFromToday >= MIN_OUTAGE_BUSINESS_DAYS &&
+                  (calendarDaysFromToday ?? 0) > MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE
+                    ? "green"
+                    : "red"
+                }
                 size="lg"
                 variant="light"
                 radius="md"
               >
-                {daysFromToday >= MIN_OUTAGE_BUSINESS_DAYS
-                  ? `ล่วงหน้า ${daysFromToday} วันทำการ`
-                  : `${daysFromToday} วันทำการ (ไม่ถึงกำหนด)`}
+                {daysFromToday >= MIN_OUTAGE_BUSINESS_DAYS &&
+                (calendarDaysFromToday ?? 0) > MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE
+                  ? `ล่วงหน้า ${daysFromToday} วันทำการ / ${calendarDaysFromToday} วันปฏิทิน`
+                  : `${daysFromToday} วันทำการ / ${calendarDaysFromToday ?? "-"} วันปฏิทิน (ไม่ถึงกำหนด)`}
               </Badge>
             )}
           </div>
@@ -338,7 +351,7 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
             )}
           />
           <Text size="sm" c="gray.6" mt={4}>
-            ต้องล่วงหน้าอย่างน้อย {MIN_OUTAGE_BUSINESS_DAYS} วันทำการ — วันที่เร็วที่สุด: {formatThaiDate(minSelectableDate)} (ไม่นับวันเสาร์-อาทิตย์และวันหยุดราชการที่ตั้งไว้)
+            ต้องล่วงหน้าอย่างน้อย {MIN_OUTAGE_BUSINESS_DAYS} วันทำการ และมากกว่า {MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน — วันที่เร็วที่สุด: {formatThaiDate(minSelectableDate)}
           </Text>
         </div>
 

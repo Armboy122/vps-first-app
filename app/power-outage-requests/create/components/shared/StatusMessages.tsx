@@ -1,7 +1,10 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import dayjs from "dayjs";
-import { MIN_OUTAGE_BUSINESS_DAYS } from "@/lib/validations/powerOutageRequest";
+import {
+  MIN_OUTAGE_BUSINESS_DAYS,
+  MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE,
+} from "@/lib/validations/powerOutageRequest";
 
 interface StatusMessagesProps {
   timeError: string | null;
@@ -11,6 +14,7 @@ interface StatusMessagesProps {
     isLoading?: boolean;
   } | null;
   daysFromToday: number | null;
+  calendarDaysFromToday: number | null;
   watchedOutageDate: string;
   minSelectableDate: string;
 }
@@ -28,6 +32,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
   timeError,
   submitStatus,
   daysFromToday,
+  calendarDaysFromToday,
   watchedOutageDate,
   minSelectableDate,
 }) => {
@@ -67,9 +72,10 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
       )}
 
       {/* คำเตือนเมื่อวันที่ใกล้เกินไป -- ปุ่มถูก disable แล้วแต่ยังต้องอธิบายให้ชัด */}
-      {daysFromToday !== null &&
-        daysFromToday < MIN_OUTAGE_BUSINESS_DAYS &&
-        watchedOutageDate && (
+      {watchedOutageDate &&
+        ((daysFromToday !== null && daysFromToday < MIN_OUTAGE_BUSINESS_DAYS) ||
+          (calendarDaysFromToday !== null &&
+            calendarDaysFromToday <= MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE)) && (
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700 text-sm" aria-hidden="true">
@@ -82,7 +88,7 @@ export const StatusMessages: React.FC<StatusMessagesProps> = ({
                 ยังไม่สามารถบันทึกคำขอได้
               </p>
               <p className="mt-1 text-sm text-amber-700 leading-relaxed">
-                วันที่ที่เลือกห่างจากวันนี้เพียง <strong>{daysFromToday} วันทำการ</strong> แต่ระบบกำหนดให้ล่วงหน้าอย่างน้อย {MIN_OUTAGE_BUSINESS_DAYS} วันทำการ
+                วันที่ที่เลือกห่างจากวันนี้ <strong>{daysFromToday} วันทำการ</strong> และ <strong>{calendarDaysFromToday} วันปฏิทิน</strong> แต่ระบบกำหนดให้ล่วงหน้าอย่างน้อย {MIN_OUTAGE_BUSINESS_DAYS} วันทำการ และต้องมากกว่า {MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน
               </p>
               <p className="mt-1 text-sm text-amber-700 leading-relaxed">
                 กรุณาเลือกวันที่ตั้งแต่ <strong>{dayjs(minSelectableDate).format("DD/MM/YYYY")}</strong> เป็นต้นไป

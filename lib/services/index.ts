@@ -5,6 +5,7 @@ export {
   BusinessCalendarValidationError,
   DEFAULT_BUSINESS_CALENDAR_SCOPE,
   DEFAULT_MIN_LEAD_BUSINESS_DAYS,
+  DEFAULT_MIN_LEAD_CALENDAR_DAYS_EXCLUSIVE,
 } from "./businessCalendar.service";
 export { TransformerService } from "./transformer.service";
 export { WorkCenterService } from "./workCenter.service";

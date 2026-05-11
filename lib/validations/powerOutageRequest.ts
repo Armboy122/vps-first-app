@@ -2,7 +2,8 @@
 
 import { z } from "zod";
 
-export const MIN_OUTAGE_BUSINESS_DAYS = 10;
+export const MIN_OUTAGE_BUSINESS_DAYS = 6;
+export const MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE = 10;
 
 export interface BusinessDayCalendarConfig {
   holidayDateKeys?: string[];
@@ -79,7 +80,24 @@ export const getMinOutageBusinessDate = (
     fromDate.getMonth(),
     fromDate.getDate(),
   );
-  return addBusinessDays(today, MIN_OUTAGE_BUSINESS_DAYS, calendarConfig);
+  const minBusinessDate = addBusinessDays(
+    today,
+    MIN_OUTAGE_BUSINESS_DAYS,
+    calendarConfig,
+  );
+  const minCalendarDate = new Date(today);
+  minCalendarDate.setDate(
+    minCalendarDate.getDate() + MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE + 1,
+  );
+
+  const minDate =
+    minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
+
+  while (!isOutageBusinessDay(minDate, calendarConfig)) {
+    minDate.setDate(minDate.getDate() + 1);
+  }
+
+  return minDate;
 };
 
 export const getMinOutageBusinessDateString = (
@@ -113,6 +131,18 @@ export const getBusinessDaysUntilOutage = (
   return count;
 };
 
+export const getCalendarDaysUntilOutage = (
+  outageDate: DateInput,
+  fromDate = new Date(),
+): number | null => {
+  const selectedDate = toLocalDateAtMidnight(outageDate);
+  const today = toLocalDateAtMidnight(fromDate);
+  if (!selectedDate || !today) return null;
+
+  const msPerDay = 1000 * 60 * 60 * 24;
+  return Math.floor((selectedDate.getTime() - today.getTime()) / msPerDay);
+};
+
 export const validateOutageBusinessDate = (
   outageDate: DateInput,
   fromDate = new Date(),
@@ -125,8 +155,9 @@ export const validateOutageBusinessDate = (
     fromDate,
     calendarConfig,
   );
+  const calendarDays = getCalendarDaysUntilOutage(outageDate, fromDate);
 
-  if (!selectedDate || businessDays === null) {
+  if (!selectedDate || businessDays === null || calendarDays === null) {
     return {
       isValid: false,
       error: "วันที่ดับไฟไม่ถูกต้อง",
@@ -144,7 +175,16 @@ export const validateOutageBusinessDate = (
     };
   }
 
-  if (selectedDate < minDate) {
+  if (calendarDays <= MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE) {
+    return {
+      isValid: false,
+      error: `วันที่ดับไฟต้องห่างจากวันปัจจุบันมากกว่า ${MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน`,
+      minDate,
+      businessDays,
+    };
+  }
+
+  if (businessDays < MIN_OUTAGE_BUSINESS_DAYS) {
     return {
       isValid: false,
       error: `วันที่ดับไฟต้องล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ`,

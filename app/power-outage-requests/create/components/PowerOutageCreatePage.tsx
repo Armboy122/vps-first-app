@@ -10,8 +10,10 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import {
   BusinessDayCalendarConfig,
   getBusinessDaysUntilOutage,
+  getCalendarDaysUntilOutage,
   getMinOutageBusinessDateString,
   MIN_OUTAGE_BUSINESS_DAYS,
+  MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE,
   PowerOutageRequestSchema,
   PowerOutageRequestInput,
   validateOutageBusinessDate,
@@ -204,11 +206,17 @@ export default function PowerOutageCreatePage({
     watchedOutageDate
       ? getBusinessDaysUntilOutage(watchedOutageDate, new Date(), calendarConfig)
       : null;
+  const calendarDaysFromToday =
+    watchedOutageDate
+      ? getCalendarDaysUntilOutage(watchedOutageDate, new Date())
+      : null;
   const isDateValid =
     !!watchedOutageDate &&
     dateValidation.isValid &&
     daysFromToday !== null &&
-    daysFromToday >= MIN_OUTAGE_BUSINESS_DAYS;
+    daysFromToday >= MIN_OUTAGE_BUSINESS_DAYS &&
+    calendarDaysFromToday !== null &&
+    calendarDaysFromToday > MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE;
 
   // =============================================
   // Custom Logic Hook
@@ -398,6 +406,7 @@ export default function PowerOutageCreatePage({
           timeError={timeError}
           submitStatus={submitStatus}
           daysFromToday={daysFromToday}
+          calendarDaysFromToday={calendarDaysFromToday}
           watchedOutageDate={watchedOutageDate}
           minSelectableDate={minSelectableDate}
         />
@@ -445,6 +454,7 @@ export default function PowerOutageCreatePage({
               specialWorkdayDateKeys={specialWorkdayDateKeys}
               minSelectableDate={minSelectableDate}
               daysFromToday={daysFromToday}
+              calendarDaysFromToday={calendarDaysFromToday}
             />
 
             {/* Navigation Buttons */}
