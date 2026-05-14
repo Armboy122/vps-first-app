@@ -29,11 +29,16 @@ function assertInvalid(
   assert.match(validation.error ?? "", new RegExp(expectedMessagePart), label);
 }
 
-function assertValid(label: string, outageDate: string, fromDate: Date) {
+function assertValid(
+  label: string,
+  outageDate: string,
+  fromDate: Date,
+  config = calendarConfig,
+) {
   const validation = validateOutageBusinessDate(
     outageDate,
     fromDate,
-    calendarConfig,
+    config,
   );
 
   assert.equal(validation.isValid, true, label);
@@ -68,6 +73,22 @@ assertValid(
   "accepts at least 6 business days and more than 10 calendar days",
   "2026-05-15",
   new Date(2026, 4, 1),
+);
+
+assertValid(
+  "accepts weekend outage dates while still counting business lead days",
+  "2026-05-16",
+  new Date(2026, 4, 1),
+);
+
+assertValid(
+  "accepts configured holiday outage dates while still counting business lead days",
+  "2026-05-15",
+  new Date(2026, 4, 1),
+  {
+    holidayDateKeys: ["2026-05-15"],
+    specialWorkdayDateKeys: [],
+  },
 );
 
 console.log("powerOutageRequest creation lead-time rules passed");

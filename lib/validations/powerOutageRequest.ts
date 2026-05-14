@@ -93,10 +93,6 @@ export const getMinOutageBusinessDate = (
   const minDate =
     minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
 
-  while (!isOutageBusinessDay(minDate, calendarConfig)) {
-    minDate.setDate(minDate.getDate() + 1);
-  }
-
   return minDate;
 };
 
@@ -161,15 +157,6 @@ export const validateOutageBusinessDate = (
     return {
       isValid: false,
       error: "วันที่ดับไฟไม่ถูกต้อง",
-      minDate,
-      businessDays,
-    };
-  }
-
-  if (!isOutageBusinessDay(selectedDate, calendarConfig)) {
-    return {
-      isValid: false,
-      error: "วันที่ดับไฟต้องเป็นวันทำการ",
       minDate,
       businessDays,
     };

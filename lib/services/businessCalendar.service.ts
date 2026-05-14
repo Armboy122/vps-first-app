@@ -68,14 +68,7 @@ function findEarliestValidWeekendOnlyOutageDate(
     start,
     DEFAULT_MIN_LEAD_CALENDAR_DAYS_EXCLUSIVE + 1,
   );
-  let candidate =
-    minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
-
-  while (!isWeekendOnlyBusinessDay(candidate)) {
-    candidate = addDays(candidate, 1);
-  }
-
-  return candidate;
+  return minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
 }
 
 function normalizeScope(scope?: string): string {
@@ -261,13 +254,6 @@ export class BusinessCalendarService {
     const today = getThailandDateAtMidnight();
     const targetDate = createThailandDateOnly(outageDate);
 
-    if (!(await this.isBusinessDay(targetDate, options))) {
-      return {
-        isValid: false,
-        error: "วันที่ดับไฟต้องเป็นวันทำการ",
-      };
-    }
-
     const businessDaysUntilOutage = await this.countBusinessDaysBetween(
       today,
       targetDate,
@@ -329,14 +315,7 @@ export class BusinessCalendarService {
       start,
       DEFAULT_MIN_LEAD_CALENDAR_DAYS_EXCLUSIVE + 1,
     );
-    let candidate =
-      minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
-
-    while (!(await this.isBusinessDay(candidate, options))) {
-      candidate = addDays(candidate, 1);
-    }
-
-    return candidate;
+    return minBusinessDate > minCalendarDate ? minBusinessDate : minCalendarDate;
   }
 
   static validateOutageDateWeekendOnly(
@@ -344,13 +323,6 @@ export class BusinessCalendarService {
     minLeadBusinessDays: number = DEFAULT_MIN_LEAD_BUSINESS_DAYS,
   ): OutageDateValidationResult {
     const today = getThailandDateAtMidnight();
-
-    if (!isWeekendOnlyBusinessDay(outageDate)) {
-      return {
-        isValid: false,
-        error: "วันที่ดับไฟต้องเป็นวันทำการ",
-      };
-    }
 
     const businessDaysUntilOutage = countWeekendOnlyBusinessDaysBetween(
       today,

@@ -144,14 +144,6 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   const calendarDaysFromToday =
     providedCalendarDaysFromToday ??
     getCalendarDaysUntilOutage(watchedOutageDate, new Date());
-  const holidayDateKeySet = React.useMemo(
-    () => new Set(holidayDateKeys),
-    [holidayDateKeys],
-  );
-  const specialWorkdayDateKeySet = React.useMemo(
-    () => new Set(specialWorkdayDateKeys),
-    [specialWorkdayDateKeys],
-  );
 
   // =========================================
   // Helper functions
@@ -206,19 +198,6 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
   const formatThaiDate = (date: string) => {
     return dayjs(date).add(543, 'year').format("DD/MM/YYYY");
   };
-
-  const isDateExcluded = React.useCallback(
-    (date: string) => {
-      const dateKey = dayjs(date).format("YYYY-MM-DD");
-
-      if (specialWorkdayDateKeySet.has(dateKey)) return false;
-      if (holidayDateKeySet.has(dateKey)) return true;
-
-      const day = dayjs(date).day();
-      return day === 0 || day === 6;
-    },
-    [holidayDateKeySet, specialWorkdayDateKeySet],
-  );
 
   // =========================================
   // Quick time presets
@@ -329,7 +308,6 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   }}
                   valueFormat="DD/MM/YYYY"
                   minDate={dayjs(minSelectableDate).toDate()}
-                  excludeDate={isDateExcluded}
                   error={errors.outageDate?.message}
                   size="md"
                   withAsterisk
