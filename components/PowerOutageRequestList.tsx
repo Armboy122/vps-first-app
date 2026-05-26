@@ -730,6 +730,7 @@ export default function PowerOutageRequestList() {
           onSubmit={handleUpdate}
           onCancel={handleCancelEdit}
           open={!!editingRequest}
+          canEditOutageDate={isAdmin}
         />
       )}
 

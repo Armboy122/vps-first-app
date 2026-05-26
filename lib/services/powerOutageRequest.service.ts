@@ -203,7 +203,9 @@ export class PowerOutageRequestService {
    */
   static async updateRequest(
     id: number,
-    data: Partial<Pick<PowerOutageRequest, "startTime" | "endTime" | "area">>,
+    data: Partial<
+      Pick<PowerOutageRequest, "outageDate" | "startTime" | "endTime" | "area">
+    >,
   ): Promise<PowerOutageRequest> {
     return await prisma.powerOutageRequest.update({
       where: { id },

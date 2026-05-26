@@ -2,8 +2,8 @@ import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
-  PowerOutageRequestSchema,
   PowerOutageRequestInput,
+  PowerOutageRequestUpdateSchema,
 } from "@/lib/validations/powerOutageRequest";
 import {
   Dialog,
@@ -16,25 +16,26 @@ import {
 } from "@mui/material";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { FormField, FormTimePicker } from "@/components/forms";
+import { FormTimePicker } from "@/components/forms";
 
 interface UpdatePowerOutageRequestModalProps {
   initialData: PowerOutageRequestInput;
   onSubmit: (data: PowerOutageRequestInput) => void;
   onCancel: () => void;
   open: boolean;
+  canEditOutageDate: boolean;
 }
 
 const UpdatePowerOutageRequestModal: React.FC<
   UpdatePowerOutageRequestModalProps
-> = ({ initialData, onSubmit, onCancel, open }) => {
+> = ({ initialData, onSubmit, onCancel, open, canEditOutageDate }) => {
   const {
     control,
     handleSubmit,
     register,
     formState: { errors },
   } = useForm<PowerOutageRequestInput>({
-    resolver: zodResolver(PowerOutageRequestSchema),
+    resolver: zodResolver(PowerOutageRequestUpdateSchema),
     defaultValues: initialData,
   });
 
@@ -49,6 +50,22 @@ const UpdatePowerOutageRequestModal: React.FC<
         <form onSubmit={handleSubmit(onFormSubmit)}>
           <DialogContent>
             <Stack spacing={3}>
+              <TextField
+                {...register("outageDate")}
+                label="วันที่ดับไฟ"
+                type="date"
+                variant="outlined"
+                fullWidth
+                inputProps={{ readOnly: !canEditOutageDate }}
+                error={!!errors.outageDate}
+                helperText={
+                  canEditOutageDate
+                    ? errors.outageDate?.message
+                    : "เฉพาะผู้ดูแลระบบเท่านั้นที่แก้ไขวันที่ดับไฟได้"
+                }
+                InputLabelProps={{ shrink: true }}
+              />
+
               <FormTimePicker
                 name="startTime"
                 control={control}

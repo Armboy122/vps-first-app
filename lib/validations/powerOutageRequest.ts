@@ -183,96 +183,103 @@ export const validateOutageBusinessDate = (
   return { isValid: true, minDate, businessDays };
 };
 
-export const PowerOutageRequestSchema = z
-  .object({
-    outageDate: z
-      .string()
-      .min(1, "กรุณากดเลือกวันที่ดับไฟจากปฏิทิน"),
-    startTime: z
-      .string()
-      .min(1, "กรุณาเลือกเวลาเริ่มต้นจากดรอปดาวน์ เช่น 08:00")
-      .regex(
-        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-        "รูปแบบเวลาไม่ถูกต้อง ต้องเป็น HH:MM เช่น 08:00",
-      ),
-    endTime: z
-      .string()
-      .min(1, "กรุณาเลือกเวลาสิ้นสุดจากดรอปดาวน์ เช่น 12:00")
-      .regex(
-        /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
-        "รูปแบบเวลาไม่ถูกต้อง ต้องเป็น HH:MM เช่น 12:00",
-      ),
-    workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงานจากรายการ"),
-    branchId: z.string().min(1, "กรุณาเลือกสาขา (ต้องเลือกจุดรวมงานก่อน)"),
-    transformerNumber: z
-      .string()
-      .min(1, "กรุณาพิมพ์ค้นหาและเลือกหมายเลขหม้อแปลงจากรายการ"),
-    gisDetails: z.string(),
-    area: z.string().nullable(),
-  })
-  .refine(
-    (data) => {
-      // ตรวจสอบเวลาทำการ (เริ่มได้ 06:00 - 19:30, สิ้นสุดไม่เกิน 20:00)
-      const [startHour, startMin] = data.startTime.split(":").map(Number);
-      const [endHour, endMin] = data.endTime.split(":").map(Number);
+const timeStringSchema = (requiredMessage: string, formatExample: string) =>
+  z
+    .string()
+    .min(1, requiredMessage)
+    .regex(
+      /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/,
+      `รูปแบบเวลาไม่ถูกต้อง ต้องเป็น HH:MM เช่น ${formatExample}`,
+    );
 
-      const startTimeInMinutes = startHour * 60 + startMin;
-      const endTimeInMinutes = endHour * 60 + endMin;
+const getMinutesFromTime = (time: string): number => {
+  const [hour, minute] = time.split(":").map(Number);
+  return hour * 60 + minute;
+};
 
-      const workingStart = 6 * 60; // 06:00
-      const latestStart = 19 * 60 + 30; // 19:30
-      const workingEnd = 20 * 60; // 20:00
+const validateWorkingHours = (data: {
+  startTime: string;
+  endTime: string;
+}): boolean => {
+  // ตรวจสอบเวลาทำการ (เริ่มได้ 06:00 - 19:30, สิ้นสุดไม่เกิน 20:00)
+  const startTimeInMinutes = getMinutesFromTime(data.startTime);
+  const endTimeInMinutes = getMinutesFromTime(data.endTime);
 
-      return (
-        startTimeInMinutes >= workingStart &&
-        startTimeInMinutes <= latestStart &&
-        endTimeInMinutes >= workingStart &&
-        endTimeInMinutes <= workingEnd
-      );
-    },
-    {
+  const workingStart = 6 * 60; // 06:00
+  const latestStart = 19 * 60 + 30; // 19:30
+  const workingEnd = 20 * 60; // 20:00
+
+  return (
+    startTimeInMinutes >= workingStart &&
+    startTimeInMinutes <= latestStart &&
+    endTimeInMinutes >= workingStart &&
+    endTimeInMinutes <= workingEnd
+  );
+};
+
+const validateMinimumDuration = (data: {
+  startTime: string;
+  endTime: string;
+}): boolean => {
+  // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที
+  const startTimeInMinutes = getMinutesFromTime(data.startTime);
+  const endTimeInMinutes = getMinutesFromTime(data.endTime);
+  return endTimeInMinutes > startTimeInMinutes + 29; // อย่างน้อย 30 นาที
+};
+
+const applyPowerOutageTimeRules = <T extends z.ZodTypeAny>(schema: T) =>
+  schema
+    .refine(validateWorkingHours, {
       message:
         "เวลาเริ่มต้นต้องอยู่ในช่วง 06:00 - 19:30 น. และเวลาสิ้นสุดต้องอยู่ในช่วง 06:30 - 20:00 น.",
       path: ["startTime"],
-    },
-  )
-  .refine(
-    (data) => {
-      // ตรวจสอบว่าเวลาสิ้นสุดมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที
-      const [startHour, startMin] = data.startTime.split(":").map(Number);
-      const [endHour, endMin] = data.endTime.split(":").map(Number);
-
-      const startTimeInMinutes = startHour * 60 + startMin;
-      const endTimeInMinutes = endHour * 60 + endMin;
-
-      return endTimeInMinutes > startTimeInMinutes + 29; // อย่างน้อย 30 นาที
-    },
-    {
+    })
+    .refine(validateMinimumDuration, {
       message:
         "เวลาสิ้นสุดต้องมาหลังเวลาเริ่มต้นอย่างน้อย 30 นาที เช่น เริ่ม 08:00 ต้องสิ้นสุดตั้งแต่ 08:30 เป็นต้นไป",
       path: ["endTime"],
-    },
-  );
+    });
 
-// Schema สำหรับการ update (ไม่มี refine เพื่อให้ใช้ pick ได้)
-export const PowerOutageRequestUpdateSchema = z.object({
-  outageDate: z.string().min(1, "กรุณาเลือกวันที่ดับไฟ"),
-  startTime: z
+const PowerOutageRequestBaseSchema = z.object({
+  outageDate: z
     .string()
-    .min(1, "กรุณาระบุเวลาเริ่มต้น เช่น 08:00"),
-  endTime: z
-    .string()
-    .min(1, "กรุณาระบุเวลาสิ้นสุด เช่น 12:00"),
-  workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงาน"),
-  branchId: z.string().min(1, "กรุณาเลือกสาขา"),
+    .min(1, "กรุณากดเลือกวันที่ดับไฟจากปฏิทิน"),
+  startTime: timeStringSchema(
+    "กรุณาเลือกเวลาเริ่มต้นจากดรอปดาวน์ เช่น 08:00",
+    "08:00",
+  ),
+  endTime: timeStringSchema(
+    "กรุณาเลือกเวลาสิ้นสุดจากดรอปดาวน์ เช่น 12:00",
+    "12:00",
+  ),
+  workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงานจากรายการ"),
+  branchId: z.string().min(1, "กรุณาเลือกสาขา (ต้องเลือกจุดรวมงานก่อน)"),
   transformerNumber: z
     .string()
-    .min(1, "กรุณาระบุหมายเลขหม้อแปลง"),
+    .min(1, "กรุณาพิมพ์ค้นหาและเลือกหมายเลขหม้อแปลงจากรายการ"),
   gisDetails: z.string(),
   area: z.string().nullable(),
 });
 
-export type PowerOutageRequestInput = z.infer<typeof PowerOutageRequestSchema>;
+export const PowerOutageRequestSchema = applyPowerOutageTimeRules(
+  PowerOutageRequestBaseSchema,
+);
+
+const PowerOutageRequestUpdateBaseSchema = z.object({
+  outageDate: z.string().min(1, "กรุณาเลือกวันที่ดับไฟ"),
+  startTime: timeStringSchema("กรุณาระบุเวลาเริ่มต้น เช่น 08:00", "08:00"),
+  endTime: timeStringSchema("กรุณาระบุเวลาสิ้นสุด เช่น 12:00", "12:00"),
+  area: z.string().nullable(),
+});
+
+export const PowerOutageRequestUpdateSchema = applyPowerOutageTimeRules(
+  PowerOutageRequestUpdateBaseSchema,
+);
+
+export type PowerOutageRequestInput = z.infer<typeof PowerOutageRequestBaseSchema>;
+export type PowerOutageRequestUpdateInput = z.infer<
+  typeof PowerOutageRequestUpdateBaseSchema
+>;
 
 export const GetAnnoucementRequest = z
   .object({

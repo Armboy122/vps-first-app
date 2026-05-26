@@ -182,12 +182,36 @@ export async function updatePowerOutageRequest(
   data: PowerOutageRequestInput,
 ) {
   try {
-    const validatedData = PowerOutageRequestUpdateSchema.pick({
-      outageDate: true,
-      startTime: true,
-      endTime: true,
-      area: true,
-    }).parse(data);
+    const currentUser = await getCurrentUser();
+    const existingRequest = await PowerOutageRequestService.getRequestById(id);
+
+    if (!existingRequest) {
+      return { success: false, error: "ไม่พบคำขอดับไฟ" };
+    }
+
+    const validatedData = PowerOutageRequestUpdateSchema.parse(data);
+    const outageDate = new Date(validatedData.outageDate);
+    const existingDateKey = existingRequest.outageDate.toISOString().split("T")[0];
+    const isChangingOutageDate = validatedData.outageDate !== existingDateKey;
+
+    if (isChangingOutageDate && currentUser.role !== "ADMIN") {
+      return {
+        success: false,
+        error: "เฉพาะผู้ดูแลระบบเท่านั้นที่แก้ไขวันที่ดับไฟได้",
+      };
+    }
+
+    if (isChangingOutageDate) {
+      const validation =
+        await PowerOutageRequestService.validateOutageDateWithCalendar(outageDate);
+
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: validation.error ?? "วันที่ดับไฟไม่ถูกต้อง",
+        };
+      }
+    }
 
     // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
     const startTime = createThailandDateTime(
@@ -204,6 +228,7 @@ export async function updatePowerOutageRequest(
     }
 
     const updatedRequest = await PowerOutageRequestService.updateRequest(id, {
+      outageDate,
       startTime,
       endTime,
       area: validatedData.area,
