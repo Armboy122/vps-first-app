@@ -201,17 +201,8 @@ export async function updatePowerOutageRequest(
       };
     }
 
-    if (isChangingOutageDate) {
-      const validation =
-        await PowerOutageRequestService.validateOutageDateWithCalendar(outageDate);
-
-      if (!validation.isValid) {
-        return {
-          success: false,
-          error: validation.error ?? "วันที่ดับไฟไม่ถูกต้อง",
-        };
-      }
-    }
+    // ADMIN can override outage date lead-time/calendar rules during updates.
+    // Creation requests still use validateOutageDateWithCalendar above.
 
     // แปลงเวลาเป็น timezone ของไทย โดยใช้ date-utils
     const startTime = createThailandDateTime(
