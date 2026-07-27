@@ -1,8 +1,6 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
-import type { BusinessDayCalendarConfig } from "@/lib/validations/powerOutageRequest";
-import { getActiveBusinessCalendarDateMetadata } from "@/app/api/action/businessCalendar";
 import { updatePowerOutageRequest } from "@/app/api/action/powerOutageRequest";
 import UpdatePowerOutageRequestModal from "./UpdateRequest";
 import { ConfirmDialog, LoadingSpinner } from "@/components/ui";
@@ -172,6 +170,7 @@ export default function PowerOutageRequestList() {
     requests,
     allRequests,
     baseRequests,
+    calendarConfig,
     loading,
     error,
     searchTerm,
@@ -188,7 +187,12 @@ export default function PowerOutageRequestList() {
     handleDelete,
     loadRequests,
     displayRange,
-  } = usePowerOutageRequests(userWorkCenterId, isAdmin, isViewer);
+  } = usePowerOutageRequests(
+    userWorkCenterId,
+    isAdmin,
+    isViewer,
+    !authLoading,
+  );
 
   // Selection hook
   const {
@@ -206,8 +210,6 @@ export default function PowerOutageRequestList() {
   const [editingRequest, setEditingRequest] =
     useState<PowerOutageRequest | null>(null);
   const [workCenters, setWorkCenters] = useState<WorkCenter[]>([]);
-  const [calendarConfig, setCalendarConfig] =
-    useState<BusinessDayCalendarConfig>();
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(
     null,
   );
@@ -229,51 +231,6 @@ export default function PowerOutageRequestList() {
       fetchWorkCenters();
     }
   }, [authLoading, fetchWorkCenters]);
-
-  useEffect(() => {
-    if (allRequests.length === 0) {
-      setCalendarConfig(undefined);
-      return;
-    }
-
-    const toDateKey = (value: Date) => {
-      const date = new Date(value);
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, "0");
-      const day = String(date.getDate()).padStart(2, "0");
-      return `${year}-${month}-${day}`;
-    };
-    const today = new Date();
-    const outageDates = allRequests.map(
-      (request) => new Date(request.outageDate),
-    );
-    const startDate = new Date(
-      Math.min(today.getTime(), ...outageDates.map((date) => date.getTime())),
-    );
-    const endDate = new Date(
-      Math.max(today.getTime(), ...outageDates.map((date) => date.getTime())),
-    );
-    let active = true;
-
-    getActiveBusinessCalendarDateMetadata(
-      toDateKey(startDate),
-      toDateKey(endDate),
-    ).then((entries) => {
-      if (!active) return;
-      setCalendarConfig({
-        holidayDateKeys: entries
-          .filter((entry) => entry.type === "HOLIDAY")
-          .map((entry) => entry.dateKey),
-        specialWorkdayDateKeys: entries
-          .filter((entry) => entry.type === "SPECIAL_WORKDAY")
-          .map((entry) => entry.dateKey),
-      });
-    });
-
-    return () => {
-      active = false;
-    };
-  }, [allRequests]);
 
   useEffect(() => {
     if (!actionFeedback || actionFeedback.variant === "error") {

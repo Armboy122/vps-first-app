@@ -238,6 +238,36 @@ export async function getActiveBusinessCalendarDateMetadata(
   }
 }
 
+export async function getAllActiveBusinessCalendarDateMetadata(
+  scope = DEFAULT_SCOPE,
+): Promise<BusinessCalendarDateMetadata[]> {
+  try {
+    const entries = await prisma.businessCalendarDate.findMany({
+      where: {
+        scope: normalizeScope(scope),
+        isActive: true,
+      },
+      orderBy: [{ date: "asc" }, { id: "asc" }],
+      select: {
+        date: true,
+        type: true,
+        name: true,
+        scope: true,
+      },
+    });
+
+    return entries.map((entry) => ({
+      dateKey: toDateOnlyKey(entry.date),
+      type: entry.type,
+      name: entry.name,
+      scope: entry.scope,
+    }));
+  } catch (error) {
+    console.error("Failed to fetch all active business calendar metadata:", error);
+    return [];
+  }
+}
+
 export async function createBusinessCalendarDate(
   payload: BusinessCalendarPayload,
 ) {

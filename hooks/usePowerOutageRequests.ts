@@ -5,7 +5,9 @@ import {
   updateStatusRequest,
   deletePowerOutageRequest,
 } from "@/app/api/action/powerOutageRequest";
+import { getAllActiveBusinessCalendarDateMetadata } from "@/app/api/action/businessCalendar";
 import { OMSStatus, Request } from "@prisma/client";
+import type { BusinessDayCalendarConfig } from "@/lib/validations/powerOutageRequest";
 import { useRequestFilters } from "./useRequestFilters";
 
 // Types
@@ -39,9 +41,12 @@ export const usePowerOutageRequests = (
   userWorkCenterId?: number,
   isAdmin?: boolean,
   isViewer?: boolean,
+  enabled = true,
 ) => {
   // Raw data state
   const [rawRequests, setRawRequests] = useState<PowerOutageRequest[]>([]);
+  const [calendarConfig, setCalendarConfig] =
+    useState<BusinessDayCalendarConfig>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -60,6 +65,10 @@ export const usePowerOutageRequests = (
 
   // Load requests
   const loadRequests = useCallback(async () => {
+    if (!enabled) {
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -70,7 +79,10 @@ export const usePowerOutageRequests = (
         queryFilters.workCenterId = userWorkCenterId;
       }
 
-      const result = await getPowerOutageRequests(1, 1000, queryFilters);
+      const [result, calendarEntries] = await Promise.all([
+        getPowerOutageRequests(1, 1000, queryFilters),
+        getAllActiveBusinessCalendarDateMetadata(),
+      ]);
 
       // Handle the new pagination structure
       const dataArray = Array.isArray(result) ? result : result.data;
@@ -86,6 +98,14 @@ export const usePowerOutageRequests = (
           : null,
       }));
 
+      setCalendarConfig({
+        holidayDateKeys: calendarEntries
+          .filter((entry) => entry.type === "HOLIDAY")
+          .map((entry) => entry.dateKey),
+        specialWorkdayDateKeys: calendarEntries
+          .filter((entry) => entry.type === "SPECIAL_WORKDAY")
+          .map((entry) => entry.dateKey),
+      });
       setRawRequests(formattedResult);
     } catch (err) {
       console.error("Error loading requests:", err);
@@ -93,7 +113,7 @@ export const usePowerOutageRequests = (
     } finally {
       setLoading(false);
     }
-  }, [userWorkCenterId, isAdmin, isViewer]);
+  }, [enabled, userWorkCenterId, isAdmin, isViewer]);
 
   // Pagination
   const currentItems = useMemo(() => {
@@ -216,6 +236,7 @@ export const usePowerOutageRequests = (
     requests: currentItems,
     allRequests: filteredRequests,
     baseRequests: rawRequests,
+    calendarConfig,
     loading,
     error,
 
