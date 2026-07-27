@@ -36,7 +36,7 @@ const theme = createTheme({
   fontFamily:
     "var(--font-sans), 'IBM Plex Sans Thai', 'Noto Sans Thai', sans-serif",
   headings: {
-    fontFamily: "var(--font-display), 'Noto Serif Thai', serif",
+    fontFamily: "var(--font-sans), 'IBM Plex Sans Thai', sans-serif",
     fontWeight: "700",
   },
   colors: {

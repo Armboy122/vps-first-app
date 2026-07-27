@@ -46,9 +46,7 @@ export const SearchSection = memo(
     branchFilter,
     setBranchFilter,
   }: SearchSectionProps) => {
-    const [isAdvancedSearch, setIsAdvancedSearch] = useState(
-      isAdmin || isViewer,
-    );
+    const [isAdvancedSearch, setIsAdvancedSearch] = useState(false);
     const [branches, setBranches] = useState<Branch[]>([]);
     const [searchInfoOpen, setSearchInfoOpen] = useState(false);
 

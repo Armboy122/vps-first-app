@@ -221,9 +221,9 @@ export default function PrintAnnouncement() {
     <div>
       <button
         onClick={handleModalOpen}
-        className="bg-blue-500 text-white p-2 rounded"
+        className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-white px-4 py-2 text-sm font-semibold text-[var(--app-text-body)] transition-colors hover:bg-[var(--app-frame)]"
       >
-        <FontAwesomeIcon icon={faPrint} className="mr-2" />
+        <FontAwesomeIcon icon={faPrint} />
         พิมพ์ประกาศ
       </button>
       {isOpen && (

@@ -251,8 +251,8 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
       <Paper shadow="xs" p="lg" radius="md" withBorder>
         <Group mb="md" justify="space-between">
           <Group gap="sm">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-blue-50 ring-1 ring-blue-200/60">
-              <CalendarDays className="w-5 h-5 text-blue-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pea-50 ring-1 ring-pea-200/60">
+              <CalendarDays className="h-5 w-5 text-pea-700" />
             </div>
             <div>
               <Title order={4} c="dark" className="text-[17px]">กำหนดวันที่และเวลา</Title>
@@ -261,7 +261,7 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
           </Group>
           <div className="flex items-center gap-2">
             {duration && (
-              <Badge color="blue" size="lg" variant="light" radius="md">
+              <Badge color="pea" size="lg" variant="light" radius="md">
                 <span className="inline-flex items-center gap-1"><Clock className="w-3.5 h-3.5" /> {duration}</span>
               </Badge>
             )}
@@ -346,14 +346,14 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   onClick={() => applyTimePreset(preset.start, preset.end)}
                   className={`rounded-xl border px-3 py-2.5 text-left transition-all cursor-pointer ${
                     active
-                      ? "border-blue-400 bg-blue-50 ring-2 ring-blue-200"
-                      : "border-slate-200 bg-white hover:border-blue-300 hover:bg-blue-50/50"
+                      ? "border-pea-500 bg-pea-50 ring-2 ring-pea-200"
+                      : "border-slate-200 bg-white hover:border-pea-300 hover:bg-pea-50/50"
                   }`}
                 >
-                  <span className={`block text-[15px] font-semibold ${active ? "text-blue-700" : "text-slate-800"}`}>
+                  <span className={`block text-[15px] font-semibold ${active ? "text-pea-700" : "text-slate-800"}`}>
                     {preset.label}
                   </span>
-                  <span className={`block text-sm ${active ? "text-blue-600" : "text-slate-500"}`}>
+                  <span className={`block text-sm ${active ? "text-pea-700" : "text-slate-500"}`}>
                     {preset.sub}
                   </span>
                 </button>
