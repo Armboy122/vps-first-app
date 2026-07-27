@@ -162,6 +162,8 @@ Cross-cutting concerns:
 - `/api/health` reports the exact deployed Git SHA and database readiness.
 - Main list results, ordering, filters, summaries, and permissions match the
   current production behavior.
+- Remaining-business-day urgency counts include today when today is a
+  configured business day.
 
 ## Phase 1 verification
 
@@ -175,7 +177,14 @@ Verified locally on 2026-07-27:
 - Main-list First Load JS decreased from 305 kB to 287 kB after removing an
   unused client import of the server-side Prisma service.
 
-The optimized image size is intentionally not recorded yet. The local OrbStack
-VM did not start, so the Docker build could not be executed. The deployment
-script now rejects an image larger than 600,000,000 bytes before replacing the
-running container; the actual image size must be captured in CI before merge.
+The local OrbStack VM did not start, so image verification was moved to the
+isolated UAT environment. UAT CI verified commit `713a919`:
+
+- image size on the VPS: 280,619,323 bytes (72.5% below baseline);
+- compressed GHCR layers: 104.5 MiB;
+- first cache-seeding build/push: 315 s;
+- readiness returned the exact deployed Git SHA;
+- authenticated USER and VIEWER list flows loaded without console errors.
+
+The first build includes the cost of exporting the BuildKit cache. A subsequent
+UAT deployment is required to record the warm-cache duration.

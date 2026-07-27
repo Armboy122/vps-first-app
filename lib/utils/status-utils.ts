@@ -148,7 +148,18 @@ export const getBusinessDaysDifference = (
   }
 
   if (calendarDiff > 0) {
-    return countBusinessDays(base, target, calendarConfig);
+    const remainingBusinessDays = countBusinessDays(
+      base,
+      target,
+      calendarConfig,
+    );
+
+    // Urgency is an inclusive "working days remaining" value. When today is a
+    // business day it is still available for OMS preparation, so count it.
+    return (
+      remainingBusinessDays +
+      (isOutageBusinessDay(base, calendarConfig) ? 1 : 0)
+    );
   }
 
   const overdueBusinessDays = countBusinessDays(target, base, calendarConfig);
