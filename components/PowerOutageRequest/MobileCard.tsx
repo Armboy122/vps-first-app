@@ -20,6 +20,7 @@ import {
   getRequestStatusMeta,
   getUrgencyStatus,
 } from "@/lib/utils/status-utils";
+import type { BusinessDayCalendarConfig } from "@/lib/validations/powerOutageRequest";
 
 interface PowerOutageRequest {
   id: number;
@@ -55,6 +56,7 @@ interface MobileCardProps {
   handleDelete: (id: number) => void;
   handleEditOmsStatus: (id: number, status: OMSStatus) => void;
   handleEditStatusRequest: (id: number, status: Request) => void;
+  calendarConfig?: BusinessDayCalendarConfig;
 }
 
 const StatusBadge = ({ meta }: { meta: StatusChipMeta }) => (
@@ -88,12 +90,14 @@ export const MobileCard: React.FC<MobileCardProps> = ({
   handleDelete,
   handleEditOmsStatus,
   handleEditStatusRequest,
+  calendarConfig,
 }) => {
   const [expanded, setExpanded] = useState(false);
   const statusInfo = getUrgencyStatus(
     request.outageDate,
     request.omsStatus,
     request.statusRequest,
+    calendarConfig,
   );
   const requestStatusMeta = getRequestStatusMeta(request.statusRequest);
   const omsStatusMeta = getOmsStatusMeta(request.omsStatus);

@@ -1,4 +1,8 @@
 import { getThailandDateAtMidnight } from "./date.utils";
+import {
+  type BusinessDayCalendarConfig,
+  isOutageBusinessDay,
+} from "@/lib/validations/powerOutageRequest";
 
 export type UrgencyLevel =
   | "CRITICAL"
@@ -104,17 +108,16 @@ const addCalendarDays = (date: Date, days: number): Date => {
   return result;
 };
 
-const isWeekend = (date: Date): boolean => {
-  const day = date.getDay();
-  return day === 0 || day === 6;
-};
-
-const countWeekendOnlyBusinessDays = (startDate: Date, endDate: Date) => {
+const countBusinessDays = (
+  startDate: Date,
+  endDate: Date,
+  calendarConfig?: BusinessDayCalendarConfig,
+) => {
   let count = 0;
   let cursor = addCalendarDays(startDate, 1);
 
   while (cursor.getTime() <= endDate.getTime()) {
-    if (!isWeekend(cursor)) {
+    if (isOutageBusinessDay(cursor, calendarConfig)) {
       count += 1;
     }
 
@@ -126,12 +129,13 @@ const countWeekendOnlyBusinessDays = (startDate: Date, endDate: Date) => {
 
 /**
  * Business-day difference for urgency buckets.
- * Fallback rule: count Monday-Friday only until the DB-backed calendar service
- * is available here.
+ * Counts configured holidays and special workdays when calendarConfig is
+ * supplied. Without it, the shared calendar rule falls back to Monday-Friday.
  */
 export const getBusinessDaysDifference = (
   targetDate: Date | string,
   baseDate: Date = getThailandDateAtMidnight(),
+  calendarConfig?: BusinessDayCalendarConfig,
 ): number => {
   const target = toDateAtMidnight(targetDate);
   const base = toDateAtMidnight(baseDate);
@@ -144,18 +148,23 @@ export const getBusinessDaysDifference = (
   }
 
   if (calendarDiff > 0) {
-    return countWeekendOnlyBusinessDays(base, target);
+    return countBusinessDays(base, target, calendarConfig);
   }
 
-  const overdueBusinessDays = countWeekendOnlyBusinessDays(target, base);
+  const overdueBusinessDays = countBusinessDays(target, base, calendarConfig);
   return -Math.max(overdueBusinessDays, 1);
 };
 
 export const getOmsUrgencyBucketKey = (
   outageDate: Date | string,
   baseDate: Date = getThailandDateAtMidnight(),
+  calendarConfig?: BusinessDayCalendarConfig,
 ): OmsUrgencyBucketKey => {
-  const diffBusinessDays = getBusinessDaysDifference(outageDate, baseDate);
+  const diffBusinessDays = getBusinessDaysDifference(
+    outageDate,
+    baseDate,
+    calendarConfig,
+  );
 
   if (diffBusinessDays < 0) {
     return "OVERDUE";
@@ -184,6 +193,7 @@ export const isApprovedPendingOmsRequest = (
 export const getOmsUrgencyBucketCounts = (
   requests: OmsUrgencyRequestLike[],
   baseDate: Date = getThailandDateAtMidnight(),
+  calendarConfig?: BusinessDayCalendarConfig,
 ): OmsUrgencyBucketCounts => {
   const counts = { ...OMS_URGENCY_BUCKET_COUNT_TEMPLATE };
 
@@ -192,7 +202,11 @@ export const getOmsUrgencyBucketCounts = (
       return;
     }
 
-    const bucketKey = getOmsUrgencyBucketKey(request.outageDate, baseDate);
+    const bucketKey = getOmsUrgencyBucketKey(
+      request.outageDate,
+      baseDate,
+      calendarConfig,
+    );
     counts[bucketKey] += 1;
   });
 
@@ -293,9 +307,14 @@ export const getUrgencyStatus = (
   outageDate: Date,
   omsStatus: string,
   statusRequest: string,
+  calendarConfig?: BusinessDayCalendarConfig,
 ): StatusInfo => {
   const today = getThailandDateAtMidnight();
-  const diffDays = getBusinessDaysDifference(outageDate, today);
+  const diffDays = getBusinessDaysDifference(
+    outageDate,
+    today,
+    calendarConfig,
+  );
   const isCancelled =
     statusRequest === "CANCELLED" || omsStatus === "CANCELLED";
   const isCompleted =

@@ -14,6 +14,7 @@ import {
   isApprovedPendingOmsRequest,
   OMS_URGENCY_BUCKETS,
 } from "@/lib/utils/status-utils";
+import type { BusinessDayCalendarConfig } from "@/lib/validations/powerOutageRequest";
 
 interface PowerOutageRequest {
   id: number;
@@ -26,6 +27,7 @@ interface OMSStatusSummaryProps {
   requests: PowerOutageRequest[];
   filteredRequests: PowerOutageRequest[];
   showFilteredSummary?: boolean;
+  calendarConfig?: BusinessDayCalendarConfig;
 }
 
 interface SummaryCardProps {
@@ -60,6 +62,7 @@ export const OMSStatusSummary = memo(
     requests,
     filteredRequests,
     showFilteredSummary = true,
+    calendarConfig,
   }: OMSStatusSummaryProps) => {
     const summaryData = useMemo(() => {
       const dataSource = showFilteredSummary ? filteredRequests : requests;
@@ -79,7 +82,11 @@ export const OMSStatusSummary = memo(
           req.statusRequest === "CANCELLED" || req.omsStatus === "CANCELLED",
       );
 
-      const urgencyBucketCounts = getOmsUrgencyBucketCounts(dataSource);
+      const urgencyBucketCounts = getOmsUrgencyBucketCounts(
+        dataSource,
+        undefined,
+        calendarConfig,
+      );
 
       return {
         totalItems: dataSource.length,
@@ -91,7 +98,7 @@ export const OMSStatusSummary = memo(
         isFiltered:
           showFilteredSummary && filteredRequests.length !== requests.length,
       };
-    }, [filteredRequests, requests, showFilteredSummary]);
+    }, [calendarConfig, filteredRequests, requests, showFilteredSummary]);
 
     if (showFilteredSummary && filteredRequests.length === 0) {
       return (
