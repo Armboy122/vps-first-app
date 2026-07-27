@@ -4,6 +4,7 @@ import { deleteTransformer } from "@/app/api/action/User";
 import { Transformer } from "../../types/admin.types";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { FeedbackBanner } from "../shared/FeedbackBanner";
+import { Pencil, Trash2 } from "lucide-react";
 
 interface TransformerRowProps {
   transformer: Transformer;
@@ -131,19 +132,19 @@ export function TransformerRow({ transformer, onEdit }: TransformerRowProps) {
           <div className="flex justify-end space-x-2">
             <button
               onClick={() => onEdit(transformer)}
-              className="text-blue-600 hover:text-blue-900 transition-colors"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--app-border)] text-pea-700 transition-colors hover:bg-pea-50"
               title="แก้ไข"
             >
-              ✏️
+              <Pencil className="h-4 w-4" />
             </button>
             
             <button
               onClick={() => setShowDeleteDialog(true)}
               disabled={deleteMutation.isPending}
-              className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
               title="ลบ"
             >
-              🗑️
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </td>

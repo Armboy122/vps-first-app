@@ -11,15 +11,15 @@ interface FilterSectionProps {
 }
 
 const statusChips = [
-  { value: "CONFIRM", label: "อนุมัติแล้ว", activeClass: "bg-emerald-100 text-emerald-800 ring-emerald-300" },
-  { value: "NOT", label: "รอการอนุมัติ", activeClass: "bg-amber-100 text-amber-800 ring-amber-300" },
-  { value: "CANCELLED", label: "ยกเลิก", activeClass: "bg-red-100 text-red-800 ring-red-300" },
+  { value: "CONFIRM", label: "อนุมัติแล้ว", activeClass: "border-green-300 bg-green-50 text-green-900" },
+  { value: "NOT", label: "รอการอนุมัติ", activeClass: "border-amber-300 bg-amber-50 text-amber-950" },
+  { value: "CANCELLED", label: "ยกเลิก", activeClass: "border-red-300 bg-red-50 text-red-900" },
 ];
 
 const omsChips = [
-  { value: "NOT_ADDED", label: "ยังไม่ดำเนินการ", activeClass: "bg-slate-200 text-slate-800 ring-slate-400" },
-  { value: "PROCESSED", label: "ดำเนินการแล้ว", activeClass: "bg-blue-100 text-blue-800 ring-blue-300" },
-  { value: "CANCELLED", label: "ยกเลิก OMS", activeClass: "bg-red-100 text-red-800 ring-red-300" },
+  { value: "NOT_ADDED", label: "ยังไม่ดำเนินการ", activeClass: "border-slate-400 bg-slate-100 text-slate-900" },
+  { value: "PROCESSED", label: "ดำเนินการแล้ว", activeClass: "border-green-300 bg-green-50 text-green-900" },
+  { value: "CANCELLED", label: "ยกเลิก OMS", activeClass: "border-red-300 bg-red-50 text-red-900" },
 ];
 
 export const FilterSection = memo(
@@ -69,10 +69,10 @@ export const FilterSection = memo(
                 <button
                   key={chip.value}
                   onClick={() => handleStatusFilterChange(chip.value)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+                  className={`min-h-8 cursor-pointer rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
                     isActive
                       ? chip.activeClass
-                      : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                      : "border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:bg-[var(--app-frame)]"
                   }`}
                 >
                   {chip.label}
@@ -94,10 +94,10 @@ export const FilterSection = memo(
                 <button
                   key={chip.value}
                   onClick={() => handleOmsStatusFilterChange(chip.value)}
-                  className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+                  className={`min-h-8 cursor-pointer rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
                     isActive
                       ? chip.activeClass
-                      : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+                      : "border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:bg-[var(--app-frame)]"
                   }`}
                 >
                   {chip.label}
@@ -112,10 +112,10 @@ export const FilterSection = memo(
         {/* แสดงรายการเก่า */}
         <button
           onClick={handlePastOutageDatesChange}
-          className={`px-3 py-1 rounded-full text-xs font-medium ring-1 transition-all cursor-pointer ${
+          className={`min-h-8 cursor-pointer rounded-lg border px-3 py-1 text-xs font-medium transition-colors ${
             showPastOutageDates
-              ? "bg-violet-100 text-violet-800 ring-violet-300"
-              : "bg-white text-slate-500 ring-slate-200 hover:bg-slate-50"
+              ? "border-pea-300 bg-pea-100 text-pea-900"
+              : "border-[var(--app-border)] bg-white text-[var(--app-text-muted)] hover:bg-[var(--app-frame)]"
           }`}
         >
           รายการที่เลยกำหนด

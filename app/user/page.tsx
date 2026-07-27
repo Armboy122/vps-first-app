@@ -2,6 +2,16 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useSession } from "next-auth/react";
+import {
+  Building2,
+  CheckCircle2,
+  CircleAlert,
+  GitBranch,
+  KeyRound,
+  Pencil,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 import {
   changePassword,
@@ -207,165 +217,114 @@ export default function User() {
   if (!session) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-pea-200 border-t-pea-700" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-8">
-      <div className="container mx-auto px-4 max-w-6xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            จัดการโปรไฟล์
-          </h1>
-          <p className="text-gray-600">
-            อัปเดตข้อมูลส่วนตัวและการตั้งค่าบัญชีของคุณ
+    <div className="min-h-screen py-5 sm:py-7">
+      <div className="mx-auto max-w-5xl px-4 sm:px-6">
+        <header className="mb-5 border-b border-[var(--app-border)] pb-4">
+          <h1 className="text-2xl font-bold text-[var(--app-text)]">ข้อมูลส่วนตัว</h1>
+          <p className="mt-1 text-sm text-[var(--app-text-muted)]">
+            ตรวจสอบข้อมูลหน่วยงาน แก้ไขโปรไฟล์ และเปลี่ยนรหัสผ่าน
           </p>
-        </div>
+        </header>
 
-        {/* Message Alert */}
         {message && (
           <div
-            className={`mb-6 p-4 rounded-xl border-l-4 ${
+            role={messageType === "error" ? "alert" : "status"}
+            className={`mb-5 flex items-center gap-3 rounded-lg border p-3 ${
               messageType === "success"
-                ? "bg-green-50 border-green-500 text-green-700"
+                ? "border-green-200 bg-green-50 text-green-800"
                 : messageType === "error"
-                  ? "bg-red-50 border-red-500 text-red-700"
-                  : "bg-blue-50 border-blue-500 text-blue-700"
-            } shadow-sm`}
+                  ? "border-red-200 bg-red-50 text-red-800"
+                  : "border-sky-200 bg-sky-50 text-sky-800"
+            }`}
           >
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                {messageType === "success" && (
-                  <span className="text-xl">✅</span>
-                )}
-                {messageType === "error" && <span className="text-xl">❌</span>}
-                {messageType === "info" && <span className="text-xl">ℹ️</span>}
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium">{message}</p>
-              </div>
-            </div>
+            {messageType === "success" ? <CheckCircle2 className="h-5 w-5" /> : <CircleAlert className="h-5 w-5" />}
+            <p className="text-sm font-medium">{message}</p>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Profile Summary Card */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-2xl shadow-xl p-6 border border-gray-100">
-              <div className="text-center mb-6">
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-                  <span className="text-3xl font-bold text-white">
+        <div className="grid gap-5 lg:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="ui-panel self-start p-5">
+              <div className="border-b border-[var(--app-border)] pb-5 text-center">
+                <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-xl bg-pea-100">
+                  <span className="text-2xl font-bold text-pea-800">
                     {userProfile?.fullName.charAt(0) || "?"}
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-gray-800 mb-1">
+                <h2 className="font-bold text-[var(--app-text)]">
                   {isLoadingProfile
                     ? "กำลังโหลด..."
                     : userProfile?.fullName || "ไม่ระบุชื่อ"}
                 </h2>
-                <p className="text-gray-600 text-sm">
+                <p className="mt-1 text-sm text-[var(--app-text-muted)]">
                   รหัสพนักงาน: {userProfile?.employeeId || "-"}
                 </p>
               </div>
 
               {userProfile && (
-                <div className="space-y-4">
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                      <span className="text-blue-600 mr-2">🏢</span>
-                      จุดรวมงาน
-                    </h3>
-                    <p className="text-gray-800">
-                      {userProfile.workCenter.name}
-                    </p>
+                <div className="mt-4 space-y-4 text-sm">
+                  <div className="flex gap-3">
+                    <Building2 className="mt-0.5 h-4 w-4 text-pea-700" />
+                    <div><p className="text-xs font-semibold text-[var(--app-text-muted)]">จุดรวมงาน</p><p className="mt-0.5 font-medium">{userProfile.workCenter.name}</p></div>
                   </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                      <span className="text-green-600 mr-2">🏬</span>
-                      สาขา
-                    </h3>
-                    <p className="text-gray-800">
-                      {userProfile.branch.fullName}
-                    </p>
+                  <div className="flex gap-3">
+                    <GitBranch className="mt-0.5 h-4 w-4 text-pea-700" />
+                    <div><p className="text-xs font-semibold text-[var(--app-text-muted)]">สาขา</p><p className="mt-0.5 font-medium">{userProfile.branch.fullName}</p></div>
                   </div>
-
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center">
-                      <span className="text-purple-600 mr-2">👤</span>
-                      บทบาท
-                    </h3>
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-medium ${
-                        userProfile.role === "ADMIN"
-                          ? "bg-red-100 text-red-800"
-                          : userProfile.role === "MANAGER"
-                            ? "bg-orange-100 text-orange-800"
-                            : userProfile.role === "SUPERVISOR"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-blue-100 text-blue-800"
-                      }`}
-                    >
+                  <div className="flex gap-3">
+                    <ShieldCheck className="mt-0.5 h-4 w-4 text-pea-700" />
+                    <div><p className="text-xs font-semibold text-[var(--app-text-muted)]">บทบาท</p><span className="mt-1 inline-flex rounded-md bg-[var(--app-frame)] px-2 py-1 text-xs font-semibold text-[var(--app-text-body)]">
                       {userProfile.role === "ADMIN" && "ผู้ดูแลระบบ"}
                       {userProfile.role === "MANAGER" && "ผู้บริหาร"}
                       {userProfile.role === "SUPERVISOR" && "หัวหน้างาน"}
                       {userProfile.role === "USER" && "พนักงาน"}
                       {userProfile.role === "VIEWER" && "ผู้ดู"}
-                    </span>
+                    </span></div>
                   </div>
                 </div>
               )}
-            </div>
-          </div>
+          </aside>
 
-          {/* Edit Forms */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Profile Update Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center mr-4">
-                  <span className="text-white text-xl">✏️</span>
+          <div className="space-y-5">
+            <section className="ui-panel p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pea-100 text-pea-800">
+                  <Pencil className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
-                    แก้ไขข้อมูลส่วนตัว
-                  </h2>
-                  <p className="text-gray-600 text-sm">
-                    อัปเดตชื่อและหน่วยงานของคุณ
-                  </p>
+                  <h2 className="text-lg font-bold text-[var(--app-text)]">แก้ไขข้อมูลส่วนตัว</h2>
+                  <p className="text-sm text-[var(--app-text-muted)]">อัปเดตชื่อและหน่วยงานของคุณ</p>
                 </div>
               </div>
 
-              <form onSubmit={handleProfileUpdate} className="space-y-6">
-                {/* Full Name */}
+              <form onSubmit={handleProfileUpdate} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ชื่อ-นามสกุล
-                  </label>
+                  <label htmlFor="profile-full-name" className="mb-1.5 block text-sm font-semibold">ชื่อ-นามสกุล</label>
                   <input
+                    id="profile-full-name"
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                    className="ui-input w-full px-4 py-3"
                     placeholder="กรอกชื่อ-นามสกุล"
                     required
                   />
                 </div>
 
-                {/* Work Center */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    จุดรวมงาน
-                  </label>
+                  <label htmlFor="profile-work-center" className="mb-1.5 block text-sm font-semibold">จุดรวมงาน</label>
                   <select
+                    id="profile-work-center"
                     value={selectedWorkCenterId}
                     onChange={(e) =>
                       handleWorkCenterChange(Number(e.target.value))
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                    className="ui-input w-full px-4 py-3"
                     required
                   >
                     <option value={0}>เลือกจุดรวมงาน</option>
@@ -377,17 +336,15 @@ export default function User() {
                   </select>
                 </div>
 
-                {/* Branch */}
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    สาขา
-                  </label>
+                  <label htmlFor="profile-branch" className="mb-1.5 block text-sm font-semibold">สาขา</label>
                   <select
+                    id="profile-branch"
                     value={selectedBranchId}
                     onChange={(e) =>
                       setSelectedBranchId(Number(e.target.value))
                     }
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 hover:border-gray-400 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="ui-input w-full px-4 py-3 disabled:cursor-not-allowed disabled:bg-slate-100"
                     required
                     disabled={!selectedWorkCenterId || isLoadingBranches}
                   >
@@ -402,13 +359,13 @@ export default function User() {
                   </select>
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-2">
                   <button
                     type="submit"
                     disabled={
                       isSubmitting || !selectedWorkCenterId || !selectedBranchId
                     }
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-indigo-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="min-h-11 rounded-lg bg-pea-700 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-pea-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center">
@@ -421,48 +378,45 @@ export default function User() {
                   </button>
                 </div>
               </form>
-            </div>
+            </section>
 
-            {/* Password Change Form */}
-            <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
-              <div className="flex items-center mb-6">
-                <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center mr-4">
-                  <span className="text-white text-xl">🔐</span>
+            <section className="ui-panel p-5 sm:p-6">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-pea-100 text-pea-800">
+                  <KeyRound className="h-5 w-5" />
                 </div>
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">
+                  <h2 className="text-lg font-bold text-[var(--app-text)]">
                     เปลี่ยนรหัสผ่าน
                   </h2>
-                  <p className="text-gray-600 text-sm">
+                  <p className="text-sm text-[var(--app-text-muted)]">
                     อัปเดตรหัสผ่านเพื่อความปลอดภัยของบัญชี
                   </p>
                 </div>
               </div>
 
-              <form onSubmit={handlePasswordChange} className="space-y-6">
+              <form onSubmit={handlePasswordChange} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    รหัสผ่านปัจจุบัน
-                  </label>
+                  <label htmlFor="current-password" className="mb-1.5 block text-sm font-semibold">รหัสผ่านปัจจุบัน</label>
                   <input
+                    id="current-password"
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                    className="ui-input w-full px-4 py-3"
                     placeholder="กรอกรหัสผ่านปัจจุบัน"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    รหัสผ่านใหม่
-                  </label>
+                  <label htmlFor="new-password" className="mb-1.5 block text-sm font-semibold">รหัสผ่านใหม่</label>
                   <input
+                    id="new-password"
                     type="password"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                    className="ui-input w-full px-4 py-3"
                     placeholder="กรอกรหัสผ่านใหม่"
                     minLength={6}
                     required
@@ -473,14 +427,13 @@ export default function User() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    ยืนยันรหัสผ่านใหม่
-                  </label>
+                  <label htmlFor="confirm-password" className="mb-1.5 block text-sm font-semibold">ยืนยันรหัสผ่านใหม่</label>
                   <input
+                    id="confirm-password"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all duration-200 hover:border-gray-400"
+                    className="ui-input w-full px-4 py-3"
                     placeholder="กรอกรหัสผ่านใหม่อีกครั้ง"
                     minLength={6}
                     required
@@ -494,7 +447,7 @@ export default function User() {
                     )}
                 </div>
 
-                <div className="flex justify-end pt-4">
+                <div className="flex justify-end pt-2">
                   <button
                     type="submit"
                     disabled={
@@ -504,7 +457,7 @@ export default function User() {
                       !confirmPassword ||
                       newPassword !== confirmPassword
                     }
-                    className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white font-semibold rounded-xl hover:from-green-700 hover:to-emerald-700 transform hover:scale-105 transition-all duration-200 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                    className="min-h-11 rounded-lg bg-pea-700 px-6 py-2.5 font-semibold text-white transition-colors hover:bg-pea-800 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isSubmitting ? (
                       <div className="flex items-center">
@@ -517,7 +470,7 @@ export default function User() {
                   </button>
                 </div>
               </form>
-            </div>
+            </section>
           </div>
         </div>
       </div>

@@ -211,8 +211,8 @@ export function BusinessCalendarManagement() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">ปฏิทินวันทำการ</h2>
-        <p className="text-gray-600 mt-1">
+        <h2 className="text-xl font-bold text-[var(--app-text)]">ปฏิทินวันทำการ</h2>
+        <p className="mt-1 text-sm text-[var(--app-text-muted)]">
           จัดการวันหยุดและวันทำงานพิเศษสำหรับการคำนวณวันทำการของคำขอดับไฟ
         </p>
       </div>
@@ -221,7 +221,7 @@ export function BusinessCalendarManagement() {
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
         <div className="space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="ui-panel overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <h3 className="text-lg font-semibold text-gray-900">

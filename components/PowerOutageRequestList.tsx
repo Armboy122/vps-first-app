@@ -570,7 +570,7 @@ export default function PowerOutageRequestList() {
         <p className="text-red-500 text-lg font-medium">{error}</p>
         <button
           onClick={loadRequests}
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition"
+        className="mt-4 min-h-11 rounded-lg bg-pea-700 px-4 py-2 font-semibold text-white transition-colors hover:bg-pea-800"
         >
           ลองใหม่อีกครั้ง
         </button>
@@ -580,7 +580,7 @@ export default function PowerOutageRequestList() {
   return (
     <div className="space-y-5">
       {/* Unified Search + Filter Card */}
-      <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+      <div className="ui-panel overflow-hidden">
         <div className="p-4 md:p-5">
           <SearchSection
             searchTerm={searchTerm}
@@ -600,7 +600,7 @@ export default function PowerOutageRequestList() {
             setBranchFilter={(value) => updateFilter("branchFilter", value)}
           />
         </div>
-        <div className="border-t border-slate-100 bg-slate-50/50 px-4 md:px-5 py-3">
+        <div className="border-t border-[var(--app-border)] bg-[var(--app-surface-subtle)] px-4 py-3 md:px-5">
           <FilterSection
             statusFilter={filters.statusFilter}
             setStatusFilter={(value) => updateFilter("statusFilter", value)}
@@ -672,7 +672,7 @@ export default function PowerOutageRequestList() {
           ))}
         </div>
       ) : (
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="ui-panel overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <TableHeader

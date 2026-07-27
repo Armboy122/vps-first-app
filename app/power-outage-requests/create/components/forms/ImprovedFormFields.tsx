@@ -321,8 +321,8 @@ export const ImprovedFormFields: React.FC<ImprovedFormFieldsProps> = ({
                   }}
                 />
                 {field.value && (
-                  <Text size="sm" c="blue.7" mt={4}>
-                    📅 วันที่เลือก: {formatThaiDate(field.value)}
+                  <Text size="sm" c="pea.7" mt={4}>
+                    วันที่เลือก: {formatThaiDate(field.value)}
                   </Text>
                 )}
               </div>

@@ -30,23 +30,23 @@ export function NavigationTabs() {
   const { activeTab, setActiveTab } = useAdminContext();
 
   return (
-    <div className="border-b border-gray-200 mb-6">
-      <nav className="-mb-px flex flex-wrap gap-x-8 gap-y-2">
+    <div className="mb-5 overflow-x-auto border-b border-[var(--app-border)]">
+      <nav className="flex min-w-max gap-1" aria-label="ส่วนจัดการระบบ">
         {Object.entries(TAB_CONFIG).map(([tabKey, config]) => {
           const isActive = activeTab === tabKey;
           return (
             <button
               key={tabKey}
               onClick={() => setActiveTab(tabKey)}
-              className={`py-3 px-1 border-b-2 font-medium text-sm transition-colors duration-200 text-left ${
+              className={`min-h-11 rounded-t-lg border-b-2 px-3 py-2 text-left text-sm font-semibold transition-colors duration-150 ${
                 isActive
-                  ? "border-blue-500 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+                  ? "border-pea-700 bg-pea-50 text-pea-900"
+                  : "border-transparent text-[var(--app-text-muted)] hover:bg-[var(--app-surface-subtle)] hover:text-[var(--app-text)]"
               }`}
             >
               <span className="block">{config.label}</span>
               {isActive && (
-                <span className="block text-xs font-normal text-blue-400 mt-0.5">
+                <span className="mt-0.5 block text-xs font-normal text-pea-700">
                   {config.description}
                 </span>
               )}

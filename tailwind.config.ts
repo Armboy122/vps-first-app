@@ -10,17 +10,17 @@ const config: Config = {
     extend: {
       colors: {
         pea: {
-          25: "#fdfdff", // Ultra light purple
-          50: "#faf5ff", // Very light purple
-          100: "#f3e8ff", // Light purple
-          200: "#e9d5ff", // Lighter purple
-          300: "#d8b4fe", // Light purple
-          400: "#c084fc", // Medium purple
-          500: "#9333ea", // PEA main purple
-          600: "#7c3aed", // Darker purple
-          700: "#6d28d9", // Dark purple
-          800: "#5b21b6", // Very dark purple
-          900: "#4c1d95", // Darkest purple
+          25: "#f8fbf9",
+          50: "#f1f7f3",
+          100: "#eaf3ed",
+          200: "#d3e5d9",
+          300: "#a9cdb5",
+          400: "#75aa87",
+          500: "#4b8964",
+          600: "#2f7554",
+          700: "#245d42",
+          800: "#1b4933",
+          900: "#143827",
         },
         "pea-accent": {
           50: "#f0f9ff", // Light blue accent
@@ -36,11 +36,11 @@ const config: Config = {
         },
       },
       fontFamily: {
-        pea: ["Inter", "Sarabun", "sans-serif"],
+        pea: ["var(--font-sans)", "IBM Plex Sans Thai", "sans-serif"],
       },
       boxShadow: {
-        pea: "0 4px 20px rgba(147, 51, 234, 0.15)",
-        "pea-lg": "0 10px 40px rgba(147, 51, 234, 0.2)",
+        pea: "0 1px 3px rgba(20, 56, 39, 0.14)",
+        "pea-lg": "0 6px 18px rgba(20, 56, 39, 0.18)",
       },
     },
   },

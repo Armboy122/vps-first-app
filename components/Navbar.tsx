@@ -4,7 +4,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useEffect, useMemo, useState } from "react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Home, LogIn, LogOut, Menu, Settings, UserRound, X } from "lucide-react";
 
 const Navbar = () => {
   const pathname = usePathname();
@@ -18,9 +18,13 @@ const Navbar = () => {
 
   const navItems = useMemo(
     () => [
-      { label: "หน้าแรก", path: "/power-outage-requests" },
-      ...(currentRole !== "VIEWER" ? [{ label: "Profile", path: "/user" }] : []),
-      ...(currentRole === "ADMIN" ? [{ label: "Admin", path: "/admin" }] : []),
+      { icon: Home, label: "รายการงาน", path: "/power-outage-requests" },
+      ...(currentRole !== "VIEWER"
+        ? [{ icon: UserRound, label: "ข้อมูลส่วนตัว", path: "/user" }]
+        : []),
+      ...(currentRole === "ADMIN"
+        ? [{ icon: Settings, label: "จัดการระบบ", path: "/admin" }]
+        : []),
     ],
     [currentRole],
   );
@@ -29,32 +33,31 @@ const Navbar = () => {
     pathname === path || pathname?.startsWith(`${path}/`);
 
   return (
-    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-white/60 bg-white/80 text-slate-900 shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+    <nav className="fixed left-0 right-0 top-0 z-50 border-b border-[var(--app-border)] bg-white text-[var(--app-text)]">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
+        <div className="flex h-16 items-center justify-between gap-4">
           <Link
             href="/power-outage-requests"
-            className="flex min-w-0 items-center gap-3 rounded-2xl px-2 py-1 transition-colors hover:bg-slate-900/5"
+            className="flex min-w-0 items-center gap-2.5 rounded-lg py-1 pr-2 transition-colors hover:bg-[var(--app-surface-subtle)]"
           >
             <Image
               src="/peatransformer-logo.png"
               alt="PeaTransformer logo"
-              width={56}
-              height={40}
-              className="h-10 w-auto rounded-xl"
-              priority
+              width={42}
+              height={32}
+              className="h-8 w-auto"
             />
             <div className="min-w-0">
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-pea-700">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pea-700">
                 PeaTransformer
               </p>
-              <p className="truncate text-[15px] font-semibold text-slate-900">
+              <p className="truncate text-sm font-semibold text-[var(--app-text)]">
                 ระบบจัดการคำขอดับไฟ
               </p>
             </div>
           </Link>
 
-          <div className="hidden md:flex md:items-center md:gap-2">
+          <div className="hidden md:flex md:items-center md:gap-1">
             {navItems.map((item) => {
               const active = isActivePath(item.path);
               return (
@@ -62,12 +65,13 @@ const Navbar = () => {
                   key={item.path}
                   href={item.path}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-full px-4 py-2 text-[15px] font-medium transition-all duration-200 ${
+                  className={`inline-flex min-h-10 items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-colors duration-150 ${
                     active
-                      ? "bg-pea-700 text-white shadow-md shadow-pea-700/20"
-                      : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
+                      ? "bg-pea-100 text-pea-900"
+                      : "text-[var(--app-text-muted)] hover:bg-[var(--app-surface-subtle)] hover:text-[var(--app-text)]"
                   }`}
                 >
+                  <item.icon className="h-4 w-4" aria-hidden />
                   {item.label}
                 </Link>
               );
@@ -77,28 +81,28 @@ const Navbar = () => {
           <div className="hidden items-center gap-3 md:flex">
             {session ? (
               <>
-                <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm lg:flex">
-                  <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                  <span className="text-slate-600">สวัสดี,</span>
-                  <span className="font-semibold text-slate-900">
+                <div className="hidden items-center gap-2 border-l border-[var(--app-border)] pl-3 text-sm lg:flex">
+                  <span className="font-semibold text-[var(--app-text)]">
                     {session.user?.name}
                   </span>
-                  <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold uppercase tracking-[0.14em] text-slate-600">
+                  <span className="rounded-md bg-[var(--app-frame)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--app-text-muted)]">
                     {currentRole}
                   </span>
                 </div>
                 <button
                   onClick={() => signOut()}
-                  className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pea-500 focus-visible:ring-offset-2"
+                  className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-white px-3 py-2 text-sm font-semibold text-[var(--app-text-body)] transition-colors hover:bg-[var(--app-surface-subtle)]"
                 >
+                  <LogOut className="h-4 w-4" aria-hidden />
                   ออกจากระบบ
                 </button>
               </>
             ) : (
               <button
                 onClick={() => signIn()}
-                className="rounded-full bg-pea-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-pea-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pea-500 focus-visible:ring-offset-2"
+                className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-pea-700 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-pea-800"
               >
+                <LogIn className="h-4 w-4" aria-hidden />
                 เข้าสู่ระบบ
               </button>
             )}
@@ -108,20 +112,20 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen((value) => !value)}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-nav-menu"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 transition-colors hover:bg-slate-900/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pea-500 focus-visible:ring-offset-2 md:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-[var(--app-border)] bg-white text-[var(--app-text-body)] transition-colors hover:bg-[var(--app-surface-subtle)] md:hidden"
           >
             <span className="sr-only">{isMenuOpen ? "ปิดเมนู" : "เปิดเมนู"}</span>
             {!isMenuOpen ? (
-              <Bars3Icon className="h-5 w-5" aria-hidden="true" />
+              <Menu className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <XMarkIcon className="h-5 w-5" aria-hidden="true" />
+              <X className="h-5 w-5" aria-hidden="true" />
             )}
           </button>
         </div>
       </div>
 
       {isMenuOpen && (
-        <div id="mobile-nav-menu" className="border-t border-slate-200/80 bg-white/95 px-4 pb-4 pt-3 shadow-[0_20px_50px_rgba(15,23,42,0.06)] backdrop-blur-xl md:hidden">
+        <div id="mobile-nav-menu" className="border-t border-[var(--app-border)] bg-white px-4 pb-4 pt-3 shadow-[var(--app-shadow-raised)] md:hidden">
           <div className="mx-auto flex max-w-7xl flex-col gap-2">
             {navItems.map((item) => {
               const active = isActivePath(item.path);
@@ -130,22 +134,23 @@ const Navbar = () => {
                   key={item.path}
                   href={item.path}
                   aria-current={active ? "page" : undefined}
-                  className={`rounded-2xl px-4 py-3 text-base font-medium transition-colors ${
+                  className={`flex min-h-11 items-center gap-3 rounded-lg px-3 py-2.5 text-base font-medium transition-colors ${
                     active
-                      ? "bg-pea-50 text-pea-800"
-                      : "text-slate-600 hover:bg-slate-900/5 hover:text-slate-900"
+                      ? "bg-pea-100 text-pea-900"
+                      : "text-[var(--app-text-body)] hover:bg-[var(--app-surface-subtle)]"
                   }`}
                 >
+                  <item.icon className="h-5 w-5" aria-hidden />
                   {item.label}
                 </Link>
               );
             })}
-            <div className="mt-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-4">
+            <div className="mt-2 rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-subtle)] px-4 py-4">
               {session ? (
                 <div className="flex items-center gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-slate-500">สวัสดี</p>
-                    <p className="truncate font-semibold text-slate-900">
+                    <p className="text-sm text-[var(--app-text-muted)]">ผู้ใช้งาน</p>
+                    <p className="truncate font-semibold text-[var(--app-text)]">
                       {session.user?.name}
                     </p>
                     <p className="text-sm uppercase tracking-[0.14em] text-slate-600">
@@ -154,16 +159,18 @@ const Navbar = () => {
                   </div>
                   <button
                     onClick={() => signOut()}
-                    className="ml-auto rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-slate-800"
+                    className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-white px-3 py-2 text-sm font-semibold text-[var(--app-text-body)]"
                   >
+                    <LogOut className="h-4 w-4" aria-hidden />
                     ออกจากระบบ
                   </button>
                 </div>
               ) : (
                 <button
                   onClick={() => signIn()}
-                  className="w-full rounded-full bg-pea-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pea-800"
+                  className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-pea-700 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-pea-800"
                 >
+                  <LogIn className="h-4 w-4" aria-hidden />
                   เข้าสู่ระบบ
                 </button>
               )}

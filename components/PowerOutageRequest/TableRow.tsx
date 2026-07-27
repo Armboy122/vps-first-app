@@ -150,9 +150,9 @@ export const TableRow = memo(
     const omsStatusMeta = getOmsStatusMeta(request.omsStatus);
     const showTimelineHint = statusInfo.daysLabel !== statusInfo.primaryLabel;
 
-    const cellClass = "px-4 py-4 align-top leading-tight";
+    const cellClass = "px-4 py-3 align-top leading-tight";
     const selectClass =
-      "w-full rounded-md border border-slate-200 bg-white px-2.5 py-1 text-[12px] font-semibold text-slate-700 shadow-sm transition-all hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:cursor-not-allowed disabled:bg-slate-50";
+      "w-full rounded-md border border-[var(--app-border-strong)] bg-white px-2.5 py-1.5 text-[12px] font-semibold text-[var(--app-text-body)] transition-colors hover:border-pea-500 focus:border-pea-600 focus:outline-none focus:ring-2 focus:ring-pea-200 disabled:cursor-not-allowed disabled:bg-slate-50";
 
     const formatThaiDate = useCallback((date: Date) => {
       try {
@@ -193,7 +193,7 @@ export const TableRow = memo(
 
     return (
       <tr
-        className={`group border-b border-slate-100 transition-colors duration-200 ${statusInfo.borderClass} ${statusInfo.bgClass}`}
+        className={`group border-b border-[var(--app-border)] transition-colors duration-150 hover:bg-[var(--app-surface-subtle)] ${statusInfo.borderClass} ${statusInfo.bgClass}`}
       >
         {!isViewer && (
           <td className="w-10 px-4 py-4 align-top">
@@ -208,7 +208,7 @@ export const TableRow = memo(
                     (isUser && request.workCenter.id === userWorkCenterId)
                   )
                 }
-                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-blue-600 shadow-sm transition-all focus:ring-blue-500"
+                className="h-4 w-4 cursor-pointer rounded border-slate-300 text-pea-700 focus:ring-pea-600"
               />
             </div>
           </td>

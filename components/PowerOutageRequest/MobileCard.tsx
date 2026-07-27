@@ -2,17 +2,16 @@
 
 import { useCallback, useState } from "react";
 import { OMSStatus, Request } from "@prisma/client";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
-  faCalendarAlt,
-  faChevronDown,
-  faChevronUp,
-  faClock,
-  faEdit,
-  faMapMarkerAlt,
-  faTrash,
-  faUser,
-} from "@fortawesome/free-solid-svg-icons";
+  CalendarDays,
+  ChevronDown,
+  ChevronUp,
+  Clock3,
+  MapPin,
+  Pencil,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import {
   type StatusChipMeta,
   type StatusInfo,
@@ -61,7 +60,7 @@ interface MobileCardProps {
 
 const StatusBadge = ({ meta }: { meta: StatusChipMeta }) => (
   <span
-    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold shadow-sm ${meta.chipClass}`}
+    className={`inline-flex items-center rounded-md border px-2 py-0.5 text-[10px] font-bold ${meta.chipClass}`}
   >
     <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${meta.dotClass}`} />
     {meta.label}
@@ -70,7 +69,7 @@ const StatusBadge = ({ meta }: { meta: StatusChipMeta }) => (
 
 const PriorityChip = ({ statusInfo }: { statusInfo: StatusInfo }) => (
   <span
-    className={`inline-flex shrink-0 items-center rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wide shadow-sm ${statusInfo.badgeClass}`}
+    className={`inline-flex shrink-0 items-center rounded-md border px-2.5 py-1 text-[10px] font-bold tracking-wide ${statusInfo.badgeClass}`}
   >
     <span className={`mr-1.5 h-1.5 w-1.5 rounded-full ${statusInfo.dotClass}`} />
     {statusInfo.primaryLabel}
@@ -132,7 +131,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
 
   return (
     <div
-      className={`mb-4 overflow-hidden rounded-xl shadow-sm ring-1 ring-slate-200/60 transition-all duration-200 ${statusInfo.borderClass} ${statusInfo.bgClass}`}
+      className={`mb-3 overflow-hidden rounded-xl border border-[var(--app-border)] transition-colors duration-150 ${statusInfo.borderClass} ${statusInfo.bgClass}`}
     >
       <div className="p-4">
         <div className="flex items-start justify-between gap-3">
@@ -146,7 +145,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
                   disabled={
                     !(isAdmin || (isUser && request.workCenter.id === userWorkCenterId))
                   }
-                  className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 shadow-sm transition-all focus:ring-blue-500"
+                  className="mt-1 h-5 w-5 rounded border-slate-300 text-pea-700 focus:ring-pea-600"
                 />
               )}
               <div className="min-w-0 flex-1">
@@ -168,14 +167,11 @@ export const MobileCard: React.FC<MobileCardProps> = ({
             <div className="mt-3 space-y-2">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center text-[14px] font-bold text-slate-800">
-                  <FontAwesomeIcon
-                    icon={faCalendarAlt}
-                    className={`mr-2 w-3.5 ${statusInfo.color === "red" ? "text-red-500" : "text-slate-400"}`}
-                  />
+                  <CalendarDays className={`mr-2 h-4 w-4 ${statusInfo.color === "red" ? "text-red-600" : "text-slate-500"}`} />
                   <span className="truncate">{formatThaiDate(request.outageDate)}</span>
                 </div>
                 <div className="flex shrink-0 items-center text-[13px] font-semibold text-slate-500">
-                  <FontAwesomeIcon icon={faClock} className="mr-2 w-3.5 text-slate-400" />
+                  <Clock3 className="mr-2 h-4 w-4 text-slate-500" />
                   {formatThaiTime(request.startTime)} - {formatThaiTime(request.endTime)}
                 </div>
               </div>
@@ -187,10 +183,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
               )}
 
               <div className="flex items-center rounded-lg border border-slate-100 bg-white/70 p-2 text-[13px] font-medium text-slate-500">
-                <FontAwesomeIcon
-                  icon={faMapMarkerAlt}
-                  className="mr-2 w-3.5 flex-shrink-0 text-slate-400"
-                />
+                <MapPin className="mr-2 h-4 w-4 flex-shrink-0 text-slate-500" />
                 <span className="truncate">{request.area || "ไม่ระบุบริเวณ"}</span>
               </div>
             </div>
@@ -203,10 +196,10 @@ export const MobileCard: React.FC<MobileCardProps> = ({
 
           <button
             onClick={() => setExpanded(!expanded)}
-            className="mt-1 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-400 shadow-sm transition-all hover:bg-slate-50 hover:text-slate-600 focus:outline-none focus:ring-2 focus:ring-slate-200"
+            className="mt-1 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg border border-[var(--app-border)] bg-white text-[var(--app-text-muted)] transition-colors hover:bg-[var(--app-frame)]"
             aria-label={expanded ? "ย่อ" : "ขยาย"}
           >
-            <FontAwesomeIcon icon={expanded ? faChevronUp : faChevronDown} size="sm" />
+            {expanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </button>
         </div>
 
@@ -229,7 +222,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
                   ผู้สร้างคำขอ
                 </span>
                 <p className="flex items-center gap-1.5 text-[13px] font-bold text-slate-800">
-                  <FontAwesomeIcon icon={faUser} size="xs" className="text-slate-300" />
+                  <UserRound className="h-3.5 w-3.5 text-slate-500" />
                   {request.createdBy.fullName}
                 </p>
                 <p className="mt-1 ml-4 text-[10px] text-slate-400">
@@ -249,7 +242,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
                     onChange={(e) =>
                       handleEditOmsStatus(request.id, e.target.value as OMSStatus)
                     }
-                    className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold shadow-sm transition-all hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                    className="ui-input block w-full px-3 py-2.5 text-xs font-bold"
                   >
                     <option value="NOT_ADDED">ยังไม่ดำเนินการ</option>
                     <option value="PROCESSED">ดำเนินการแล้ว</option>
@@ -269,7 +262,7 @@ export const MobileCard: React.FC<MobileCardProps> = ({
                       onChange={(e) =>
                         handleEditStatusRequest(request.id, e.target.value as Request)
                       }
-                      className="block w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-xs font-bold shadow-sm transition-all hover:border-blue-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                      className="ui-input block w-full px-3 py-2.5 text-xs font-bold"
                     >
                       <option value="NOT">รออนุมัติ</option>
                       <option value="CONFIRM">อนุมัติดับไฟ</option>
@@ -283,16 +276,16 @@ export const MobileCard: React.FC<MobileCardProps> = ({
               <div className="flex gap-2 pt-2">
                 <button
                   onClick={() => handleEdit(request)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-[12px] font-bold text-slate-700 shadow-sm transition-all hover:border-blue-200 hover:bg-slate-50 hover:text-blue-600 active:bg-slate-100"
+                  className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-white px-4 py-2.5 text-[12px] font-bold text-[var(--app-text-body)] transition-colors hover:bg-[var(--app-frame)]"
                 >
-                  <FontAwesomeIcon icon={faEdit} />
+                  <Pencil className="h-4 w-4" />
                   แก้ไขข้อมูล
                 </button>
                 <button
                   onClick={() => handleDelete(request.id)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-red-100 bg-red-50 px-4 py-2.5 text-[12px] font-bold text-red-600 shadow-sm transition-all hover:border-red-200 hover:bg-red-100 active:bg-red-200"
+                  className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2.5 text-[12px] font-bold text-red-700 transition-colors hover:bg-red-100"
                 >
-                  <FontAwesomeIcon icon={faTrash} />
+                  <Trash2 className="h-4 w-4" />
                   ลบคำขอ
                 </button>
               </div>

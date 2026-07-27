@@ -78,9 +78,6 @@ export const SearchSection = memo(
       setStartDate("");
       setEndDate("");
 
-      const hasWorkCenterOrBranchFilter =
-        workCenterFilter !== "" || branchFilter !== "";
-
       setWorkCenterFilter("");
       setBranchFilter("");
     }, [
@@ -89,8 +86,6 @@ export const SearchSection = memo(
       setEndDate,
       setWorkCenterFilter,
       setBranchFilter,
-      workCenterFilter,
-      branchFilter,
     ]);
 
     const handleSearchTermChange = useCallback(
@@ -181,7 +176,7 @@ export const SearchSection = memo(
               placeholder="ค้นหาหมายเลขหม้อแปลง, บริเวณ, หรือผู้สร้างคำขอ..."
               value={searchTerm}
               onChange={handleSearchTermChange}
-              className="w-full pl-10 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white text-slate-700 text-sm placeholder:text-slate-400 transition-all"
+              className="ui-input w-full py-2.5 pl-10 pr-10 text-sm placeholder:text-slate-500"
             />
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
             {searchTerm && (
@@ -197,14 +192,14 @@ export const SearchSection = memo(
             <div className="flex items-center gap-2">
               <button
                 onClick={toggleAdvancedSearch}
-                className="inline-flex items-center gap-1.5 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors"
+                className="inline-flex min-h-10 items-center gap-1.5 rounded-md px-1 text-sm font-medium text-[var(--app-text-body)] transition-colors hover:text-pea-800"
               >
                 <SlidersHorizontal className="w-3.5 h-3.5" />
                 {isAdvancedSearch ? "ซ่อนตัวกรองขั้นสูง" : "แสดงตัวกรองขั้นสูง"}
               </button>
 
               <button
-                className="text-slate-400 hover:text-slate-600 transition-colors"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-md text-[var(--app-text-muted)] transition-colors hover:bg-[var(--app-frame)]"
                 onClick={toggleSearchInfo}
                 aria-label="คำแนะนำการค้นหา"
               >
@@ -212,7 +207,7 @@ export const SearchSection = memo(
               </button>
 
               {searchInfoOpen && (
-                <div className="absolute z-10 mt-2 p-3 bg-white rounded-lg shadow-lg border border-gray-200 text-sm w-72 top-full">
+                <div className="absolute top-full z-10 mt-2 w-72 rounded-lg border border-[var(--app-border)] bg-white p-3 text-sm shadow-[var(--app-shadow-raised)]">
                   <h4 className="font-bold mb-2">คำแนะนำการค้นหา:</h4>
                   <ul className="list-disc pl-5 space-y-1">
                     <li>ค้นหาหมายเลขหม้อแปลง เช่น 08-123456</li>
@@ -222,7 +217,7 @@ export const SearchSection = memo(
                   <div className="mt-2 text-right">
                     <button
                       onClick={toggleSearchInfo}
-                      className="text-blue-600 hover:text-blue-800 text-xs"
+                      className="text-xs font-semibold text-pea-700 hover:text-pea-900"
                     >
                       ปิด
                     </button>
@@ -234,7 +229,7 @@ export const SearchSection = memo(
             {hasActiveFilters && (
               <button
                 onClick={handleClearSearch}
-                className="text-red-600 hover:text-red-800 text-sm font-medium"
+                className="min-h-10 rounded-md px-2 text-sm font-medium text-[var(--app-danger)] hover:bg-red-50"
               >
                 ล้างการค้นหาทั้งหมด
               </button>
@@ -257,7 +252,7 @@ export const SearchSection = memo(
                 id="startDate"
                 value={startDate}
                 onChange={handleStartDateChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
+                className="ui-input w-full px-3 py-2 text-sm"
               />
             </div>
 
@@ -274,7 +269,7 @@ export const SearchSection = memo(
                 id="endDate"
                 value={endDate}
                 onChange={handleEndDateChange}
-                className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
+                className="ui-input w-full px-3 py-2 text-sm"
               />
             </div>
 
@@ -292,7 +287,7 @@ export const SearchSection = memo(
                     id="workCenter"
                     value={workCenterFilter}
                     onChange={handleWorkCenterChange}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 focus:bg-white transition-all"
+                    className="ui-input w-full px-3 py-2 text-sm"
                   >
                     <option value="">ทุกจุดรวมงาน</option>
                     {workCenterOptions}
@@ -312,7 +307,7 @@ export const SearchSection = memo(
                     value={branchFilter}
                     onChange={handleBranchChange}
                     disabled={!workCenterFilter}
-                    className={`w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 transition-all ${!workCenterFilter ? "bg-slate-100 cursor-not-allowed text-slate-400" : "bg-slate-50 focus:bg-white"}`}
+                    className={`ui-input w-full px-3 py-2 text-sm ${!workCenterFilter ? "cursor-not-allowed bg-slate-100 text-slate-500" : ""}`}
                   >
                     <option value="">ทุกสาขา</option>
                     {branchOptions}

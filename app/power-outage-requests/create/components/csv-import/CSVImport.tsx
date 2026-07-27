@@ -27,6 +27,7 @@ import {
   type CSVValidationError,
   type CSVRow,
 } from "../../utils/csvValidation";
+import { AlertTriangle, Download, FileUp, Trash2 } from "lucide-react";
 
 interface CSVImportProps {
   role: string;
@@ -327,9 +328,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
       {showExistingWarning && (
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
           <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <span className="text-yellow-600 text-xl">⚠️</span>
-            </div>
+            <AlertTriangle className="h-5 w-5 flex-shrink-0 text-amber-700" />
             <div className="ml-3 flex-1">
               <h4 className="text-lg font-semibold text-yellow-800 mb-2">
                 มีรายการรอการบันทึกอยู่แล้ว
@@ -349,7 +348,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
                       onClearExistingRequests();
                       setShowExistingWarning(false);
                     }}
-                    icon="🗑️"
+                    icon={<Trash2 className="h-4 w-4" />}
                   >
                     ล้างรายการเก่า
                   </FormButton>
@@ -368,10 +367,10 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         </div>
       )}
 
-      <div className="rounded-2xl border border-emerald-200 bg-gradient-to-br from-emerald-50 via-white to-emerald-100 p-5 shadow-sm">
+      <div className="rounded-xl border border-[var(--app-border)] bg-[var(--app-surface-subtle)] p-5">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div className="space-y-2">
-            <div className="inline-flex items-center rounded-full bg-white/80 px-3 py-1 text-sm font-semibold uppercase tracking-[0.14em] text-emerald-700 shadow-sm">
+            <div className="inline-flex items-center rounded-md bg-pea-100 px-3 py-1 text-sm font-semibold uppercase tracking-[0.12em] text-pea-800">
               CSV Import
             </div>
             <div>
@@ -386,15 +385,15 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           </div>
 
           <div className="grid grid-cols-1 gap-2 text-sm text-emerald-800 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+            <div className="rounded-lg border border-[var(--app-border)] bg-white px-3 py-2">
               <p className="font-semibold text-emerald-900">สูงสุด 1,000 แถว</p>
               <p className="text-emerald-700">รองรับงาน batch แบบปลอดภัย</p>
             </div>
-            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+            <div className="rounded-lg border border-[var(--app-border)] bg-white px-3 py-2">
               <p className="font-semibold text-emerald-900">ไฟล์ไม่เกิน 10MB</p>
               <p className="text-emerald-700">ช่วยให้ parse และตรวจสอบได้เร็ว</p>
             </div>
-            <div className="rounded-xl border border-white/70 bg-white/80 px-3 py-2 shadow-sm">
+            <div className="rounded-lg border border-[var(--app-border)] bg-white px-3 py-2">
               <p className="font-semibold text-emerald-900">เพิ่มเฉพาะแถวที่ผ่าน</p>
               <p className="text-emerald-700">แถวที่ผิดจะถูกสรุปให้แก้ง่าย</p>
             </div>
@@ -407,9 +406,10 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             variant="secondary"
             onClick={() => fileInputRef.current?.click()}
             disabled={isProcessing}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-pea-700 text-white hover:bg-pea-800"
           >
-            {isProcessing ? "กำลังประมวลผล..." : "📂 เลือกไฟล์ Excel / CSV"}
+            <FileUp className="h-4 w-4" />
+            {isProcessing ? "กำลังประมวลผล..." : "เลือกไฟล์ Excel / CSV"}
           </FormButton>
 
           <FormButton
@@ -418,7 +418,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             onClick={downloadTemplate}
             className="border-green-300 text-green-600 bg-white hover:bg-green-50"
           >
-            📋 ดาวน์โหลดแม่แบบ
+            <Download className="h-4 w-4" /> ดาวน์โหลดแม่แบบ
           </FormButton>
         </div>
 
@@ -431,14 +431,14 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         />
 
         {lastFileName && (
-          <div className="mt-4 inline-flex items-center rounded-full border border-emerald-200 bg-white/90 px-3 py-1.5 text-sm font-medium text-emerald-800 shadow-sm">
+          <div className="mt-4 inline-flex items-center rounded-md border border-emerald-200 bg-white px-3 py-1.5 text-sm font-medium text-emerald-800">
             ไฟล์ล่าสุด: {lastFileName}
           </div>
         )}
       </div>
 
       {isProcessing && (
-        <div className="rounded-2xl border border-sky-200 bg-gradient-to-br from-sky-50 via-white to-sky-100 p-5 shadow-sm">
+        <div className="rounded-xl border border-sky-200 bg-sky-50 p-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
               <div className="mt-1 h-10 w-10 animate-spin rounded-full border-2 border-sky-200 border-t-sky-600" />

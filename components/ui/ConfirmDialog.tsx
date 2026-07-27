@@ -83,10 +83,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       }
       size="sm"
       centered
-      radius="lg"
-      shadow="xl"
-      overlayProps={{ blur: 4, opacity: 0.28 }}
-      transitionProps={{ transition: "pop", duration: 180 }}
+      radius="md"
+      shadow="md"
+      overlayProps={{ opacity: 0.32 }}
+      transitionProps={{ transition: "fade", duration: 150 }}
       closeOnClickOutside={!isSubmitting}
       closeOnEscape={!isSubmitting}
     >

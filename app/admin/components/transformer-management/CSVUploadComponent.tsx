@@ -4,6 +4,7 @@ import { bulkUpsertTransformers } from "@/app/api/action/User";
 import { SECURITY_LIMITS } from "../../constants/admin.constants";
 import { parseCSVLine, validateTransformerData, formatFileSize } from "../../utils/csvParser";
 import { CSVUploadProgress } from "../../types/admin.types";
+import { FileUp } from "lucide-react";
 
 export function CSVUploadComponent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -204,10 +205,10 @@ export function CSVUploadComponent() {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+    <div className="ui-panel p-6">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          📊 นำเข้าข้อมูลจากไฟล์ CSV
+        <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <FileUp className="h-5 w-5 text-pea-700" /> นำเข้าข้อมูลจากไฟล์ CSV
         </h3>
         <p className="text-sm text-gray-600">
           อัพโหลดไฟล์ CSV เพื่อเพิ่มหม้อแปลงหลายรายการพร้อมกัน
@@ -225,7 +226,7 @@ export function CSVUploadComponent() {
           accept=".csv"
           onChange={handleFileSelect}
           disabled={uploadProgress.isUploading}
-          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 disabled:opacity-50"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-pea-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-pea-800 hover:file:bg-pea-100 disabled:opacity-50"
         />
         
         <div className="mt-2 text-xs text-gray-500">

@@ -8,8 +8,8 @@ export function TransformerManagement() {
       {/* Page Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">จัดการหม้อแปลง</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-xl font-bold text-[var(--app-text)]">จัดการหม้อแปลง</h2>
+          <p className="mt-1 text-sm text-[var(--app-text-muted)]">
             จัดการข้อมูลหม้อแปลง เพิ่ม แก้ไข ลบ และนำเข้าข้อมูลจากไฟล์ CSV
           </p>
         </div>

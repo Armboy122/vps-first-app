@@ -35,8 +35,15 @@ interface SummaryCardProps {
   value: number;
   hint: string;
   icon: React.ComponentType<{ className?: string }>;
-  tone: string;
+  tone: "critical" | "info" | "neutral" | "warning";
 }
+
+const toneClasses = {
+  critical: "border-red-200 bg-red-50 text-red-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-950",
+  info: "border-sky-200 bg-sky-50 text-sky-950",
+  neutral: "border-[var(--app-border)] bg-[var(--app-surface-subtle)] text-[var(--app-text)]",
+};
 
 const SummaryCard = ({
   title,
@@ -45,15 +52,15 @@ const SummaryCard = ({
   icon: Icon,
   tone,
 }: SummaryCardProps) => (
-  <div className={`rounded-xl p-4 ring-1 ${tone}`}>
-    <div className="mb-2 flex items-center gap-2">
-      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/70">
+  <div className={`min-w-0 border-r px-3 py-2.5 last:border-r-0 ${toneClasses[tone]}`}>
+    <div className="mb-1 flex items-center gap-2">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-white/75">
         <Icon className="h-4 w-4" />
       </div>
-      <span className="text-xs font-semibold">{title}</span>
+      <span className="truncate text-xs font-semibold">{title}</span>
     </div>
-    <div className="text-2xl font-bold">{value}</div>
-    <div className="mt-0.5 text-xs opacity-80">{hint}</div>
+    <div className="text-2xl font-bold tabular-nums">{value}</div>
+    <div className="mt-0.5 truncate text-xs opacity-80">{hint}</div>
   </div>
 );
 
@@ -102,9 +109,9 @@ export const OMSStatusSummary = memo(
 
     if (showFilteredSummary && filteredRequests.length === 0) {
       return (
-        <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/60">
+        <div className="ui-panel p-4">
           <div className="mb-2 flex items-center gap-2">
-            <Info className="h-4 w-4 text-blue-500" />
+            <Info className="h-4 w-4 text-[var(--app-info)]" />
             <h2 className="text-sm font-semibold text-slate-700">
               ไม่พบข้อมูลตามเงื่อนไขที่กำหนด
             </h2>
@@ -117,10 +124,10 @@ export const OMSStatusSummary = memo(
     }
 
     return (
-      <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-slate-200/60">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <section className="ui-panel overflow-hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[var(--app-border)] px-4 py-3">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-blue-600" />
+            <BarChart3 className="h-4 w-4 text-pea-700" />
             <div>
               <h2 className="text-sm font-semibold text-slate-800">
                 สรุปสถานะรวม
@@ -130,60 +137,60 @@ export const OMSStatusSummary = memo(
               </p>
             </div>
           </div>
-          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+          <span className="rounded-md bg-[var(--app-frame)] px-2.5 py-1 text-xs font-medium text-[var(--app-text-muted)]">
             {summaryData.isFiltered
               ? `แสดง ${filteredRequests.length} จาก ${requests.length} รายการ`
               : `ทั้งหมด ${summaryData.totalItems} รายการ`}
           </span>
         </div>
 
-        <div className="rounded-xl border border-slate-200/70 bg-slate-50/70 p-3">
-          <div className="mb-3 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <div>
+          <div className="flex items-center gap-2 px-4 py-2.5">
+            <AlertTriangle className="h-4 w-4 text-[var(--app-warning)]" />
             <h3 className="text-sm font-semibold text-slate-800">
               งานคงค้างที่อนุมัติแล้ว แต่ยังไม่ลง OMS
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-5">
+          <div className="grid overflow-hidden border-t border-[var(--app-border)] sm:grid-cols-2 xl:grid-cols-5 [&>*]:border-[var(--app-border)]">
             <SummaryCard
               title={OMS_URGENCY_BUCKETS[0].label}
               value={summaryData.urgencyBucketCounts.OVERDUE}
               hint={OMS_URGENCY_BUCKETS[0].hint}
               icon={AlertTriangle}
-              tone="bg-red-50 text-red-900 ring-red-200/70"
+              tone="critical"
             />
             <SummaryCard
               title={OMS_URGENCY_BUCKETS[1].label}
               value={summaryData.urgencyBucketCounts.WITHIN_3_BUSINESS_DAYS}
               hint={OMS_URGENCY_BUCKETS[1].hint}
               icon={CalendarClock}
-              tone="bg-orange-50 text-orange-900 ring-orange-200/70"
+              tone="warning"
             />
             <SummaryCard
               title={OMS_URGENCY_BUCKETS[2].label}
               value={summaryData.urgencyBucketCounts.BUSINESS_DAYS_4_TO_7}
               hint={OMS_URGENCY_BUCKETS[2].hint}
               icon={Clock3}
-              tone="bg-amber-50 text-amber-900 ring-amber-200/70"
+              tone="warning"
             />
             <SummaryCard
               title={OMS_URGENCY_BUCKETS[3].label}
               value={summaryData.urgencyBucketCounts.BUSINESS_DAYS_8_TO_15}
               hint={OMS_URGENCY_BUCKETS[3].hint}
               icon={CalendarCheck2}
-              tone="bg-emerald-50 text-emerald-900 ring-emerald-200/70"
+              tone="neutral"
             />
             <SummaryCard
               title={OMS_URGENCY_BUCKETS[4].label}
               value={summaryData.urgencyBucketCounts.OVER_15_BUSINESS_DAYS}
               hint={OMS_URGENCY_BUCKETS[4].hint}
               icon={CalendarCheck2}
-              tone="bg-blue-50 text-blue-900 ring-blue-200/70"
+              tone="info"
             />
           </div>
         </div>
-      </div>
+      </section>
     );
   },
 );

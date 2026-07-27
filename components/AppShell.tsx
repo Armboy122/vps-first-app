@@ -22,14 +22,14 @@ export default function AppShell({
     <>
       {!hideChrome && <Navbar />}
 
-      <main className={`relative z-10 flex-grow ${hideChrome ? "" : "pt-20"}`}>
+      <main className={`relative z-10 flex-grow ${hideChrome ? "" : "pt-16"}`}>
         {children}
       </main>
 
       {!hideChrome && (
-        <footer className="relative z-10 border-t border-slate-200/80 bg-white/70 text-center text-sm text-slate-600 backdrop-blur-xl">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-            <p className="font-medium text-slate-600">ระบบจัดการคำขอดับไฟ</p>
+        <footer className="relative z-10 border-t border-[var(--app-border)] bg-white text-center text-sm text-[var(--app-text-muted)]">
+          <div className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
+            <p className="font-medium">ระบบจัดการคำขอดับไฟ</p>
             <p>&copy; 2024-2026 PeaTransformer</p>
           </div>
         </footer>

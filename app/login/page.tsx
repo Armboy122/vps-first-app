@@ -6,32 +6,11 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import {
   ArrowRight,
-  GaugeCircle,
   KeyRound,
   LockKeyhole,
-  Orbit,
-  ScanSearch,
   ShieldCheck,
   UserRound,
 } from "lucide-react";
-
-const highlights = [
-  {
-    title: "ควบคุมงานคงค้างให้ไม่หลุดกำหนด",
-    description: "เห็นงานที่อนุมัติแล้วแต่ยังไม่ลง OMS ได้เร็วพอที่จะตัดสินใจและเร่งติดตาม",
-    icon: GaugeCircle,
-  },
-  {
-    title: "มองเครือข่ายไฟฟ้าแบบเป็นระบบ",
-    description: "ตรวจสอบหม้อแปลง พื้นที่ และลำดับความเร่งด่วนจากมุมมองที่ออกแบบมาสำหรับงานภาคสนาม",
-    icon: Orbit,
-  },
-  {
-    title: "ตัดสินใจไวขึ้นในช่วงเวลาสำคัญ",
-    description: "ข้อมูลที่ถูกจัดระเบียบดีช่วยลดการสลับจอและลดความเสี่ยงจากการมองข้ามสถานะสำคัญ",
-    icon: ScanSearch,
-  },
-];
 
 export default function LoginPage() {
   const [employeeId, setEmployeeId] = useState("");
@@ -76,8 +55,8 @@ export default function LoginPage() {
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center px-4 py-10">
-        <div className="app-surface w-full max-w-md rounded-[28px] px-8 py-10 text-center">
-          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-pea-200/80 bg-white/80 shadow-sm">
+        <div className="ui-panel w-full max-w-md px-8 py-10 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-pea-100">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-pea-200 border-t-pea-700" />
           </div>
           <h2 className="mt-5 text-2xl font-bold text-slate-900">
@@ -96,102 +75,68 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-10 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-5xl">
-        <div className="overflow-hidden rounded-[32px] border border-white/70 bg-white/70 shadow-[0_30px_90px_rgba(80,30,150,0.10)] backdrop-blur-2xl">
-          <div className="grid lg:grid-cols-[1.1fr_0.9fr]">
-            {/* Left — branding & highlights */}
-            <section className="relative hidden overflow-hidden bg-gradient-to-br from-pea-700 via-pea-800 to-pea-900 px-10 py-12 lg:block">
-              {/* Decorative circles */}
-              <div aria-hidden="true" className="absolute inset-0">
-                <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-pea-600/20" />
-                <div className="absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-pea-500/10" />
-                <div className="absolute right-12 top-1/2 h-32 w-32 rounded-full border border-white/10" />
-              </div>
-
-              <div className="relative flex h-full flex-col justify-between">
-                {/* Logo & name */}
+    <div className="flex min-h-screen items-center justify-center bg-[var(--app-frame)] px-4 py-8 sm:px-6">
+      <div className="mx-auto w-full max-w-4xl overflow-hidden rounded-2xl border border-[var(--app-border)] bg-white shadow-[var(--app-shadow-raised)]">
+        <div className="grid lg:grid-cols-[1fr_0.92fr]">
+          <section className="relative hidden min-h-[610px] overflow-hidden bg-pea-900 lg:block">
+            <Image
+              src="/transformer-login-hero.png"
+              alt="อุปกรณ์ระบบจำหน่ายไฟฟ้า"
+              fill
+              className="object-cover opacity-65"
+              priority
+              sizes="(min-width: 1024px) 460px, 0px"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-pea-900 via-pea-900/65 to-pea-900/20" />
+            <div className="absolute inset-x-0 bottom-0 p-8 text-white">
+              <div className="mb-5 flex items-center gap-3">
+                <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white">
+                  <Image
+                    src="/peatransformer-logo.png"
+                    alt=""
+                    width={34}
+                    height={30}
+                    className="h-8 w-auto"
+                  />
+                </span>
                 <div>
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15 backdrop-blur-sm">
-                      <Image
-                        src="/peatransformer-logo.png"
-                        alt="PeaTransformer"
-                        width={36}
-                        height={36}
-                        className="h-8 w-8 object-contain"
-                        priority
-                      />
-                    </div>
-                    <div>
-                      <p className="text-lg font-bold text-white">
-                        PeaTransformer
-                      </p>
-                      <p className="text-xs font-medium tracking-wider text-pea-200/80">
-                        Operations Platform
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Hero illustration */}
-                  <div className="mt-8 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-                    <Image
-                      src="/transformer-login-hero.png"
-                      alt="Transformer illustration"
-                      width={400}
-                      height={300}
-                      className="h-auto w-full rounded-xl"
-                      priority
-                    />
-                  </div>
-                </div>
-
-                {/* Highlights */}
-                <div className="mt-8 space-y-4">
-                  {highlights.map((h) => (
-                    <div key={h.title} className="flex gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10">
-                        <h.icon className="h-4 w-4 text-pea-200" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-white">
-                          {h.title}
-                        </p>
-                        <p className="mt-0.5 text-sm leading-relaxed text-pea-200/80">
-                          {h.description}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                  <p className="font-bold">PeaTransformer</p>
+                  <p className="text-sm text-pea-200">ระบบจัดการคำขอดับไฟ</p>
                 </div>
               </div>
-            </section>
+              <h1 className="max-w-sm text-2xl font-bold leading-snug">
+                ติดตามงานอนุมัติและสถานะ OMS ในพื้นที่ทำงานเดียว
+              </h1>
+              <p className="mt-3 max-w-sm text-sm leading-6 text-pea-100">
+                สำหรับเจ้าหน้าที่การไฟฟ้าส่วนภูมิภาคที่รับผิดชอบงานดับไฟตามแผน
+              </p>
+            </div>
+          </section>
 
-            {/* Right — login form */}
-            <section className="bg-white/90 px-6 py-10 sm:px-10 lg:px-12 lg:py-12">
+          <section className="px-6 py-9 sm:px-10 lg:px-12 lg:py-12">
               <div className="mx-auto max-w-sm">
-                {/* Mobile logo */}
                 <div className="mb-6 flex items-center gap-3 lg:hidden">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-pea-700">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-pea-100">
                     <Image
                       src="/peatransformer-logo.png"
                       alt="PeaTransformer"
                       width={28}
                       height={28}
-                      className="h-7 w-7 object-contain"
+                      className="h-8 w-auto object-contain"
                       priority
                     />
                   </div>
-                  <p className="text-lg font-bold text-slate-900">
-                    PeaTransformer
-                  </p>
+                  <div>
+                    <p className="font-bold text-[var(--app-text)]">PeaTransformer</p>
+                    <p className="text-xs text-[var(--app-text-muted)]">ระบบจัดการคำขอดับไฟ</p>
+                  </div>
                 </div>
 
                 <div className="mb-8">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-900">
+                  <h2 className="text-2xl font-bold tracking-tight text-[var(--app-text)]">
                     เข้าสู่ระบบ
                   </h2>
-                  <p className="mt-2 text-[15px] leading-relaxed text-slate-600">
+                  <p className="mt-2 text-[15px] leading-relaxed text-[var(--app-text-muted)]">
                     ใช้รหัสพนักงานและรหัสผ่านเพื่อเข้าสู่พื้นที่ปฏิบัติการ
                   </p>
                 </div>
@@ -212,7 +157,7 @@ export default function LoginPage() {
                         type="text"
                         required
                         autoComplete="username"
-                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-base text-slate-900 shadow-sm transition-all placeholder:text-slate-500 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
+                        className="ui-input block w-full py-3 pl-10 pr-4 text-base placeholder:text-slate-500"
                         placeholder="เช่น 540123"
                         value={employeeId}
                         onChange={(e) => setEmployeeId(e.target.value)}
@@ -236,7 +181,7 @@ export default function LoginPage() {
                         type="password"
                         required
                         autoComplete="current-password"
-                        className="block w-full rounded-xl border border-slate-200 bg-slate-50/60 py-3 pl-10 pr-4 text-base text-slate-900 shadow-sm transition-all placeholder:text-slate-500 focus:border-pea-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-pea-100"
+                        className="ui-input block w-full py-3 pl-10 pr-4 text-base placeholder:text-slate-500"
                         placeholder="กรอกรหัสผ่าน"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -248,7 +193,7 @@ export default function LoginPage() {
                   <div className="flex items-center justify-between">
                     <label
                       htmlFor="remember-me"
-                      className="flex cursor-pointer items-center gap-2.5 text-sm text-slate-600"
+                      className="flex min-h-11 cursor-pointer items-center gap-2.5 text-sm text-[var(--app-text-body)]"
                     >
                       <input
                         id="remember-me"
@@ -260,21 +205,21 @@ export default function LoginPage() {
                       />
                       <span className="font-medium">จดจำฉัน</span>
                     </label>
-                    <div className="inline-flex items-center gap-1.5 text-sm text-slate-500">
+                    <div className="inline-flex items-center gap-1.5 text-xs text-[var(--app-text-muted)]">
                       <LockKeyhole className="h-3 w-3" />
                       SSL Encrypted
                     </div>
                   </div>
 
                   {error && (
-                    <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                    <div role="alert" className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-800">
                       {error}
                     </div>
                   )}
 
                   <button
                     type="submit"
-                    className="group inline-flex w-full items-center justify-center gap-2 rounded-xl bg-pea-700 px-4 py-3 text-base font-semibold text-white shadow-pea transition-all hover:bg-pea-800 hover:shadow-pea-lg focus:outline-none focus:ring-2 focus:ring-pea-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="group inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-pea-700 px-4 py-3 text-base font-semibold text-white transition-colors hover:bg-pea-800 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={isLoading}
                   >
                     {isLoading ? (
@@ -296,8 +241,7 @@ export default function LoginPage() {
                   <span>สำหรับพนักงาน กฟภ. เท่านั้น</span>
                 </div>
               </div>
-            </section>
-          </div>
+          </section>
         </div>
       </div>
     </div>

@@ -6,34 +6,44 @@
 @tailwind utilities;
 
 :root {
-  --app-bg: #f4f7f5;
-  --app-surface: rgba(255, 255, 255, 0.84);
+  --app-bg: #f5f7f5;
+  --app-frame: #eff3f0;
+  --app-surface: #ffffff;
   --app-surface-strong: #ffffff;
-  --app-border: rgba(15, 23, 42, 0.12);
-  --app-text: #10212f;
-  --app-text-muted: #3d4d5c;
+  --app-surface-subtle: #f7f9f7;
+  --app-border: #dce4de;
+  --app-border-strong: #c8d3cb;
+  --app-text: #16211a;
+  --app-text-body: #314139;
+  --app-text-muted: #607067;
   --app-pea: #245d42;
-  --app-pea-strong: #163826;
-  --app-amber: #b85f0d;
-  --app-shadow: 0 22px 70px rgba(15, 23, 42, 0.08);
+  --app-pea-hover: #1b4933;
+  --app-pea-strong: #143827;
+  --app-pea-soft: #eaf3ed;
+  --app-focus: #2f7554;
+  --app-danger: #b42318;
+  --app-danger-soft: #fef3f2;
+  --app-warning: #8a4b08;
+  --app-warning-soft: #fff7e8;
+  --app-success: #267447;
+  --app-success-soft: #ecf8f0;
+  --app-info: #245f91;
+  --app-info-soft: #eef6fc;
+  --app-shadow: 0 1px 3px rgba(20, 33, 26, 0.08);
+  --app-shadow-raised: 0 6px 18px rgba(20, 33, 26, 0.1);
   color-scheme: light;
 }
 
 html {
   scroll-behavior: smooth;
-  background:
-    radial-gradient(circle at top, rgba(36, 93, 66, 0.08), transparent 30%),
-    linear-gradient(180deg, #f8faf8 0%, #f3f6f4 100%);
+  background: var(--app-bg);
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   color: var(--app-text);
-  background:
-    radial-gradient(circle at 20% 0%, rgba(36, 93, 66, 0.08), transparent 28%),
-    radial-gradient(circle at 80% 12%, rgba(245, 158, 11, 0.06), transparent 24%),
-    linear-gradient(180deg, rgba(248, 250, 248, 0.92), rgba(243, 246, 244, 1));
+  background: var(--app-bg);
   font-family: var(--font-sans), "IBM Plex Sans Thai", "Noto Sans Thai", sans-serif;
   font-size: 16px;
   line-height: 1.65;
@@ -42,27 +52,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: -1;
-  opacity: 0.45;
-  background-image:
-    linear-gradient(rgba(15, 23, 42, 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(15, 23, 42, 0.028) 1px, transparent 1px);
-  background-size: 28px 28px;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.82), transparent 92%);
-}
-
 ::selection {
   color: #ffffff;
   background: var(--app-pea);
 }
 
 :focus-visible {
-  outline: 2px solid rgba(36, 93, 66, 0.7);
+  outline: 2px solid var(--app-focus);
   outline-offset: 2px;
 }
 
@@ -73,21 +69,20 @@ h4,
 h5,
 h6,
 .font-display {
-  font-family: var(--font-display), "Noto Serif Thai", serif;
-  letter-spacing: -0.01em;
+  font-family: var(--font-sans), "IBM Plex Sans Thai", sans-serif;
+  letter-spacing: -0.012em;
 }
 
 .app-surface {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
   box-shadow: var(--app-shadow);
-  backdrop-filter: blur(20px);
 }
 
 .app-card {
   background: var(--app-surface-strong);
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--app-border);
+  box-shadow: none;
 }
 
 .app-muted {
@@ -107,7 +102,7 @@ textarea {
 
 /* Improve Thai text readability globally */
 p, li, td, th, label, span, div {
-  line-height: 1.65;
+  line-height: 1.55;
 }
 
 /* Prevent overly faint text — minimum contrast overrides */
@@ -116,7 +111,7 @@ p, li, td, th, label, span, div {
 }
 
 .text-slate-500 {
-  color: #556270 !important;
+  color: #607067 !important;
 }
 
 .text-gray-400 {
@@ -124,7 +119,28 @@ p, li, td, th, label, span, div {
 }
 
 .text-gray-500 {
-  color: #556270 !important;
+  color: #607067 !important;
+}
+
+.ui-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 12px;
+  background: var(--app-surface);
+}
+
+.ui-input {
+  min-height: 44px;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-text);
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.ui-input:focus {
+  border-color: var(--app-focus);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 117, 84, 0.14);
 }
 
 .app-scrollbar::-webkit-scrollbar {

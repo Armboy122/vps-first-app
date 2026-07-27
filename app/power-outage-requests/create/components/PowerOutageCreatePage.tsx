@@ -347,7 +347,7 @@ export default function PowerOutageCreatePage({
     <LocalizationProvider dateAdapter={AdapterDayjs}>
       <div className="space-y-6">
         {/* Step Indicator Bar */}
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="ui-panel overflow-hidden">
           <div className="px-4 py-4 sm:px-6">
             <div className="flex items-center justify-between">
               {STEPS.map((step, idx) => {
@@ -365,7 +365,7 @@ export default function PowerOutageCreatePage({
                       }}
                       className={`flex items-center gap-2.5 rounded-xl px-3 py-2 transition-all cursor-pointer ${
                         isActive
-                          ? "bg-blue-50 ring-2 ring-blue-200"
+                          ? "bg-pea-50 ring-2 ring-pea-200"
                           : isCompleted
                             ? "bg-emerald-50 hover:bg-emerald-100"
                             : "bg-slate-50 opacity-60"
@@ -373,7 +373,7 @@ export default function PowerOutageCreatePage({
                     >
                       <div className={`flex items-center justify-center w-8 h-8 rounded-lg ${
                         isActive
-                          ? "bg-blue-600 text-white"
+                          ? "bg-pea-700 text-white"
                           : isCompleted
                             ? "bg-emerald-600 text-white"
                             : "bg-slate-200 text-slate-500"
@@ -382,10 +382,10 @@ export default function PowerOutageCreatePage({
                       </div>
                       <div className="hidden sm:block text-left">
                         <p className={`text-xs font-semibold uppercase tracking-wider ${
-                          isActive ? "text-blue-700" : isCompleted ? "text-emerald-700" : "text-slate-500"
+                          isActive ? "text-pea-700" : isCompleted ? "text-emerald-700" : "text-slate-500"
                         }`}>Step {step.num}</p>
                         <p className={`text-sm font-medium ${
-                          isActive ? "text-blue-900" : isCompleted ? "text-emerald-900" : "text-slate-600"
+                          isActive ? "text-pea-900" : isCompleted ? "text-emerald-900" : "text-slate-600"
                         }`}>{step.label}</p>
                       </div>
                     </button>
@@ -425,11 +425,11 @@ export default function PowerOutageCreatePage({
 
         {/* Queue indicator when in step 2 with items */}
         {currentStep === 2 && requests.length > 0 && !justAdded && (
-          <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 flex items-center gap-3">
-            <div className="flex-shrink-0 w-7 h-7 rounded-full bg-blue-200 flex items-center justify-center text-sm font-bold text-blue-700">
+          <div className="flex items-center gap-3 rounded-xl border border-pea-200 bg-pea-50 px-4 py-3">
+            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-md bg-pea-200 text-sm font-bold text-pea-800">
               {requests.length}
             </div>
-            <p className="text-sm text-blue-800">
+            <p className="text-sm text-pea-900">
               มี <strong>{requests.length}</strong> รายการในคิวรอบันทึก — เลือกหม้อแปลงเพิ่มได้เลย
             </p>
           </div>
@@ -437,7 +437,7 @@ export default function PowerOutageCreatePage({
 
         {/* ฟอร์มหลัก (Steps 1 & 2) */}
         {currentStep <= 2 && (
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="ui-panel overflow-hidden">
           <form onSubmit={handleSubmit(onSubmit)} className="p-5 md:p-6 space-y-6">
             <ImprovedFormFields
               register={register}
@@ -515,7 +515,7 @@ export default function PowerOutageCreatePage({
 
         {/* Step 3: Review & Submit */}
         {currentStep === 3 && (
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="ui-panel overflow-hidden">
           <div className="p-5 md:p-6 space-y-5">
             <div>
               <h2 className="text-lg font-bold text-slate-900 tracking-tight">ตรวจทานข้อมูลก่อนยืนยัน</h2>
@@ -526,15 +526,15 @@ export default function PowerOutageCreatePage({
             <div className="rounded-xl border border-slate-200 divide-y divide-slate-100">
               {/* วันที่และเวลา */}
               <div className="p-4 flex items-start gap-3">
-                <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                  <CalendarDays className="w-4 h-4 text-blue-600" />
+                <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-pea-50">
+                  <CalendarDays className="h-4 w-4 text-pea-700" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-500 uppercase tracking-wider">วันที่และเวลา</p>
                   <p className="text-base font-semibold text-slate-900 mt-0.5">{formatReviewDate(watchedOutageDate)}</p>
                   <p className="text-[15px] text-slate-700 mt-0.5">{watchedStartTime || "-"} – {watchedEndTime || "-"}</p>
                 </div>
-                <button type="button" onClick={() => setCurrentStep(1)} className="text-sm text-blue-600 hover:text-blue-800 font-medium cursor-pointer">แก้ไข</button>
+                <button type="button" onClick={() => setCurrentStep(1)} className="min-h-10 cursor-pointer rounded-md px-2 text-sm font-medium text-pea-700 hover:bg-pea-50">แก้ไข</button>
               </div>
               {/* สถานที่ */}
               <div className="p-4 flex items-start gap-3">
@@ -547,7 +547,7 @@ export default function PowerOutageCreatePage({
                   {watchedGisDetails && <p className="text-[15px] text-slate-700 mt-0.5">{watchedGisDetails}</p>}
                   {watchedArea && <p className="text-sm text-slate-600 mt-0.5">พื้นที่: {watchedArea}</p>}
                 </div>
-                <button type="button" onClick={() => setCurrentStep(2)} className="text-sm text-blue-600 hover:text-blue-800 font-medium cursor-pointer">แก้ไข</button>
+                <button type="button" onClick={() => setCurrentStep(2)} className="min-h-10 cursor-pointer rounded-md px-2 text-sm font-medium text-pea-700 hover:bg-pea-50">แก้ไข</button>
               </div>
             </div>
 
@@ -587,7 +587,7 @@ export default function PowerOutageCreatePage({
         )}
 
         {/* นำเข้าข้อมูลจาก CSV */}
-        <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 overflow-hidden">
+        <div className="ui-panel overflow-hidden">
           <div className="p-5 md:p-6 space-y-1">
             <h2 className="text-lg font-bold text-slate-900 tracking-tight">นำเข้าจากไฟล์ CSV</h2>
             <p className="text-sm text-slate-600">อัปโหลดไฟล์ CSV เพื่อเพิ่มหลายรายการพร้อมกัน (ไม่ต้องผ่านขั้นตอนด้านบน)</p>

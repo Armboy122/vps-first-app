@@ -17,6 +17,19 @@ import { useBranches } from "@/hooks/queries/useBranches";
 import { useCreateUser, useCheckEmployeeId } from "@/hooks/queries/useUsers";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FeedbackBanner } from "@/app/admin/components/shared/FeedbackBanner";
+import {
+  BadgeCheck,
+  Building2,
+  CheckCircle2,
+  CircleAlert,
+  GitBranch,
+  Info,
+  KeyRound,
+  LockKeyhole,
+  Search,
+  ShieldCheck,
+  UserRound,
+} from "lucide-react";
 
 type WorkCenter = {
   id: number;
@@ -140,7 +153,7 @@ export default function CreateUserForm() {
   if (workCentersLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-600"></div>
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-pea-200 border-t-pea-700" />
         <span className="ml-3 text-gray-600">กำลังโหลดข้อมูล...</span>
       </div>
     );
@@ -180,7 +193,7 @@ export default function CreateUserForm() {
           name="employeeId"
           error={errors.employeeId}
           required
-          icon="🏷️"
+          icon={<BadgeCheck className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="employeeId"
@@ -199,11 +212,11 @@ export default function CreateUserForm() {
                 }
                 icon={
                   employeeIdCheck.isChecking ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-blue-600"></div>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-pea-200 border-t-pea-700" />
                   ) : employeeIdCheck.exists ? (
-                    <span className="text-red-500 text-lg">❌</span>
+                    <CircleAlert className="h-5 w-5 text-red-600" />
                   ) : employeeIdCheck.message && !employeeIdCheck.error ? (
-                    <span className="text-green-500 text-lg">✅</span>
+                    <CheckCircle2 className="h-5 w-5 text-green-700" />
                   ) : null
                 }
               />
@@ -219,15 +232,7 @@ export default function CreateUserForm() {
                   : "text-green-600"
               }`}
             >
-              <span className="mr-1">
-                {employeeIdCheck.isChecking
-                  ? "🔍"
-                  : employeeIdCheck.exists
-                    ? "❌"
-                    : employeeIdCheck.error
-                      ? "⚠️"
-                      : "✅"}
-              </span>
+              {employeeIdCheck.isChecking ? <Search className="mr-1 h-4 w-4" /> : employeeIdCheck.exists || employeeIdCheck.error ? <CircleAlert className="mr-1 h-4 w-4" /> : <CheckCircle2 className="mr-1 h-4 w-4" />}
               {employeeIdCheck.isChecking
                 ? "กำลังตรวจสอบ..."
                 : employeeIdCheck.message}
@@ -237,7 +242,7 @@ export default function CreateUserForm() {
           {/* Password Preview */}
           {employeeId && employeeId.length >= 6 && !employeeIdCheck.exists && (
             <p className="text-sm text-green-600 flex items-center">
-              <span className="mr-1">🔐</span>
+              <LockKeyhole className="mr-1 h-4 w-4" />
               รหัสผ่านจะถูกตั้งเป็น: {employeeId}
             </p>
           )}
@@ -249,7 +254,7 @@ export default function CreateUserForm() {
           name="password"
           error={errors.password}
           required
-          icon="🔐"
+          icon={<KeyRound className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="password"
@@ -263,14 +268,14 @@ export default function CreateUserForm() {
                 error={errors.password}
                 icon={
                   employeeId && employeeId.length >= 6 ? (
-                    <span className="text-green-500">🔒</span>
+                    <LockKeyhole className="h-5 w-5 text-green-700" />
                   ) : undefined
                 }
               />
             )}
           />
           <p className="text-xs text-gray-500">
-            💡 รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ
+            รหัสผ่านจะถูกตั้งให้เหมือนกับรหัสพนักงานโดยอัตโนมัติ
             ผู้ใช้สามารถเปลี่ยนได้ภายหลัง
           </p>
         </FormField>
@@ -281,7 +286,7 @@ export default function CreateUserForm() {
           name="fullName"
           error={errors.fullName}
           required
-          icon="👤"
+          icon={<UserRound className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="fullName"
@@ -303,7 +308,7 @@ export default function CreateUserForm() {
           name="workCenterId"
           error={errors.workCenterId}
           required
-          icon="🏢"
+          icon={<Building2 className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="workCenterId"
@@ -326,7 +331,7 @@ export default function CreateUserForm() {
           name="branchId"
           error={errors.branchId}
           required
-          icon="🏪"
+          icon={<GitBranch className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="branchId"
@@ -358,7 +363,7 @@ export default function CreateUserForm() {
           name="role"
           error={errors.role}
           required
-          icon="👑"
+          icon={<ShieldCheck className="h-4 w-4 text-pea-700" />}
         >
           <Controller
             name="role"
@@ -389,10 +394,10 @@ export default function CreateUserForm() {
               employeeIdCheck.isChecking
                 ? undefined
                 : employeeIdCheck.exists
-                  ? "❌"
+                  ? <CircleAlert className="h-4 w-4" />
                   : createUserMutation.isPending
                     ? undefined
-                    : "✨"
+                    : <CheckCircle2 className="h-4 w-4" />
             }
           >
             {employeeIdCheck.exists
@@ -402,9 +407,9 @@ export default function CreateUserForm() {
         </div>
 
         {/* Info Panel */}
-        <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-          <h4 className="font-semibold text-blue-800 mb-2">📝 ข้อมูลสำคัญ:</h4>
-          <ul className="text-sm text-blue-700 space-y-1">
+        <div className="mt-6 rounded-lg border border-sky-200 bg-sky-50 p-4">
+          <h4 className="mb-2 flex items-center gap-2 font-semibold text-sky-900"><Info className="h-4 w-4" />ข้อมูลสำคัญ</h4>
+          <ul className="space-y-1 text-sm text-sky-900">
             <li>• ระบบจะตรวจสอบรหัสพนักงานซ้ำอัตโนมัติขณะพิมพ์</li>
             <li>• รหัสผ่านเริ่มต้นจะเป็นรหัสพนักงาน</li>
             <li>• ผู้ใช้สามารถเปลี่ยนรหัสผ่านได้ภายหลัง</li>

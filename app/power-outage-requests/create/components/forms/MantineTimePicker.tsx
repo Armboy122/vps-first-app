@@ -88,10 +88,10 @@ export const MantineTimePicker: React.FC<MantineTimePickerProps> = ({
             {/* Helper text */}
             <div className="text-xs text-gray-500">
               {minTime && maxTime && (
-                <span>⏰ เวลาที่อนุญาต: {minTime} - {maxTime} น.</span>
+                <span>เวลาที่อนุญาต: {minTime} - {maxTime} น.</span>
               )}
-              <div className="mt-1 text-blue-600">
-                💡 คลิกที่ช่องเวลาเพื่อเลือกจากดรอปดาวน์ (เวลานอกช่วงจะไม่สามารถเลือกได้)
+              <div className="mt-1 text-pea-700">
+                คลิกที่ช่องเวลาเพื่อเลือกจากดรอปดาวน์ (เวลานอกช่วงจะไม่สามารถเลือกได้)
               </div>
             </div>
           </div>

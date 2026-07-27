@@ -6,6 +6,7 @@ import { ROLE_TRANSLATIONS, ROLE_COLORS } from "../../constants/admin.constants"
 import { updateUserRole, resetUserPassword, deleteUser } from "@/app/api/action/User";
 import { ConfirmDialog } from "../shared/ConfirmDialog";
 import { FeedbackBanner } from "../shared/FeedbackBanner";
+import { ChevronDown, Check, KeyRound, Trash2 } from "lucide-react";
 
 interface UserRowProps {
   user: User;
@@ -194,7 +195,7 @@ export function UserRow({ user }: UserRowProps) {
           </td>
         </tr>
       )}
-      <tr className="hover:bg-gray-50 transition-colors">
+      <tr className="transition-colors hover:bg-[var(--app-surface-subtle)]">
         {/* User Info */}
         <td className="px-6 py-4 whitespace-nowrap">
           <div>
@@ -210,13 +211,13 @@ export function UserRow({ user }: UserRowProps) {
               onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
               aria-haspopup="listbox"
               aria-expanded={isRoleMenuOpen}
-              className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium cursor-pointer ${
+              className={`inline-flex min-h-8 cursor-pointer items-center rounded-md px-2.5 py-0.5 text-xs font-medium ${
                 ROLE_COLORS[user.role]
               } hover:opacity-80 transition-opacity`}
               disabled={updateRoleMutation.isPending}
             >
               {ROLE_TRANSLATIONS[user.role]}
-              <span className="ml-1">▼</span>
+              <ChevronDown className="ml-1 h-3 w-3" />
             </button>
 
             {/* Role Dropdown Menu */}
@@ -224,7 +225,7 @@ export function UserRow({ user }: UserRowProps) {
               <div
                 role="listbox"
                 aria-label="เลือกบทบาท"
-                className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200"
+                className="absolute z-10 mt-1 w-48 rounded-md border border-[var(--app-border)] bg-white shadow-[var(--app-shadow-raised)]"
               >
                 <div className="py-1">
                   {Object.entries(ROLE_TRANSLATIONS).map(([role, label]) => (
@@ -234,12 +235,12 @@ export function UserRow({ user }: UserRowProps) {
                       aria-selected={user.role === role}
                       onClick={() => handleRoleChange(role as Role)}
                       className={`block w-full text-left px-4 py-2 text-sm cursor-pointer hover:bg-gray-100 transition-colors ${
-                        user.role === role ? "bg-blue-50 text-blue-700" : "text-gray-700"
+                        user.role === role ? "bg-pea-50 text-pea-800" : "text-gray-700"
                       }`}
                       disabled={updateRoleMutation.isPending}
                     >
                       {label}
-                      {user.role === role && <span className="ml-2">✓</span>}
+                      {user.role === role && <Check className="ml-2 inline h-3.5 w-3.5" />}
                     </button>
                   ))}
                 </div>
@@ -260,19 +261,19 @@ export function UserRow({ user }: UserRowProps) {
             <button
               onClick={handleResetPassword}
               disabled={resetPasswordMutation.isPending}
-              className="text-blue-600 hover:text-blue-900 transition-colors disabled:opacity-50"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--app-border)] text-pea-700 transition-colors hover:bg-pea-50 disabled:opacity-50"
               title="รีเซ็ตรหัสผ่าน"
             >
-              🔐
+              <KeyRound className="h-4 w-4" />
             </button>
             
             <button
               onClick={handleDeleteUser}
               disabled={deleteUserMutation.isPending}
-              className="text-red-600 hover:text-red-900 transition-colors disabled:opacity-50"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-red-200 text-red-700 transition-colors hover:bg-red-50 disabled:opacity-50"
               title="ลบผู้ใช้"
             >
-              🗑️
+              <Trash2 className="h-4 w-4" />
             </button>
           </div>
         </td>
@@ -287,7 +288,7 @@ export function UserRow({ user }: UserRowProps) {
         confirmButtonClass={
           confirmDialog.type === "delete" 
             ? "bg-red-600 hover:bg-red-700" 
-            : "bg-blue-600 hover:bg-blue-700"
+            : "bg-pea-700 hover:bg-pea-800"
         }
         onConfirm={handleConfirmAction}
         onCancel={handleCancelDialog}

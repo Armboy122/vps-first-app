@@ -31,7 +31,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm ring-1 ring-slate-200/60 p-4">
+    <div className="ui-panel p-3">
       {actionFeedback && (
         <ActionFeedback
           variant={actionFeedback.variant}
@@ -46,7 +46,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
           {(isUser || isAdmin) && (
             <Link
               href="/power-outage-requests/create"
-              className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors shadow-sm cursor-pointer"
+              className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg bg-pea-700 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-pea-800"
             >
               <Plus className="w-4 h-4" />
               สร้างคำขอดับไฟใหม่
@@ -60,7 +60,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
                   onChange={(e) =>
                     handleBulkStatusChange(e.target.value as Request)
                   }
-                  className="appearance-none bg-white border border-slate-200 text-slate-700 py-2 pl-3.5 pr-9 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 focus:border-blue-400 font-medium cursor-pointer transition-all"
+                  className="ui-input cursor-pointer appearance-none py-2 pl-3.5 pr-9 text-sm font-medium"
                   defaultValue=""
                 >
                   <option value="" disabled>
@@ -77,7 +77,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
 
               <button
                 onClick={handlePrintSelected}
-                className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold py-2 px-3.5 rounded-lg transition-colors cursor-pointer"
+                className="inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border border-[var(--app-border-strong)] bg-white px-3.5 py-2 text-sm font-semibold text-[var(--app-text-body)] transition-colors hover:bg-[var(--app-frame)]"
               >
                 <Printer className="w-4 h-4" />
                 พิมพ์ ({selectedRequests.length})
@@ -92,7 +92,7 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
 
         <div className="flex flex-wrap items-center gap-3">
           {selectedRequests.length > 0 && (
-            <div className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full text-xs font-medium">
+            <div className="inline-flex items-center gap-1.5 rounded-lg bg-pea-100 px-3 py-1.5 text-xs font-medium text-pea-900">
               <CheckSquare className="w-3.5 h-3.5" />
               <span>{selectedRequests.length} รายการที่เลือก</span>
             </div>

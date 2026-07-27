@@ -6,6 +6,7 @@ import { WorkCenter, ExportOptions } from "../../types/admin.types";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { FeedbackBanner } from "../shared/FeedbackBanner";
 import { generateCSVContent } from "../../utils/csvParser";
+import { Download } from "lucide-react";
 
 export function ExportDataComponent() {
   const [exportOptions, setExportOptions] = useState<ExportOptions>({
@@ -164,16 +165,16 @@ export function ExportDataComponent() {
     <div className="space-y-6">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">ส่งออกข้อมูล</h2>
-        <p className="text-gray-600 mt-1">
+        <h2 className="text-xl font-bold text-[var(--app-text)]">ส่งออกข้อมูล</h2>
+        <p className="mt-1 text-sm text-[var(--app-text-muted)]">
           ส่งออกข้อมูลคำขอตัดไฟเป็นไฟล์ CSV ตามเงื่อนไขที่กำหนด
         </p>
       </div>
 
       {/* Export Form */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          📤 ตัวเลือกการส่งออก
+      <div className="ui-panel p-6">
+        <h3 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+          <Download className="h-5 w-5 text-pea-700" /> ตัวเลือกการส่งออก
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

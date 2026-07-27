@@ -7,6 +7,7 @@ import { ErrorMessage } from "../shared/ErrorMessage";
 import { UserRow } from "./UserRow";
 import { UserPagination } from "./UserPagination";
 import { PageSizeSelector } from "../shared/PageSizeSelector";
+import { UserRound } from "lucide-react";
 
 interface UsersResponse {
   users: User[];
@@ -54,7 +55,7 @@ export function UserTable() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="ui-panel">
         <div className="p-8">
           <LoadingSpinner size="lg" text="กำลังโหลดข้อมูลผู้ใช้..." />
         </div>
@@ -65,7 +66,7 @@ export function UserTable() {
   // Error state
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      <div className="ui-panel">
         <div className="p-6">
           <ErrorMessage
             message="ไม่สามารถโหลดข้อมูลผู้ใช้ได้"
@@ -79,9 +80,9 @@ export function UserTable() {
   const { users = [], totalUsers = 0, totalPages = 0 } = data || {};
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    <div className="ui-panel overflow-hidden">
       {/* Table Header with Page Size Selector */}
-      <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+      <div className="flex items-center justify-between border-b border-[var(--app-border)] px-5 py-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-900">
             รายชื่อผู้ใช้งาน
@@ -100,7 +101,7 @@ export function UserTable() {
       {/* Table Content */}
       {users.length === 0 ? (
         <div className="p-8 text-center">
-          <div className="text-gray-400 text-6xl mb-4">👤</div>
+          <UserRound className="mx-auto mb-4 h-12 w-12 text-slate-400" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">
             ไม่พบข้อมูลผู้ใช้
           </h3>
@@ -114,8 +115,8 @@ export function UserTable() {
         <>
           {/* Table */}
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[var(--app-border)]">
+              <thead className="bg-[var(--app-surface-subtle)]">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     ข้อมูลผู้ใช้
@@ -131,7 +132,7 @@ export function UserTable() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="divide-y divide-[var(--app-border)] bg-white">
                 {users.map((user) => (
                   <UserRow key={user.id} user={user} />
                 ))}

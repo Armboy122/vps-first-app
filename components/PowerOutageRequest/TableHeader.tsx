@@ -17,10 +17,10 @@ export const TableHeader = memo(
     isViewer,
     isSupervisor,
   }: TableHeaderProps) => {
-    const thClass = "py-4 px-4 text-left text-[11px] font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap";
+    const thClass = "px-4 py-3 text-left text-[11px] font-bold text-[var(--app-text-muted)] uppercase tracking-wider whitespace-nowrap";
 
     return (
-      <thead className="bg-slate-50/50 border-b border-slate-200 sticky top-0 z-10 backdrop-blur-sm">
+      <thead className="sticky top-0 z-10 border-b border-[var(--app-border)] bg-[var(--app-surface-subtle)]">
         <tr>
           {!isViewer && (
             <th className="py-4 px-4 w-10">
@@ -29,7 +29,7 @@ export const TableHeader = memo(
                   type="checkbox"
                   checked={selectAll}
                   onChange={onToggleSelectAll}
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 transition-all cursor-pointer"
+                  className="h-4 w-4 cursor-pointer rounded border-slate-300 text-pea-700 focus:ring-pea-600"
                 />
               </div>
             </th>

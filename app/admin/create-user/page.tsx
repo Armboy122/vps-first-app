@@ -1,67 +1,30 @@
 import CreateUserForm from "@/components/CreateUserForm";
 import Link from "next/link";
+import { ArrowLeft, UserPlus } from "lucide-react";
 
 export default function CreateUserPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+    <div className="min-h-screen py-6">
+      <div className="mx-auto max-w-4xl px-4 sm:px-6">
+        <header className="mb-5 border-b border-[var(--app-border)] pb-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-gray-800 mb-2">
-                ✨ สร้างผู้ใช้ใหม่
+              <h1 className="flex items-center gap-2 text-2xl font-bold text-[var(--app-text)]">
+                <UserPlus className="h-6 w-6 text-pea-700" />
+                เพิ่มผู้ใช้
               </h1>
-              <p className="text-gray-600 text-lg">
-                เพิ่มผู้ใช้ใหม่เข้าสู่ระบบด้วยข้อมูลที่ครบถ้วน
+              <p className="mt-1 text-sm text-[var(--app-text-muted)]">
+                ระบุข้อมูลบัญชี หน่วยงาน และสิทธิ์การใช้งาน
               </p>
             </div>
-            <Link href="/admin">
-              <button className="group bg-gray-600 hover:bg-gray-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-gray-200">
-                <span className="flex items-center">
-                  <span className="mr-2 group-hover:-translate-x-1 transition-transform duration-200">
-                    ←
-                  </span>
-                  กลับไปหน้า Admin
-                </span>
-              </button>
+            <Link href="/admin" className="inline-flex min-h-11 items-center gap-2 self-start rounded-lg border border-[var(--app-border-strong)] bg-white px-4 py-2 text-sm font-semibold text-[var(--app-text-body)] hover:bg-[var(--app-frame)]">
+              <ArrowLeft className="h-4 w-4" />
+              กลับหน้าจัดการระบบ
             </Link>
           </div>
-        </div>
+        </header>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-w-4xl mx-auto">
-          {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center space-x-4 text-sm">
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
-                  1
-                </div>
-                <span className="ml-2 text-blue-600 font-medium">
-                  ข้อมูลพื้นฐาน
-                </span>
-              </div>
-              <div className="w-8 h-0.5 bg-gray-200"></div>
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
-                  2
-                </div>
-                <span className="ml-2 text-blue-600 font-medium">หน่วยงาน</span>
-              </div>
-              <div className="w-8 h-0.5 bg-gray-200"></div>
-              <div className="flex items-center">
-                <div className="w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-semibold">
-                  3
-                </div>
-                <span className="ml-2 text-blue-600 font-medium">
-                  สิทธิ์การใช้งาน
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Form */}
+        <div className="ui-panel p-5 sm:p-7">
           <CreateUserForm />
         </div>
       </div>
