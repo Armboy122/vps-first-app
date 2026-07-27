@@ -186,5 +186,45 @@ isolated UAT environment. UAT CI verified commit `713a919`:
 - readiness returned the exact deployed Git SHA;
 - authenticated USER and VIEWER list flows loaded without console errors.
 
-The first build includes the cost of exporting the BuildKit cache. A subsequent
-UAT deployment is required to record the warm-cache duration.
+Warm-cache deployments confirmed that the cache is reused:
+
+| UAT commit | Total | Build/push | VPS rollout |
+| --- | ---: | ---: | ---: |
+| `f22f8b8` | 180 s | 121 s | 18 s |
+| `5b5c7e7` | 201 s | 142 s | 18 s |
+
+The fastest representative warm deployment is 43.6% below the 319-second
+baseline. The remaining dominant cost is Next.js production compilation after
+source changes; VPS pull, replacement, and readiness are no longer the primary
+deploy bottleneck.
+
+## UAT data-flow verification
+
+Testing `dev.peas3.shop` with isolated temporary USER and VIEWER accounts found
+and fixed an additional loading race:
+
+1. the list hook fetched before authentication had resolved, then fetched
+   again after role/work-center resolution;
+2. calendar metadata loaded only after the request list, so the first render
+   briefly calculated Monday-Friday values before applying configured
+   holidays;
+3. changing list filters could trigger more calendar requests because the
+   metadata effect depended on the filtered request collection.
+
+Commit `5b5c7e7` gates list loading on resolved authentication and loads the
+request collection and active calendar metadata together. UI and business
+rules are unchanged.
+
+Browser verification after the fix:
+
+- clean login and hard reload both rendered 4 August 2026 as
+  `ภายใน 3 วันทำการ` without first rendering `อีก 7 วันทำการ`;
+- list-page server actions decreased from five to three (40% fewer);
+- measured action durations were 466 ms, 117 ms, and 107 ms through Cloudflare;
+- USER list, profile, and create routes and the VIEWER list route returned
+  successfully with zero console errors;
+- one non-blocking warning remains: the 32px navigation logo is preloaded but
+  not consumed quickly after client-side navigation.
+
+The temporary UAT account was removed after verification. Production remained
+on commit `36e52fe` throughout the UAT tests.
