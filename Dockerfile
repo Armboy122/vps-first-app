@@ -1,76 +1,59 @@
-# Ultra-Fast Multi-stage Dockerfile สำหรับ Next.js + Prisma
-# Stage 1: Base - ติดตั้ง dependencies พื้นฐาน
+# Multi-stage Dockerfile for Next.js standalone + Prisma
 FROM node:18-alpine AS base
 RUN apk add --no-cache libc6-compat openssl curl dumb-init
 WORKDIR /app
 
-# Stage 2: Production Dependencies
-FROM base AS deps
+# Install dependencies once. BuildKit/GitHub Actions persists the npm cache
+# between builds, while package-lock.json keeps the install reproducible.
+FROM base AS dependencies
 COPY package.json package-lock.json* ./
-RUN npm ci --only=production && npm cache clean --force
+RUN --mount=type=cache,target=/root/.npm npm ci
 
-# Stage 3: Build Dependencies
-FROM base AS build-deps
-COPY package.json package-lock.json* ./
-RUN npm ci && npm cache clean --force
+# Keep the migration CLI separate from the application's full dependency tree.
+# The final image needs this at startup, but not every UI/build package.
+FROM base AS prisma-cli
+RUN --mount=type=cache,target=/root/.npm \
+    npm install --no-save prisma@5.22.0
 
-# Stage 4: Builder - build application และ generate Prisma
 FROM base AS builder
-
-# Environment variables สำหรับ build (ย้ายขึ้นมาก่อน)
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-# คัดลอก build dependencies
-COPY --from=build-deps /app/node_modules ./node_modules
-COPY --from=build-deps /app/package*.json ./
-
-# คัดลอก Prisma schema ก่อน (เพื่อให้ cache ทำงาน)
+COPY --from=dependencies /app/node_modules ./node_modules
+COPY --from=dependencies /app/package*.json ./
 COPY prisma ./prisma
-
-# Generate Prisma client ก่อน (เพื่อให้ cache ทำงาน)
 RUN npx prisma generate
 
-# คัดลอก source code ทั้งหมด (layer นี้จะ rebuild เมื่อโค้ดเปลี่ยน)
 COPY . .
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
-# Build Next.js
-RUN npm run build
-
-# Stage 5: Runner - Production image ที่เล็กที่สุด
 FROM base AS runner
 
-# สร้าง non-root user
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Environment variables
+ARG APP_VERSION=unknown
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV HOSTNAME=0.0.0.0
 ENV PORT=3000
+ENV APP_VERSION=${APP_VERSION}
 
-# คัดลอกเฉพาะ production dependencies
-COPY --from=deps /app/node_modules ./node_modules
-
-# คัดลอกเฉพาะไฟล์ที่จำเป็นสำหรับ Next.js standalone
+# Prisma migrate is required by docker-entrypoint.sh. Copy its isolated
+# dependency tree first, then overlay the smaller traced app runtime.
+COPY --from=prisma-cli /app/node_modules ./node_modules
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-
-# คัดลอก Prisma client ที่ generate แล้ว
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 COPY docker-entrypoint.sh ./docker-entrypoint.sh
 
 RUN chmod +x ./docker-entrypoint.sh
 
-# เปลี่ยนเป็น non-root user
 USER nextjs
 
-# เปิด port
 EXPOSE 3000
 
-# ใช้ dumb-init สำหรับ proper signal handling และ Prisma migrate ก่อน start
 ENTRYPOINT ["dumb-init", "--", "./docker-entrypoint.sh"]

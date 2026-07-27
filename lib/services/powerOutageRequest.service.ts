@@ -286,67 +286,6 @@ export class PowerOutageRequestService {
   }
 
   /**
-   * คำนวณสีพื้นหลังตามวันที่และสถานะ (UI Logic) - รักษาเงื่อนไขเดิม
-   */
-  static getRowBackgroundColor(
-    omsStatus: string,
-    statusRequest: string,
-    outageDate: Date,
-  ): string {
-    const today = getThailandDateAtMidnight();
-    const diffTime = outageDate.getTime() - today.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    // Completed and confirmed requests - keep original gray
-    if (omsStatus === "PROCESSED" && statusRequest === "CONFIRM") {
-      return "bg-gray-100";
-    }
-
-    // Active requests with time-based urgency - keep original colors
-    if (statusRequest !== "CANCELLED") {
-      // Critical - 5 days or less (Red)
-      if (diffDays <= 5 && diffDays >= 0) return "bg-red-50 border-red-200";
-      // Warning - 6-7 days (Yellow)
-      if (diffDays <= 7 && diffDays > 0)
-        return "bg-yellow-50 border-yellow-200";
-      // Normal - 8-15 days (Green)
-      if (diffDays <= 15 && diffDays > 0) return "bg-green-50 border-green-200";
-    }
-
-    // Default
-    return "";
-  }
-
-  /**
-   * คำนวณสีของ badge สำหรับสถานะ
-   */
-  static getStatusBadgeColor(status: string, type: "oms" | "request"): string {
-    if (type === "oms") {
-      switch (status) {
-        case "NOT_ADDED":
-          return "bg-gray-100 text-gray-700 border border-gray-300";
-        case "PROCESSED":
-          return "bg-pea-100 text-pea-800 border border-pea-300";
-        case "CANCELLED":
-          return "bg-red-100 text-red-700 border border-red-300";
-        default:
-          return "bg-gray-100 text-gray-700 border border-gray-300";
-      }
-    } else {
-      switch (status) {
-        case "NOT":
-          return "bg-amber-100 text-amber-800 border border-amber-300";
-        case "CONFIRM":
-          return "bg-emerald-100 text-emerald-800 border border-emerald-300";
-        case "CANCELLED":
-          return "bg-red-100 text-red-700 border border-red-300";
-        default:
-          return "bg-gray-100 text-gray-700 border border-gray-300";
-      }
-    }
-  }
-
-  /**
    * เรียงลำดับข้อมูลตามเงื่อนไขที่ซับซ้อน (Business Logic)
    */
   static sortRequests(

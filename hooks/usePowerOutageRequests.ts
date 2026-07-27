@@ -6,7 +6,6 @@ import {
   deletePowerOutageRequest,
 } from "@/app/api/action/powerOutageRequest";
 import { OMSStatus, Request } from "@prisma/client";
-import { PowerOutageRequestService } from "@/lib/services";
 import { useRequestFilters } from "./useRequestFilters";
 
 // Types
@@ -207,15 +206,6 @@ export const usePowerOutageRequests = (
     [],
   );
 
-  // Get row background color using service
-  const getRowBackgroundColor = useCallback((request: PowerOutageRequest) => {
-    return PowerOutageRequestService.getRowBackgroundColor(
-      request.omsStatus,
-      request.statusRequest,
-      request.outageDate,
-    );
-  }, []);
-
   // Load requests on mount
   useEffect(() => {
     loadRequests();
@@ -249,9 +239,6 @@ export const usePowerOutageRequests = (
     handleUpdateOMS,
     handleUpdateStatus,
     handleDelete,
-
-    // Utils
-    getRowBackgroundColor,
 
     // Stats
     totalRequests: filteredRequests.length,

@@ -6,6 +6,7 @@
     "db": "./scripts/db-tunnel.sh",
     "dev": "next dev",
     "build": "next build",
+    "typecheck": "tsc --noEmit",
     "start": "next start",
     "lint": "next lint"
   },

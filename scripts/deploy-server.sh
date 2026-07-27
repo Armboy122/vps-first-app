@@ -6,6 +6,8 @@ ENV_FILE="${ENV_FILE:-.env}"
 COMPOSE_FILE="${COMPOSE_FILE:-}"
 RUN_DB_SERVICE="${RUN_DB_SERVICE:-true}"
 APP_IMAGE_VALUE="${APP_IMAGE:-}"
+EXPECTED_APP_VERSION="${EXPECTED_APP_VERSION:-}"
+MAX_APP_IMAGE_BYTES="${MAX_APP_IMAGE_BYTES:-600000000}"
 
 cd "$APP_DIR"
 
@@ -54,12 +56,30 @@ if [[ "${RUN_DB_SERVICE}" == "true" ]]; then
 fi
 
 "${compose_cmd[@]}" pull app
+
+image_size_bytes="$(docker image inspect "$APP_IMAGE" --format '{{.Size}}')"
+echo "Pulled $APP_IMAGE (${image_size_bytes} bytes)"
+
+if (( image_size_bytes > MAX_APP_IMAGE_BYTES )); then
+  echo "Image exceeds MAX_APP_IMAGE_BYTES=${MAX_APP_IMAGE_BYTES}"
+  exit 1
+fi
+
 "${compose_cmd[@]}" up -d app
-docker image prune -f >/dev/null 2>&1 || true
 
 for attempt in {1..45}; do
-  if curl -fsS "http://127.0.0.1:${APP_PORT}/api/health" >/dev/null 2>&1; then
+  health_payload="$(
+    curl -fsS "http://127.0.0.1:${APP_PORT}/api/health" 2>/dev/null || true
+  )"
+
+  if [[ -n "$health_payload" ]] &&
+    {
+      [[ -z "$EXPECTED_APP_VERSION" ]] ||
+        [[ "$health_payload" == *"\"version\":\"${EXPECTED_APP_VERSION}\""* ]]
+    }; then
+    docker image prune -f --filter "until=168h" >/dev/null 2>&1 || true
     "${compose_cmd[@]}" ps
+    echo "Readiness verified for version ${EXPECTED_APP_VERSION:-unknown}"
     exit 0
   fi
 

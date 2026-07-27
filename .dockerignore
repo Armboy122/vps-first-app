@@ -4,10 +4,9 @@ node_modules
 .pnp.js
 .yarn/install-state.gz
 
-# Build outputs (ยกเว้น .next/standalone)
+# Build outputs are produced inside the builder stage. Sending local artifacts
+# in the context invalidates cache and adds tens of megabytes.
 .next
-!.next/standalone
-!.next/static
 out
 build
 dist
