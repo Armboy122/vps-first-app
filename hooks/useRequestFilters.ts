@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useDeferredValue } from "react";
+import { matchesRequestDateFilters } from "@/lib/utils/request-filter.utils";
 
 interface PowerOutageRequest {
   id: number;
@@ -28,8 +29,6 @@ export interface FilterOptions {
   branchFilter: string;
   startDate: string;
   endDate: string;
-  outageStartDate: string;
-  outageEndDate: string;
   showPastOutageDates: boolean;
 }
 
@@ -42,8 +41,6 @@ export const useRequestFilters = (requests: PowerOutageRequest[]) => {
     branchFilter: "",
     startDate: "",
     endDate: "",
-    outageStartDate: "",
-    outageEndDate: "",
     showPastOutageDates: false,
   });
 
@@ -51,39 +48,18 @@ export const useRequestFilters = (requests: PowerOutageRequest[]) => {
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   // Filter functions
-  const createDateFilter = useCallback((startDate: string, endDate: string) => {
-    return (request: PowerOutageRequest) => {
-      if (!startDate && !endDate) return true;
-
-      const requestDate = new Date(request.createdAt);
-      const start = startDate ? new Date(startDate + "T00:00:00") : null;
-      const end = endDate ? new Date(endDate + "T23:59:59") : null;
-
-      if (start && requestDate < start) return false;
-      if (end && requestDate > end) return false;
-      return true;
-    };
-  }, []);
-
-  const createOutageDateFilter = useCallback(
-    (startDate: string, endDate: string, showPast: boolean) => {
+  const createDateFilter = useCallback(
+    (
+      startDate: string,
+      endDate: string,
+      showPastOutageDates: boolean,
+    ) => {
       return (request: PowerOutageRequest) => {
-        const outageDate = new Date(request.outageDate);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-
-        // Filter by show past dates
-        if (!showPast && outageDate < today) return false;
-
-        // Filter by date range
-        if (!startDate && !endDate) return true;
-
-        const start = startDate ? new Date(startDate + "T00:00:00") : null;
-        const end = endDate ? new Date(endDate + "T23:59:59") : null;
-
-        if (start && outageDate < start) return false;
-        if (end && outageDate > end) return false;
-        return true;
+        return matchesRequestDateFilters(request, {
+          endDate,
+          showPastOutageDates,
+          startDate,
+        });
       };
     },
     [],
@@ -119,10 +95,9 @@ export const useRequestFilters = (requests: PowerOutageRequest[]) => {
 
   // Apply filters
   const filteredByFilters = useMemo(() => {
-    const dateFilter = createDateFilter(filters.startDate, filters.endDate);
-    const outageFilter = createOutageDateFilter(
-      filters.outageStartDate,
-      filters.outageEndDate,
+    const dateFilter = createDateFilter(
+      filters.startDate,
+      filters.endDate,
       filters.showPastOutageDates,
     );
     const statusFilter = createStatusFilter(filters.statusFilter);
@@ -133,7 +108,6 @@ export const useRequestFilters = (requests: PowerOutageRequest[]) => {
     return requests.filter(
       (request) =>
         dateFilter(request) &&
-        outageFilter(request) &&
         statusFilter(request) &&
         omsFilter(request) &&
         workCenterFilter(request) &&
@@ -143,7 +117,6 @@ export const useRequestFilters = (requests: PowerOutageRequest[]) => {
     requests,
     filters,
     createDateFilter,
-    createOutageDateFilter,
     createStatusFilter,
     createOMSStatusFilter,
     createWorkCenterFilter,
