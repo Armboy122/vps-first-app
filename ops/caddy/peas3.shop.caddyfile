@@ -1,4 +1,14 @@
+{
+	default_sni 103.117.149.118
+}
+
 peas3.shop {
+	reverse_proxy 127.0.0.1:3000
+	encode gzip zstd
+}
+
+103.117.149.118 {
+	tls internal
 	reverse_proxy 127.0.0.1:3000
 	encode gzip zstd
 }
