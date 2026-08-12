@@ -17,7 +17,7 @@ Current working rule decision: an outage date is valid when it is at least 10 bu
 ## Environment
 
 - VPS: `peas3@103.117.149.118`
-- Production app: `https://peas3.shop`
+- Production app: `https://peas3.online`
 - DB access strategy: SSH tunnel only, do not expose PostgreSQL publicly.
 - Local tunnel: `127.0.0.1:15432 -> VPS 127.0.0.1:5432`
 - Tunnel PID when last checked: `60016`

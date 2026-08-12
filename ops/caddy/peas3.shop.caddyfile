@@ -2,15 +2,29 @@
 	default_sni 103.117.149.118
 }
 
-peas3.shop {
+peas3.online {
 	reverse_proxy 127.0.0.1:3000
 	encode gzip zstd
 }
 
+www.peas3.online {
+	redir https://peas3.online{uri} permanent
+}
+
+http://103.117.149.118 {
+	route {
+		handle /.well-known/acme-challenge/* {
+			root * /var/www/letsencrypt
+			file_server
+		}
+
+		redir https://peas3.online{uri} 308
+	}
+}
+
 103.117.149.118 {
-	tls internal
-	reverse_proxy 127.0.0.1:3000
-	encode gzip zstd
+	tls /etc/caddy/certs/103.117.149.118/fullchain.pem /etc/caddy/certs/103.117.149.118/privkey.pem
+	redir https://peas3.online{uri} 308
 }
 
 dev.peas3.shop {
