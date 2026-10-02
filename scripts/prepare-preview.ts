@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 import bcrypt from "bcryptjs";
 import { PrismaClient } from "@prisma/client";
-import { assertPreviewDatabaseTarget } from "../lib/server/config/previewBoundary";
+import { assertPreviewDatabaseTarget, PreviewDatabaseTargetError, PREVIEW_DATABASE_ERROR_CODES } from "../lib/server/config/previewBoundary";
 import { runPreviewSeed, PREVIEW_SEED_CONFIRMATION, type PreviewSeedClient } from "./seed-preview";
 export const PREVIEW_PREPARE_CONFIRMATION = "prepare-vps-tr-mock-20261001";
 export interface PrepareEnvironment extends Record<string, string | undefined> {
@@ -48,7 +48,8 @@ const PREPARATION_STAGES = [
     "admin-password", "admin-create", "admin-disconnect", "full-seed",
 ] as const;
 type PreparationStage = typeof PREPARATION_STAGES[number];
-const SAFE_FAILURE_CODES = new Set([
+const SAFE_FAILURE_CODES = new Set<string>([
+    ...PREVIEW_DATABASE_ERROR_CODES,
     "PREPARATION_FAILED", "APP_ENV_NOT_PREVIEW", "VERCEL_ENV_NOT_PREVIEW", "PREPARE_CONFIRMATION_INVALID",
     "DATABASE_TARGET_REJECTED", "DIRECT_TARGET_REJECTED", "DIRECT_ENDPOINT_REQUIRED", "ADMIN_PASSWORD_INVALID",
     "ADMIN_ORGANIZATION_MISSING", "MIGRATION_LAUNCH_FAILED", "MIGRATION_SUBPROCESS_FAILED",
@@ -98,6 +99,10 @@ async function atStage<T>(stage: PreparationStage, action: () => T | Promise<T>)
         throw new PreviewPreparationError(stage, prismaErrorCode(error) || "PREPARATION_FAILED");
     }
 }
+function databaseTargetFailureCode(error: unknown, fallback: string): string {
+    return error instanceof PreviewDatabaseTargetError && PREVIEW_DATABASE_ERROR_CODES.includes(error.code)
+        ? error.code : fallback;
+}
 export function validatePrepareEnvironment(env: PrepareEnvironment): void {
     if (env.APP_ENV !== "preview")
         throw new PreviewPreparationError("validate-environment", "APP_ENV_NOT_PREVIEW");
@@ -106,9 +111,9 @@ export function validatePrepareEnvironment(env: PrepareEnvironment): void {
     if (env.PREVIEW_PREPARE_ONCE !== PREVIEW_PREPARE_CONFIRMATION)
         throw new PreviewPreparationError("validate-environment", "PREPARE_CONFIRMATION_INVALID");
     try { assertPreviewDatabaseTarget(env); }
-    catch { throw new PreviewPreparationError("validate-database", "DATABASE_TARGET_REJECTED"); }
+    catch (error) { throw new PreviewPreparationError("validate-database", databaseTargetFailureCode(error, "DATABASE_TARGET_REJECTED")); }
     try { assertPreviewDatabaseTarget({ ...env, DATABASE_URL: env.DIRECT_URL }); }
-    catch { throw new PreviewPreparationError("validate-direct", "DIRECT_TARGET_REJECTED"); }
+    catch (error) { throw new PreviewPreparationError("validate-direct", databaseTargetFailureCode(error, "DIRECT_TARGET_REJECTED")); }
     const direct = new URL(env.DIRECT_URL!);
     if (direct.hostname.includes("-pooler."))
         throw new PreviewPreparationError("validate-direct", "DIRECT_ENDPOINT_REQUIRED");
