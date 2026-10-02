@@ -15,19 +15,22 @@
 
 import React, { useState, useRef } from "react";
 import {
-  addBusinessDays,
   PowerOutageRequestInput,
 } from "@/lib/validations/powerOutageRequest";
 import { FormButton } from "@/components/forms";
-import dayjs from "dayjs";
 import * as XLSX from "xlsx";
+import { excelSerialToDateKey } from "@/lib/utils/importValues";
+import { assertCsvHeader, decodeUtf8Csv, parseCsvDocument } from "@/lib/utils/csvDocument";
+import { validateOutageDatesForImport } from "@/lib/api/client";
 import {
-  parseCSVLine,
   validateAndTransformCSVRows,
+  parseDate,
   type CSVValidationError,
   type CSVRow,
 } from "../../utils/csvValidation";
 import { AlertTriangle, Download, FileUp, Trash2 } from "lucide-react";
+import { generateCSVContent } from "@/app/admin/utils/csvParser";
+import { buildImportSample, formatImportSampleRow, getImportSampleHeaders } from "../../utils/importSample";
 
 interface CSVImportProps {
   role: string;
@@ -58,6 +61,8 @@ export const CSVImport: React.FC<CSVImportProps> = ({
     hasPartialData: boolean;
   } | null>(null);
   const [showExistingWarning, setShowExistingWarning] = useState(false);
+  const [isDownloadingSample, setIsDownloadingSample] = useState(false);
+  const [sampleDownloadError, setSampleDownloadError] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -111,18 +116,28 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           header: 1,
           raw: true,
           defval: "",
+          blankrows: true,
+          range: 0,
         });
+        const uses1904DateSystem = Boolean(workbook.Workbook?.WBProps?.date1904);
 
         if (jsonData.length < 2) throw new Error("ไฟล์ว่างเปล่าหรือมีแค่ header");
+        const expectedHeaders = role === "ADMIN"
+          ? ["วันที่ดับไฟ", "เวลาเริ่มต้น", "เวลาสิ้นสุด", "จุดรวมงาน", "สาขา", "หมายเลขหม้อแปลง", "สถานที่ติดตั้ง (GIS)", "พื้นที่ไฟดับ"]
+          : ["วันที่ดับไฟ", "เวลาเริ่มต้น", "เวลาสิ้นสุด", "หมายเลขหม้อแปลง", "สถานที่ติดตั้ง (GIS)", "พื้นที่ไฟดับ"];
+        assertCsvHeader(jsonData[0].map((value: unknown) => String(value ?? "")), [expectedHeaders]);
 
-        const maxRows = 1000;
-        if (jsonData.length > maxRows + 1) {
+        const maxRows = 500;
+        if (jsonData.slice(1).filter((row) => row.some((value: unknown) => String(value ?? "").trim() !== "")).length > maxRows) {
           throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
         }
 
         // Skip header (row 0), parse data rows
         for (let i = 1; i < jsonData.length; i++) {
           const values = jsonData[i].map((v: any) => String(v ?? ""));
+          if (typeof jsonData[i][0] === "number") {
+            values[0] = excelSerialToDateKey(jsonData[i][0], uses1904DateSystem) || "";
+          }
           const hasData = values.some((v: string) => v.trim() !== "");
           if (!hasData) continue;
 
@@ -130,6 +145,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             outageDate: values[0] || "",
             startTime: values[1] || "",
             endTime: values[2] || "",
+            physicalRow: i + 1,
           };
 
           let colIndex = 3;
@@ -139,6 +155,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             colIndex += 2;
           }
 
+          if (values.length !== colIndex + 3) throw new Error(`แถว ${i + 1}: จำนวนคอลัมน์ไม่ตรงกับ header`);
           row.transformerNumber = values[colIndex] || "";
           row.gisDetails = values[colIndex + 1] || "";
           row.area = values[colIndex + 2] || "";
@@ -147,60 +164,69 @@ export const CSVImport: React.FC<CSVImportProps> = ({
         }
       } else {
         // ===== อ่านไฟล์ CSV =====
-        const text = await file.text();
-        const lines = text.split("\n").filter(line => line.trim());
+        const records = parseCsvDocument(decodeUtf8Csv(await file.arrayBuffer()));
+        if (records.length === 0) throw new Error("ไฟล์ว่างเปล่า");
 
-        if (lines.length === 0) throw new Error("ไฟล์ว่างเปล่า");
+        const expectedHeaders = role === "ADMIN"
+          ? ["วันที่ดับไฟ", "เวลาเริ่มต้น", "เวลาสิ้นสุด", "จุดรวมงาน", "สาขา", "หมายเลขหม้อแปลง", "สถานที่ติดตั้ง (GIS)", "พื้นที่ไฟดับ"]
+          : ["วันที่ดับไฟ", "เวลาเริ่มต้น", "เวลาสิ้นสุด", "หมายเลขหม้อแปลง", "สถานที่ติดตั้ง (GIS)", "พื้นที่ไฟดับ"];
+        assertCsvHeader(records[0].values, [expectedHeaders]);
 
-        const maxRows = 1000;
-        if (lines.length > maxRows + 1) {
+        const maxRows = 500;
+        if (records.length > maxRows + 1) {
           throw new Error(`จำนวนแถวเกินขีดจำกัด (สูงสุด ${maxRows} แถว)`);
         }
 
-        void parseCSVLine(lines[0]);
-
-        for (let i = 1; i < lines.length; i++) {
-          const line = lines[i].trim();
-          if (!line) continue;
-
-          const values = parseCSVLine(line);
+        for (const { values, physicalRow } of records.slice(1)) {
 
           const row: CSVRow = {
-            outageDate: values[0]?.replace(/"/g, "") || "",
-            startTime: values[1]?.replace(/"/g, "") || "",
-            endTime: values[2]?.replace(/"/g, "") || "",
+            outageDate: values[0] || "",
+            startTime: values[1] || "",
+            endTime: values[2] || "",
+            physicalRow,
           };
 
           let colIndex = 3;
           if (role === "ADMIN") {
-            row.workCenterName = values[colIndex]?.replace(/"/g, "") || "";
-            row.branchName = values[colIndex + 1]?.replace(/"/g, "") || "";
+            row.workCenterName = values[colIndex] || "";
+            row.branchName = values[colIndex + 1] || "";
             colIndex += 2;
           }
 
-          row.transformerNumber = values[colIndex]?.replace(/"/g, "") || "";
-          row.gisDetails = values[colIndex + 1]?.replace(/"/g, "") || "";
-          row.area = values[colIndex + 2]?.replace(/"/g, "") || "";
+          if (values.length !== colIndex + 3) throw new Error(`บรรทัด ${physicalRow}: จำนวนคอลัมน์ไม่ตรงกับ header`);
+          row.transformerNumber = values[colIndex] || "";
+          row.gisDetails = values[colIndex + 1] || "";
+          row.area = values[colIndex + 2] || "";
 
           rows.push(row);
         }
       }
 
+      if (rows.length === 0) throw new Error("ไฟล์ต้องมี header และข้อมูลอย่างน้อย 1 รายการ");
+
       // Delegate all validation logic to the utility function
+      const normalizedDates = rows
+        .map((row) => parseDate(row.outageDate || "")?.format("YYYY-MM-DD"))
+        .filter((date): date is string => Boolean(date));
+      const dateValidation = await validateOutageDatesForImport(normalizedDates);
+      if (!dateValidation.success) throw new Error(dateValidation.error);
+
       const { validData, errors: validationErrs } =
         await validateAndTransformCSVRows(rows, {
           role,
           workCenters,
           userWorkCenterId,
           userBranch,
+          dateValidationResults: dateValidation.results,
         });
 
       setValidationErrors(validationErrs);
+      const invalidRowCount = new Set(validationErrs.map((error) => error.row)).size;
       setImportResults({
         total: rows.length,
         success: validData.length,
-        errors: validationErrs.length,
-        hasPartialData: validData.length > 0 && validationErrs.length > 0,
+        errors: invalidRowCount,
+        hasPartialData: validData.length > 0 && invalidRowCount > 0,
       });
 
       // เพิ่มข้อมูลที่ถูกต้องเข้าฟอร์มทันที
@@ -227,65 +253,50 @@ export const CSVImport: React.FC<CSVImportProps> = ({
     }
   };
 
-  const downloadTemplate = () => {
-    const firstBusinessSample = dayjs(addBusinessDays(new Date(), 12)).format(
-      "YYYY-MM-DD",
-    );
-    const secondBusinessSample = dayjs(addBusinessDays(new Date(), 15)).format(
-      "YYYY-MM-DD",
-    );
+  const downloadSample = async (format: "csv" | "xlsx") => {
+    setIsDownloadingSample(true);
+    setSampleDownloadError(null);
+    try {
+      const sample = await buildImportSample({
+        role,
+        workCenters,
+        userWorkCenterId,
+        userBranch,
+      });
+      const headers = getImportSampleHeaders(role);
+      const rows = sample.requests.map((request) =>
+        formatImportSampleRow(request, role, sample.names),
+      );
 
-    const headers = [
-      "วันที่ดับไฟ",
-      "เวลาเริ่มต้น",
-      "เวลาสิ้นสุด",
-      ...(role === "ADMIN" ? ["จุดรวมงาน", "สาขา"] : []),
-      "หมายเลขหม้อแปลง",
-      "สถานที่ติดตั้ง (GIS)",
-      "พื้นที่ไฟดับ",
-    ];
-
-    const sampleData = [
-      [
-        firstBusinessSample,
-        "08:00",
-        "12:00",
-        ...(role === "ADMIN" ? ["จุดรวมงานตัวอย่าง", "สาขาตัวอย่าง"] : []),
-        "TX001",
-        "หน้าโรงเรียนวัดใหม่",
-        "หมู่บ้านเจริญสุข",
-      ],
-      [
-        secondBusinessSample,
-        "14:00",
-        "17:30",
-        ...(role === "ADMIN" ? ["นราธิวาส", "เมือง"] : []),
-        "TX002",
-        "หน้าตลาดสด",
-        "ชุมชนบ้านใหม่",
-      ],
-    ];
-
-    // สร้างไฟล์ .xlsx ด้วย SheetJS
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-
-    // ตั้งความกว้างคอลัมน์ให้อ่านง่าย
-    ws["!cols"] = headers.map(() => ({ wch: 22 }));
-
-    // ตั้ง format ให้คอลัมน์เวลาเป็น text เพื่อไม่ให้ Excel แปลงเป็นตัวเลข
-    const timeColIndexes = [1, 2]; // startTime, endTime
-    for (let r = 1; r <= sampleData.length; r++) {
-      for (const c of timeColIndexes) {
-        const cellRef = XLSX.utils.encode_cell({ r, c });
-        if (ws[cellRef]) {
-          ws[cellRef].t = "s"; // force text type
-        }
+      if (format === "csv") {
+        const records = sample.requests.map((_, rowIndex) =>
+          Object.fromEntries(
+            headers.map((header, columnIndex) => [header, rows[rowIndex][columnIndex]]),
+          ),
+        );
+        const csv = generateCSVContent(records, headers);
+        const blob = new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8;" });
+        const href = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = href;
+        link.download = "outage-import-sample.csv";
+        link.click();
+        URL.revokeObjectURL(href);
+        return;
       }
-    }
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "คำขอดับไฟ");
-    XLSX.writeFile(wb, "template_power_outage_request.xlsx");
+      const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+      worksheet["!cols"] = headers.map(() => ({ wch: 24 }));
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "คำขอดับไฟ");
+      XLSX.writeFile(workbook, "outage-import-sample.xlsx", { bookType: "xlsx" });
+    } catch (error) {
+      setSampleDownloadError(
+        error instanceof Error ? error.message : "ไม่สามารถสร้างไฟล์ตัวอย่างได้ กรุณาลองใหม่อีกครั้ง",
+      );
+    } finally {
+      setIsDownloadingSample(false);
+    }
   };
 
   const resultTone = !importResults
@@ -386,7 +397,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
 
           <div className="grid grid-cols-1 gap-2 text-sm text-emerald-800 sm:grid-cols-3">
             <div className="rounded-lg border border-[var(--app-border)] bg-white px-3 py-2">
-              <p className="font-semibold text-emerald-900">สูงสุด 1,000 แถว</p>
+              <p className="font-semibold text-emerald-900">สูงสุด 500 แถว</p>
               <p className="text-emerald-700">รองรับงาน batch แบบปลอดภัย</p>
             </div>
             <div className="rounded-lg border border-[var(--app-border)] bg-white px-3 py-2">
@@ -415,12 +426,33 @@ export const CSVImport: React.FC<CSVImportProps> = ({
           <FormButton
             type="button"
             variant="secondary"
-            onClick={downloadTemplate}
+            onClick={() => downloadSample("csv")}
+            disabled={isProcessing || isDownloadingSample}
             className="border-green-300 text-green-600 bg-white hover:bg-green-50"
           >
-            <Download className="h-4 w-4" /> ดาวน์โหลดแม่แบบ
+            <Download className="h-4 w-4" /> ดาวน์โหลด CSV ตัวอย่าง
+          </FormButton>
+
+          <FormButton
+            type="button"
+            variant="secondary"
+            onClick={() => downloadSample("xlsx")}
+            disabled={isProcessing || isDownloadingSample}
+            className="border-green-300 text-green-600 bg-white hover:bg-green-50"
+          >
+            <Download className="h-4 w-4" /> ดาวน์โหลด XLSX ตัวอย่าง
           </FormButton>
         </div>
+
+        <p className="mt-2 text-xs leading-5 text-slate-600">
+          ตัวอย่างใช้หม้อแปลงจำลอง DEMO_TR001–002 และตรวจสอบวันที่กับปฏิทินล่าสุดทุกครั้งที่ดาวน์โหลด
+        </p>
+        {isDownloadingSample && (
+          <p className="mt-2 text-sm text-sky-700" role="status">กำลังเตรียมไฟล์ตัวอย่าง...</p>
+        )}
+        {sampleDownloadError && (
+          <p className="mt-2 text-sm text-rose-700" role="alert">{sampleDownloadError}</p>
+        )}
 
         <input
           ref={fileInputRef}
@@ -721,7 +753,7 @@ export const CSVImport: React.FC<CSVImportProps> = ({
             สามารถพิมพ์เป็น text ได้ตามรูปแบบต่างๆ ข้างต้น ระบบจะแปลงให้อัตโนมัติ
           </p>
           <p>
-            <strong>ข้อจำกัด:</strong> ไฟล์สูงสุด 10MB, จำนวนแถวสูงสุด 1,000 แถว
+            <strong>ข้อจำกัด:</strong> ไฟล์สูงสุด 10MB, จำนวนแถวสูงสุด 500 แถว
           </p>
         </div>
       </details>

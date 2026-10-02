@@ -1,0 +1,6 @@
+transformerNumber,gisDetails
+T-1,first value
+T-2,second value
+ T-1 ,later duplicate
+t-1,different case is distinct
+T-1,last duplicate

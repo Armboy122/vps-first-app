@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { useRouter } from "next/navigation";
 import {
@@ -10,7 +10,7 @@ import {
 import {
   createPowerOutageRequest,
   createMultiplePowerOutageRequests,
-} from "@/app/api/action/powerOutageRequest";
+} from "@/lib/api/client";
 import { validateDateAndTime } from "@/lib/utils/dateUtils";
 import { usePowerOutageFormStore } from "@/stores/powerOutageFormStore";
 import { FORM_MESSAGES } from "../constants/form.constants";
@@ -47,6 +47,7 @@ export const usePowerOutageFormLogic = ({
 }: UsePowerOutageFormLogicProps) => {
   const { setValue, reset } = form;
   const { setSubmitStatus, showErrorModal } = usePowerOutageFormStore();
+  const outageImportAttempt = useRef<{ fingerprint: string; key: string } | null>(null);
 
   const validateRequestForCreateFlow = useCallback(
     (data: PowerOutageRequestInput) => {
@@ -277,7 +278,14 @@ export const usePowerOutageFormLogic = ({
         isLoading: true,
       });
 
-      const result = await createMultiplePowerOutageRequests(requests);
+      const fingerprint = JSON.stringify(requests);
+      if (outageImportAttempt.current?.fingerprint !== fingerprint) {
+        outageImportAttempt.current = { fingerprint, key: crypto.randomUUID() };
+      }
+      const result = await createMultiplePowerOutageRequests(
+        requests,
+        outageImportAttempt.current.key,
+      );
 
       if (result.success) {
         logUserAction("bulk_power_outage_requests_created", {
@@ -287,6 +295,7 @@ export const usePowerOutageFormLogic = ({
         });
 
         // รีเซ็ตฟอร์มและรายการคำขอ
+        outageImportAttempt.current = null;
         reset();
         resetStore();
 
@@ -304,6 +313,12 @@ export const usePowerOutageFormLogic = ({
           validationErrors: result.validationErrors,
         });
 
+        setSubmitStatus({
+          success: false,
+          message: result.error || "เกิดข้อผิดพลาดในการบันทึกคำขอหลายรายการ",
+          isLoading: false,
+        });
+
         // แสดง Modal สำหรับ bulk submit errors
         showErrorModal({
           type: "error",
@@ -316,6 +331,12 @@ export const usePowerOutageFormLogic = ({
     } catch (error) {
       logError("bulk_power_outage_requests_error", error as Error, {
         requestCount: requests.length,
+      });
+
+      setSubmitStatus({
+        success: false,
+        message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ กรุณาตรวจสอบการเชื่อมต่ออินเทอร์เน็ตและลองใหม่อีกครั้ง",
+        isLoading: false,
       });
 
       showErrorModal({

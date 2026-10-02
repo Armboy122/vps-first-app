@@ -11,6 +11,7 @@ export {
   getThailandDateAtMidnight,
   DATE_ONLY_FORMAT,
   toDateOnlyKey,
+  isValidISODateKey,
   createDateOnlyUtc,
   createThailandDateOnly,
   isWeekendDate,

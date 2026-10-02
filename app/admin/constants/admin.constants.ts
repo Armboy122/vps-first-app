@@ -16,8 +16,9 @@ export const USERS_PER_PAGE = 10;
 export const SECURITY_LIMITS = {
   MAX_FILE_SIZE_MB: 10,
   MAX_ROWS_PER_UPLOAD: 10000,
+  MAX_CALENDAR_ROWS_PER_UPLOAD: 500,
   ALLOWED_FILE_TYPES: [".csv"],
-  BATCH_SIZE: 100, // จำนวนรายการที่ประมวลผลพร้อมกัน
+  BATCH_SIZE: 250, // จำนวนรายการที่ประมวลผลพร้อมกัน
 };
 
 // ตัวเลือกขนาดหน้า

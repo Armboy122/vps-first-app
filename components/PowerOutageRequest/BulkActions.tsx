@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
 import { Plus, Printer, CheckSquare, ChevronDown } from "lucide-react";
-import PrintAnnouncement from "../print";
 import { Request } from "@prisma/client";
 import { ActionFeedback, ActionFeedbackState } from "./ActionFeedback";
 
@@ -97,7 +96,13 @@ export const BulkActions: React.FC<BulkActionsProps> = ({
               <span>{selectedRequests.length} รายการที่เลือก</span>
             </div>
           )}
-          <PrintAnnouncement />
+          <p
+            aria-label="ปิดการสร้าง PDF ในพรีวิว"
+            className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900 ring-1 ring-amber-200"
+          >
+            <Printer className="h-3.5 w-3.5" />
+            ปิดการสร้าง PDF ระบบจริงในพรีวิว
+          </p>
         </div>
       </div>
     </div>

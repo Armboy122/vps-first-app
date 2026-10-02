@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
+import { getWorkCenters } from "@/lib/api/client";
 
 /**
  * Hook สำหรับดึงข้อมูล Work Centers ทั้งหมด

@@ -1,6 +1,7 @@
 // lib/validations/powerOutageRequest.ts
 
 import { z } from "zod";
+import { isValidISODateKey } from "@/lib/date-utils";
 
 export const MIN_OUTAGE_BUSINESS_DAYS = 6;
 export const MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE = 10;
@@ -243,7 +244,8 @@ const applyPowerOutageTimeRules = <T extends z.ZodTypeAny>(schema: T) =>
 const PowerOutageRequestBaseSchema = z.object({
   outageDate: z
     .string()
-    .min(1, "กรุณากดเลือกวันที่ดับไฟจากปฏิทิน"),
+    .min(1, "กรุณากดเลือกวันที่ดับไฟจากปฏิทิน")
+    .refine(isValidISODateKey, "วันที่ดับไฟต้องเป็นวันที่จริงในรูปแบบ YYYY-MM-DD"),
   startTime: timeStringSchema(
     "กรุณาเลือกเวลาเริ่มต้นจากดรอปดาวน์ เช่น 08:00",
     "08:00",
@@ -252,10 +254,12 @@ const PowerOutageRequestBaseSchema = z.object({
     "กรุณาเลือกเวลาสิ้นสุดจากดรอปดาวน์ เช่น 12:00",
     "12:00",
   ),
-  workCenterId: z.string().min(1, "กรุณาเลือกจุดรวมงานจากรายการ"),
-  branchId: z.string().min(1, "กรุณาเลือกสาขา (ต้องเลือกจุดรวมงานก่อน)"),
+  workCenterId: z.string().trim().min(1, "กรุณาเลือกจุดรวมงานจากรายการ").regex(/^\d+$/, "รหัสจุดรวมงานไม่ถูกต้อง"),
+  branchId: z.string().trim().min(1, "กรุณาเลือกสาขา (ต้องเลือกจุดรวมงานก่อน)").regex(/^\d+$/, "รหัสสาขาไม่ถูกต้อง"),
   transformerNumber: z
     .string()
+    .trim()
+    .max(100, "หมายเลขหม้อแปลงยาวเกินกำหนด")
     .min(1, "กรุณาพิมพ์ค้นหาและเลือกหมายเลขหม้อแปลงจากรายการ"),
   gisDetails: z.string(),
   area: z.string().nullable(),
@@ -266,7 +270,8 @@ export const PowerOutageRequestSchema = applyPowerOutageTimeRules(
 );
 
 const PowerOutageRequestUpdateBaseSchema = z.object({
-  outageDate: z.string().min(1, "กรุณาเลือกวันที่ดับไฟ"),
+  outageDate: z.string().min(1, "กรุณาเลือกวันที่ดับไฟ")
+    .refine(isValidISODateKey, "วันที่ดับไฟต้องเป็นวันที่จริงในรูปแบบ YYYY-MM-DD"),
   startTime: timeStringSchema("กรุณาระบุเวลาเริ่มต้น เช่น 08:00", "08:00"),
   endTime: timeStringSchema("กรุณาระบุเวลาสิ้นสุด เช่น 12:00", "12:00"),
   area: z.string().nullable(),

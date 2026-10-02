@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import { SyntheticDataBanner } from "@/components/dev/SyntheticDataBanner";
 
 const chromeHiddenRoutes = ["/login"];
 
@@ -23,6 +24,7 @@ export default function AppShell({
       {!hideChrome && <Navbar />}
 
       <main className={`relative z-10 flex-grow ${hideChrome ? "" : "pt-16"}`}>
+        {!hideChrome && <SyntheticDataBanner />}
         {children}
       </main>
 

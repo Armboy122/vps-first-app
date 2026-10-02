@@ -64,8 +64,22 @@ model User {
   createdRequests PowerOutageRequest[] @relation("RequestCreator")
   updatedStatuses PowerOutageRequest[] @relation("StatusUpdater")
   updatedOMS      PowerOutageRequest[] @relation("OMSUpdater")
+  outageRequestImports OutageRequestImport[]
 
   @@index([workCenterId, branchId])
+}
+
+// An idempotency record for retried bulk outage-request submissions. The key
+// scopes one submitted batch and does not impose a business uniqueness rule on
+// transformer/date/time combinations.
+model OutageRequestImport {
+  id              Int      @id @default(autoincrement())
+  idempotencyKey  String   @unique
+  payloadHash     String
+  createdById     Int
+  createdBy       User     @relation(fields: [createdById], references: [id])
+  requestIds      Int[]    @default([])
+  createdAt       DateTime @default(now())
 }
 
 // enum Role: กำหนดบทบาทที่เป็นไปได้ของผู้ใช้
@@ -106,6 +120,7 @@ model BusinessCalendarDate {
 
 // โมเดล PowerOutageRequest: จัดการคำขอดับไฟสำหรับหม้อแปลง
 model PowerOutageRequest {
+  seedKey              String?              @unique
   id                Int         @id @default(autoincrement())
   createdAt         DateTime    @default(now())
   createdById       Int

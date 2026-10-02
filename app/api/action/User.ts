@@ -1,5 +1,7 @@
 "use server";
 
+import { getCurrentActor, requireAdmin } from "@/lib/server/auth/currentActor";
+import { assertTransformerUpsertCounts } from "@/lib/services/transformerImportCounts";
 import { hash, compare } from "bcryptjs";
 import prisma from "../../../lib/prisma";
 import { getServerSession } from "next-auth/next";
@@ -10,8 +12,10 @@ import { authOptions } from "@/authOption";
 
 export async function createUser(input: CreateUserInput) {
   try {
+    await requireAdmin();
     // Validate input
     const validatedData = await CreateUserSchema.parseAsync(input);
+    if (!(await prisma.branch.findFirst({ where: { id: validatedData.branchId, workCenterId: validatedData.workCenterId }, select: { id: true } }))) return { success: false, error: "สาขาไม่อยู่ในจุดรวมงานที่ระบุ" };
 
     // ตรวจสอบว่า employeeId นี้มีอยู่แล้วหรือไม่
     const existingUser = await prisma.user.findUnique({
@@ -55,6 +59,7 @@ export async function getUsers(
   const skip = (page - 1) * pageSize;
   
   try {
+    await requireAdmin();
     // สร้าง where condition
     const whereCondition: Prisma.UserWhereInput = {};
     
@@ -112,6 +117,7 @@ export async function getUsers(
 
 export async function updateUserRole(userId: number, newRole: Role) {
   try {
+    await requireAdmin();
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { role: newRole },
@@ -126,6 +132,7 @@ export async function updateUserRole(userId: number, newRole: Role) {
 
 export async function updateUserName(userId: number, newName: string) {
   try {
+    await requireAdmin();
     const updatedUser = await prisma.user.update({
       where: { id: userId },
       data: { fullName: newName },
@@ -143,6 +150,7 @@ export async function changePassword(
   newPassword: string,
 ) {
   try {
+    await getCurrentActor();
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized" };
@@ -185,6 +193,13 @@ export async function updateUserProfile(data: {
   branchId?: number;
 }) {
   try {
+    const actor = await getCurrentActor();
+    if (actor.role !== "ADMIN" && ((data.workCenterId !== undefined && data.workCenterId !== actor.workCenterId) || (data.branchId !== undefined && data.branchId !== actor.branchId))) return { success: false, error: "ไม่สามารถเปลี่ยนจุดรวมงานหรือสาขาของตนเองได้" };
+    if (data.workCenterId !== undefined || data.branchId !== undefined) {
+      const pair = await prisma.branch.findFirst({ where: { id: data.branchId ?? actor.branchId, workCenterId: data.workCenterId ?? actor.workCenterId }, select: { id: true } });
+      if (!pair) return { success: false, error: "สาขาไม่อยู่ในจุดรวมงานที่ระบุ" };
+    }
+
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized" };
@@ -244,6 +259,7 @@ export async function updateUserProfile(data: {
 
 export async function getCurrentUser() {
   try {
+    await getCurrentActor();
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
       return { success: false, error: "Unauthorized" };
@@ -287,6 +303,7 @@ export async function getCurrentUser() {
 
 export async function deleteUser(userId: number) {
   try {
+    await requireAdmin();
     // ตรวจสอบสิทธิ์ของผู้ใช้ที่กำลังดำเนินการลบ (ควรทำในส่วนนี้)
 
     await prisma.user.delete({
@@ -305,6 +322,7 @@ export async function deleteUser(userId: number) {
 export async function getTransformers(page = 1, pageSize = 10, search = "") {
   const skip = (page - 1) * pageSize;
   try {
+    await getCurrentActor();
     const [transformers, totalCount] = await Promise.all([
       prisma.transformer.findMany({
         where: {
@@ -343,6 +361,7 @@ export async function createTransformer(data: {
   gisDetails: string;
 }) {
   try {
+    await requireAdmin();
     // ตรวจสอบว่า transformerNumber นี้มีอยู่แล้วหรือไม่
     const existingTransformer = await prisma.transformer.findUnique({
       where: { transformerNumber: data.transformerNumber.trim() },
@@ -370,6 +389,7 @@ export async function updateTransformer(
   data: { transformerNumber: string; gisDetails: string },
 ) {
   try {
+    await requireAdmin();
     // ตรวจสอบว่า transformerNumber ใหม่ไม่ซ้ำกับของอื่น
     const existingTransformer = await prisma.transformer.findFirst({
       where: {
@@ -398,6 +418,7 @@ export async function updateTransformer(
 
 export async function deleteTransformer(id: number) {
   try {
+    await requireAdmin();
     // ตรวจสอบว่ามีการใช้งานในคำขอดับไฟหรือไม่
     const relatedRequests = await prisma.powerOutageRequest.findMany({
       where: { transformer: { id } },
@@ -433,24 +454,7 @@ export async function bulkUpsertTransformers(
   }) => void,
 ) {
   try {
-    // ตรวจสอบการ authentication
-    const session = await getServerSession(authOptions);
-    if (!session || !session.user) {
-      return {
-        success: false,
-        error: "ไม่มีสิทธิ์เข้าถึง",
-        results: { success: 0, updated: 0, created: 0, errors: [] },
-      };
-    }
-
-    // ตรวจสอบสิทธิ์ admin
-    if (session.user.role !== "ADMIN") {
-      return {
-        success: false,
-        error: "ไม่มีสิทธิ์ในการอัพโหลดข้อมูลจำนวนมาก",
-        results: { success: 0, updated: 0, created: 0, errors: [] },
-      };
-    }
+    await requireAdmin();
 
     // ตรวจสอบจำนวนข้อมูลที่ส่งมา - เพิ่มขีดจำกัดสำหรับข้อมูลจำนวนมาก
     if (!data || !Array.isArray(data)) {
@@ -469,12 +473,12 @@ export async function bulkUpsertTransformers(
       };
     }
 
-    // เพิ่มขีดจำกัดเป็น 100,000 รายการ สำหรับข้อมูลจำนวนมากขึ้น
-    if (data.length > 100000) {
+    // Keep each action request comfortably below serverless payload ceilings.
+    if (data.length > 1000) {
       return {
         success: false,
         error:
-          "จำนวนข้อมูลเกินกำหนด (สูงสุด 100,000 รายการ) กรุณาแบ่งไฟล์เป็นส่วนๆ",
+          "จำนวนข้อมูลต่อคำขอเกินกำหนด (สูงสุด 1,000 รายการ) กรุณาแบ่งส่งเป็นชุดย่อย",
         results: { success: 0, updated: 0, created: 0, errors: [] },
       };
     }
@@ -504,13 +508,13 @@ export async function bulkUpsertTransformers(
       operation: string,
     ) => {
       if (onProgress) {
-        onProgress({
+        try { onProgress({
           currentBatch,
           totalBatches,
           processedRecords,
           totalRecords,
           currentOperation: operation,
-        });
+        }); } catch { /* A progress observer cannot undo a committed batch. */ }
       }
     };
 
@@ -585,6 +589,10 @@ export async function bulkUpsertTransformers(
           .replace(/javascript:/gi, "")
           .replace(/on\w+\s*=/gi, "");
 
+        if (!cleanGisDetails.trim()) {
+          results.errors.push({ row, transformerNumber, error: "รายละเอียด GIS ว่างเปล่าหลังตรวจสอบข้อมูล" });
+          return null;
+        }
         return {
           transformerNumber,
           gisDetails: cleanGisDetails.trim(),
@@ -642,9 +650,11 @@ export async function bulkUpsertTransformers(
     });
 
     // ลบ duplicate ออกจาก sanitizedData (เก็บแค่รายการแรก)
-    const uniqueData = sanitizedData.filter((item, index) => {
-      const firstIndex = transformerNumbers.indexOf(item.transformerNumber);
-      return firstIndex === index;
+    const seenNumbers = new Set<string>();
+    const uniqueData = sanitizedData.filter((item) => {
+      if (seenNumbers.has(item.transformerNumber)) return false;
+      seenNumbers.add(item.transformerNumber);
+      return true;
     });
 
     if (process.env.NODE_ENV !== "production") {
@@ -662,14 +672,7 @@ export async function bulkUpsertTransformers(
 
     // ปรับปรุง batch processing สำหรับความเร็วสูงสุด
     // สำหรับข้อมูลจำนวนมาก ใช้ batch size ที่ใหญ่ขึ้น
-    const determineBatchSize = (totalRecords: number): number => {
-      if (totalRecords < 1000) return 250; // batch เล็กสำหรับข้อมูลน้อย
-      if (totalRecords < 5000) return 500; // batch ปานกลาง
-      if (totalRecords < 20000) return 1000; // batch ใหญ่สำหรับข้อมูลปานกลาง
-      return 2000; // batch ใหญ่สุดสำหรับข้อมูลจำนวนมาก
-    };
-
-    const BATCH_SIZE = determineBatchSize(uniqueData.length);
+    const BATCH_SIZE = 250;
     const batches = [];
 
     for (let i = 0; i < uniqueData.length; i += BATCH_SIZE) {
@@ -695,14 +698,14 @@ export async function bulkUpsertTransformers(
       reportProgress(
         currentBatch,
         batches.length,
-        batchIndex * BATCH_SIZE,
+        results.success,
         uniqueData.length,
         `กำลังประมวลผล batch ${currentBatch}/${batches.length} (${batch.length.toLocaleString()} รายการ)`,
       );
 
       try {
         // ใช้ High-Performance Bulk Upsert ด้วย UNNEST และ RETURNING
-        await prisma.$transaction(
+        const committedCounts = await prisma.$transaction(
           async (tx) => {
             // สร้าง arrays สำหรับ UNNEST
             const transformerNumbers = batch.map(
@@ -746,44 +749,17 @@ export async function bulkUpsertTransformers(
               gisDetailsArray,
             )) as Array<{ created_count: bigint; updated_count: bigint }>;
 
-            if (result && result.length > 0) {
-              const createdCount = Number(result[0].created_count);
-              const updatedCount = Number(result[0].updated_count);
-
-              results.created += createdCount;
-              results.updated += updatedCount;
-              results.success += batch.length;
-
-              if (process.env.NODE_ENV !== "production") {
-                console.log(
-                  `Batch ${currentBatch} completed: Created ${createdCount}, Updated ${updatedCount}`,
-                );
-              }
-            } else {
-              // Fallback ถ้า query ไม่ return ผลลัพธ์ที่คาดหวัง
-              if (process.env.NODE_ENV !== "production") {
-                console.warn(
-                  `Batch ${currentBatch}: No result returned, assuming all records processed`,
-                );
-              }
-              results.success += batch.length;
-              results.created += batch.length; // สมมติว่าเป็นการสร้างใหม่
-            }
-
-            // Report progress after completing batch with 500-record granularity
-            const processedSoFar = (batchIndex + 1) * BATCH_SIZE;
-            reportProgress(
-              currentBatch,
-              batches.length,
-              Math.min(processedSoFar, uniqueData.length),
-              uniqueData.length,
-              `เสร็จสิ้น batch ${currentBatch}/${batches.length} - ประมวลผลแล้ว ${Math.min(processedSoFar, uniqueData.length).toLocaleString()}/${uniqueData.length.toLocaleString()} รายการ`,
-            );
+            return assertTransformerUpsertCounts(result, batch.length);
           },
           {
             timeout: 120000, // เพิ่ม timeout เป็น 2 นาทีสำหรับ batch ขนาดใหญ่
           },
         );
+        // Credit persistence only after the transaction has committed.
+        results.created += committedCounts.created;
+        results.updated += committedCounts.updated;
+        results.success += committedCounts.created + committedCounts.updated;
+        reportProgress(currentBatch, batches.length, results.success, uniqueData.length, `บันทึกแล้ว ${results.success}/${uniqueData.length} รายการ`);
       } catch (error) {
         console.error(`Error processing batch ${currentBatch}:`, error);
 
@@ -808,13 +784,15 @@ export async function bulkUpsertTransformers(
     reportProgress(
       batches.length,
       batches.length,
-      uniqueData.length,
+      results.success,
       uniqueData.length,
       "การประมวลผลเสร็จสิ้น - ใช้เทคนิค UNNEST สำหรับประสิทธิภาพสูงสุด",
     );
 
+    const completelySuccessful = results.success > 0 && results.errors.length === 0;
     return {
-      success: true,
+      success: completelySuccessful,
+      ...(completelySuccessful ? {} : { error: results.success > 0 ? "นำเข้าสำเร็จบางส่วน โปรดตรวจสอบรายการที่ผิดพลาด" : "ไม่มีรายการที่บันทึกสำเร็จ" }),
       results,
       message: `ประมวลผลแบบ High-Performance: ${uniqueData.length.toLocaleString()} รายการ สำเร็จ ${results.success.toLocaleString()} รายการ (สร้างใหม่ ${results.created.toLocaleString()}, อัพเดท ${results.updated.toLocaleString()})${results.duplicatesRemoved > 0 ? `, ลบข้อมูลซ้ำ ${results.duplicatesRemoved.toLocaleString()} รายการ` : ""}, ผิดพลาด ${results.errors.length.toLocaleString()} รายการ`,
     };
@@ -835,39 +813,15 @@ export async function bulkUpsertTransformers(
   }
 }
 
-export async function resetUserPassword(userId: number) {
-  try {
-    // ดึงข้อมูลผู้ใช้เพื่อเอารหัสพนักงาน
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { employeeId: true, fullName: true },
-    });
-
-    if (!user) {
-      return { success: false, error: "ไม่พบผู้ใช้" };
-    }
-
-    // ใช้รหัสพนักงานเป็นรหัสผ่านใหม่
-    const newPassword = user.employeeId;
-    const hashedPassword = await hash(newPassword, 10);
-
-    await prisma.user.update({
-      where: { id: userId },
-      data: { password: hashedPassword },
-    });
-
-    return {
-      success: true,
-      message: `รีเซ็ตรหัสผ่านของ ${user.fullName} เรียบร้อยแล้ว รหัสผ่านใหม่คือ: ${newPassword}`,
-    };
-  } catch (error) {
-    console.error("Failed to reset password:", error);
-    return { success: false, error: "เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน" };
-  }
+export async function resetUserPassword(_userId: number) {
+  try { await requireAdmin(); }
+  catch { return { success: false, error: "ไม่มีสิทธิ์ดำเนินการ" }; }
+  return { success: false, error: "การรีเซ็ตรหัสผ่านแบบเดิมถูกปิดใช้งาน กรุณาใช้ขั้นตอนตั้งรหัสผ่านที่ปลอดภัย" };
 }
 
 export async function checkEmployeeIdExists(employeeId: string) {
   try {
+    await requireAdmin();
     if (!employeeId || employeeId.length < 6) {
       return { exists: false, message: "" };
     }

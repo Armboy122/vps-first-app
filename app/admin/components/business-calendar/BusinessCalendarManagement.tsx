@@ -1,5 +1,7 @@
 "use client";
 
+import { parseImportDateKey } from "@/lib/utils/importValues";
+
 import {
   useRef,
   useState,
@@ -23,7 +25,8 @@ import {
   BusinessCalendarFormData,
 } from "../../types/admin.types";
 import { PAGE_SIZE_OPTIONS, SECURITY_LIMITS } from "../../constants/admin.constants";
-import { parseCSVLine, formatFileSize } from "../../utils/csvParser";
+import { formatFileSize } from "../../utils/csvParser";
+import { assertCsvHeader, decodeUtf8Csv, parseCsvDocument } from "@/lib/utils/csvDocument";
 import { FeedbackBanner } from "../shared/FeedbackBanner";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { ErrorMessage } from "../shared/ErrorMessage";
@@ -62,24 +65,7 @@ function normalizeCSVType(value: string): BusinessCalendarEntryType | null {
 }
 
 function normalizeCSVDate(value: string) {
-  const trimmed = value.trim();
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-    return trimmed;
-  }
-
-  const thaiDateMatch = trimmed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-  if (!thaiDateMatch) {
-    return "";
-  }
-
-  const [, rawDay, rawMonth, rawYear] = thaiDateMatch;
-  const day = rawDay.padStart(2, "0");
-  const month = rawMonth.padStart(2, "0");
-  const yearNumber = Number(rawYear);
-  const year = yearNumber > 2400 ? String(yearNumber - 543) : rawYear;
-
-  return `${year}-${month}-${day}`;
+  return parseImportDateKey(value) || "";
 }
 
 function formatThaiDate(dateKey: string) {
@@ -681,16 +667,17 @@ function BusinessCalendarCSVImport() {
     onSuccess: (result) => {
       if (!result.success) {
         setErrors([
+          `บันทึกได้ ${result.results?.created || 0} รายการ และอัปเดต ${result.results?.updated || 0} รายการ`,
           result.error || "นำเข้าไม่สำเร็จ",
-          ...result.results.errors.slice(0, 10),
+          ...(result.results?.errors || []).slice(0, 10),
         ]);
+        setSuccessMessage(null);
       } else {
         setErrors([]);
+        setSuccessMessage(
+          `นำเข้าสำเร็จ: เพิ่ม ${result.results.created} รายการ, อัปเดต ${result.results.updated} รายการ`,
+        );
       }
-
-      setSuccessMessage(
-        `นำเข้าสำเร็จ: เพิ่ม ${result.results.created} รายการ, อัปเดต ${result.results.updated} รายการ`,
-      );
       queryClient.invalidateQueries({ queryKey: ["business-calendar"] });
     },
   });
@@ -717,26 +704,25 @@ function BusinessCalendarCSVImport() {
   };
 
   const parseFile = async (file: File) => {
-    const text = await file.text();
-    const lines = text.split(/\r?\n/).filter((line) => line.trim());
-
-    if (lines.length <= 1) {
+    const records = parseCsvDocument(decodeUtf8Csv(await file.arrayBuffer()));
+    if (records.length <= 1) {
       throw new Error("ไฟล์ต้องมี header และข้อมูลอย่างน้อย 1 รายการ");
     }
-
-    const dataLines = lines.slice(1);
-    if (dataLines.length > SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD) {
+    assertCsvHeader(records[0].values, [
+      ["date", "name", "type", "scope", "note", "isActive"],
+      ["date", "name", "type"],
+    ]);
+    const dataRecords = records.slice(1);
+    if (dataRecords.length > SECURITY_LIMITS.MAX_CALENDAR_ROWS_PER_UPLOAD) {
       throw new Error(
-        `จำนวนรายการเกินกำหนด (สูงสุด ${SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD.toLocaleString()} รายการ)`,
+        `จำนวนรายการเกินกำหนด (สูงสุด ${SECURITY_LIMITS.MAX_CALENDAR_ROWS_PER_UPLOAD.toLocaleString()} รายการต่อครั้ง) กรุณาแบ่งไฟล์เป็นชุดย่อย`,
       );
     }
 
-    return dataLines.map((line, index) => {
-      const rowNumber = index + 2;
-      const fields = parseCSVLine(line);
+    return dataRecords.map(({ values: fields, physicalRow: rowNumber }) => {
 
-      if (fields.length < 3) {
-        throw new Error(`บรรทัด ${rowNumber}: ต้องมีอย่างน้อย 3 คอลัมน์`);
+      if (fields.length !== records[0].values.length) {
+        throw new Error(`บรรทัด ${rowNumber}: จำนวนคอลัมน์ไม่ตรงกับ header`);
       }
 
       const type = normalizeCSVType(fields[2] || "");

@@ -1,5 +1,7 @@
 "use server";
 
+import { getCurrentActor } from "@/lib/server/auth/currentActor";
+
 interface PdfData {
   peaNo: string;
   name: string;
@@ -10,6 +12,8 @@ interface PdfData {
 
 export async function generatePdf(data: PdfData) {
   try {
+    await getCurrentActor();
+    if (process.env.APP_ENV === "preview" || process.env.VERCEL_ENV === "preview") return { success: false, data: null, message: "การสร้าง PDF ภายนอกปิดใช้งานในระบบทดสอบ" };
     const response = await fetch(
       process.env.NEXT_PUBLIC_GENERATE_PDF as string,
       {

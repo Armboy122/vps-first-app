@@ -1,3 +1,4 @@
+import { formatImportTime, parseImportDateKey } from "@/lib/utils/importValues";
 /**
  * csvValidation.ts
  *
@@ -23,8 +24,7 @@ import {
   MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE,
   PowerOutageRequestInput,
 } from "@/lib/validations/powerOutageRequest";
-import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
-import { searchTransformers } from "@/app/api/action/powerOutageRequest";
+import { getBranches, getTransformersByNumbers } from "@/lib/api/client";
 
 dayjs.extend(customParseFormat);
 
@@ -33,6 +33,7 @@ dayjs.extend(customParseFormat);
 // ===================================================
 
 export interface CSVRow {
+  physicalRow?: number;
   outageDate?: string;
   startTime?: string;
   endTime?: string;
@@ -55,6 +56,7 @@ export interface ValidateCSVOptions {
   workCenters: { id: number; name: string }[];
   userWorkCenterId?: string;
   userBranch?: string;
+  dateValidationResults?: Record<string, { isValid: boolean; error?: string }>;
 }
 
 export interface ValidateCSVResult {
@@ -101,115 +103,11 @@ export const parseCSVLine = (line: string): string[] => {
  * รองรับ: HH:MM, H:MM, HHMM, HMM, HH.MM, H.MM
  * คืนค่า "" หากรูปแบบไม่ถูกต้อง
  */
-export const formatTime = (timeInput: string): string => {
-  if (!timeInput?.trim()) return "";
+export const formatTime = formatImportTime;
 
-  const cleanTime = timeInput.trim();
-
-  // รูปแบบ HH:MM หรือ H:MM
-  const timeMatch = cleanTime.match(/^(\d{1,2}):(\d{2})$/);
-  if (timeMatch) {
-    const [, hours, minutes] = timeMatch;
-    const h = parseInt(hours);
-    const m = parseInt(minutes);
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-      return `${h.toString().padStart(2, "0")}:${minutes}`;
-    }
-  }
-
-  // รูปแบบ HH:MM:SS (ตัด seconds ออก)
-  const timeWithSec = cleanTime.match(/^(\d{1,2}):(\d{2}):(\d{2})$/);
-  if (timeWithSec) {
-    const [, hours, minutes] = timeWithSec;
-    const h = parseInt(hours);
-    const m = parseInt(minutes);
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-      return `${h.toString().padStart(2, "0")}:${minutes}`;
-    }
-  }
-
-  // Excel decimal fraction (0.333333 = 08:00, 0.5 = 12:00, 0.75 = 18:00)
-  const decimalVal = parseFloat(cleanTime);
-  if (!isNaN(decimalVal) && decimalVal > 0 && decimalVal < 1) {
-    const totalMinutes = Math.round(decimalVal * 24 * 60);
-    const h = Math.floor(totalMinutes / 60);
-    const m = totalMinutes % 60;
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-    }
-  }
-
-  // รูปแบบ HHMM หรือ HMM (เช่น 0800, 830)
-  const numericTime = cleanTime.replace(/[^\d]/g, "");
-  if (numericTime.length >= 3 && numericTime.length <= 4) {
-    let hours: string, minutes: string;
-    if (numericTime.length === 3) {
-      hours = numericTime.slice(0, 1);
-      minutes = numericTime.slice(1);
-    } else {
-      hours = numericTime.slice(0, 2);
-      minutes = numericTime.slice(2);
-    }
-    const h = parseInt(hours);
-    const m = parseInt(minutes);
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-    }
-  }
-
-  // รูปแบบ H.M หรือ HH.MM (ใช้จุดแทนโคลอน)
-  const dotTimeMatch = cleanTime.match(/^(\d{1,2})\.(\d{1,2})$/);
-  if (dotTimeMatch) {
-    const [, hours, minutes] = dotTimeMatch;
-    const h = parseInt(hours);
-    const m = parseInt(minutes);
-    if (h >= 0 && h <= 23 && m >= 0 && m <= 59) {
-      return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
-    }
-  }
-
-  return "";
-};
-
-// ===================================================
-// Date Parser
-// ===================================================
-
-/**
- * แปลง string วันที่เป็น dayjs object
- * รองรับรูปแบบ: YYYY-MM-DD, DD/MM/YYYY, DD-MM-YYYY, YYYY/MM/DD
- * คืนค่า null หากไม่สามารถแปลงได้
- */
 export const parseDate = (dateInput: string): dayjs.Dayjs | null => {
-  if (!dateInput?.trim()) return null;
-
-  const cleanDate = dateInput.trim();
-
-  // Excel serial date number (e.g. 45800 → 2025-05-20)
-  // Excel epoch is 1900-01-01 with a known bug (treats 1900 as leap year)
-  const serialNum = parseFloat(cleanDate);
-  if (!isNaN(serialNum) && serialNum > 40000 && serialNum < 60000 && !cleanDate.includes('/') && !cleanDate.includes('-')) {
-    const excelEpoch = new Date(1899, 11, 30); // Excel day 0
-    const jsDate = new Date(excelEpoch.getTime() + serialNum * 86400000);
-    const parsed = dayjs(jsDate);
-    if (parsed.isValid()) return parsed;
-  }
-
-  // Standard formats
-  const formats = ["YYYY-MM-DD", "DD/MM/YYYY", "DD-MM-YYYY", "YYYY/MM/DD"];
-
-  for (const format of formats) {
-    const parsed = dayjs(cleanDate, format, true);
-    if (parsed.isValid()) {
-      // Handle Thai Buddhist year (พ.ศ.) — if year > 2400, subtract 543
-      if (parsed.year() > 2400) {
-        return parsed.subtract(543, "year");
-      }
-      return parsed;
-    }
-  }
-
-  return null;
+  const key = parseImportDateKey(dateInput);
+  return key ? dayjs(key, "YYYY-MM-DD", true) : null;
 };
 
 // ===================================================
@@ -236,6 +134,10 @@ export const validateAndTransformCSVRows = async (
   const validData: PowerOutageRequestInput[] = [];
   const errors: CSVValidationError[] = [];
 
+  const numbers = Array.from(new Set(rows.map((row) => (row.transformerNumber || "").trim().split(" - ")[0]).filter((number) => Boolean(number) && number.length <= 100)));
+  const transformerRows = await getTransformersByNumbers(numbers);
+  const transformerByNumber = new Map(transformerRows.map((item) => [item.transformerNumber, item]));
+
   // Cache สำหรับ branches ของแต่ละ workCenter เพื่อลด API calls
   const branchCache = new Map<number, any[]>();
 
@@ -251,11 +153,11 @@ export const validateAndTransformCSVRows = async (
 
   for (let index = 0; index < rows.length; index++) {
     const row = rows[index];
-    const rowNumber = index + 2; // +2 เพราะมี header row และ index เริ่มจาก 0
+    const rowNumber = row.physicalRow ?? index + 2;
     const rowErrors: CSVValidationError[] = [];
 
     // ข้ามแถวที่ว่างเปล่า
-    const hasData = Object.values(row).some(
+    const hasData = Object.entries(row).filter(([key]) => key !== "physicalRow").map(([, value]) => value).some(
       (value) => value !== null && value !== undefined && value !== "",
     );
     if (!hasData) continue;
@@ -273,20 +175,21 @@ export const validateAndTransformCSVRows = async (
         value: row.outageDate,
       });
     } else {
+      const dateKey = parsedDate.format("YYYY-MM-DD");
+      const authoritative = options.dateValidationResults?.[dateKey];
       const minDate = dayjs(getMinOutageBusinessDateString());
-      const businessDaysFromToday =
-        getBusinessDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
-      const calendarDaysFromToday =
-        getCalendarDaysUntilOutage(parsedDate.format("YYYY-MM-DD")) ?? 0;
-      if (
-        parsedDate.isBefore(minDate, "day") ||
-        businessDaysFromToday < MIN_OUTAGE_BUSINESS_DAYS ||
-        calendarDaysFromToday <= MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE
-      ) {
+      const businessDaysFromToday = getBusinessDaysUntilOutage(dateKey) ?? 0;
+      const calendarDaysFromToday = getCalendarDaysUntilOutage(dateKey) ?? 0;
+      const rejected = authoritative
+        ? !authoritative.isValid
+        : parsedDate.isBefore(minDate, "day") ||
+          businessDaysFromToday < MIN_OUTAGE_BUSINESS_DAYS ||
+          calendarDaysFromToday <= MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE;
+      if (rejected) {
         rowErrors.push({
           row: rowNumber,
           field: "วันที่ดับไฟ",
-          message: `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ และมากกว่า ${MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้ ${businessDaysFromToday} วันทำการ / ${calendarDaysFromToday} วันปฏิทิน (วันที่เร็วที่สุด: ${minDate.format("DD/MM/YYYY")})`,
+          message: authoritative?.error ?? `วันที่ดับไฟต้องอยู่ล่วงหน้าอย่างน้อย ${MIN_OUTAGE_BUSINESS_DAYS} วันทำการ และมากกว่า ${MIN_OUTAGE_CALENDAR_DAYS_EXCLUSIVE} วันปฏิทิน — วันที่เลือก ${parsedDate.format("DD/MM/YYYY")} ห่างจากวันนี้ ${businessDaysFromToday} วันทำการ / ${calendarDaysFromToday} วันปฏิทิน (วันที่เร็วที่สุด: ${minDate.format("DD/MM/YYYY")})`,
           value: row.outageDate,
         });
       }
@@ -375,17 +278,19 @@ export const validateAndTransformCSVRows = async (
           value: row.workCenterName,
         });
       } else {
-        const workCenter = workCenters.find(
-          (wc) =>
-            wc.name.toLowerCase().includes(row.workCenterName!.toLowerCase()) ||
-            row.workCenterName!.toLowerCase().includes(wc.name.toLowerCase()),
+        const normalizeName = (value: string) => value.trim().toLocaleLowerCase();
+        const matchingCenters = workCenters.filter(
+          (wc) => normalizeName(wc.name) === normalizeName(row.workCenterName!),
         );
+        const workCenter = matchingCenters.length === 1 ? matchingCenters[0] : undefined;
 
         if (!workCenter) {
           rowErrors.push({
             row: rowNumber,
             field: "จุดรวมงาน",
-            message: `ไม่พบจุดรวมงาน "${row.workCenterName}" ในระบบ กรุณาตรวจสอบชื่อให้ถูกต้อง`,
+            message: matchingCenters.length > 1
+              ? `ชื่อจุดรวมงาน "${row.workCenterName}" ไม่ชัดเจน กรุณาใช้ชื่อเต็มจากระบบ`
+              : `ไม่พบจุดรวมงาน "${row.workCenterName}" ในระบบ กรุณาใช้ชื่อเต็มให้ตรงกับระบบ`,
             value: row.workCenterName,
           });
         } else {
@@ -407,15 +312,11 @@ export const validateAndTransformCSVRows = async (
                 branchCache.set(workCenter.id, branches);
               }
 
-              const branch = branches.find(
-                (b: any) =>
-                  b.shortName
-                    .toLowerCase()
-                    .includes(row.branchName!.toLowerCase()) ||
-                  row.branchName!
-                    .toLowerCase()
-                    .includes(b.shortName.toLowerCase()),
+              const matchingBranches = branches.filter((b: any) =>
+                normalizeName(b.shortName) === normalizeName(row.branchName!) ||
+                normalizeName(b.fullName || "") === normalizeName(row.branchName!),
               );
+              const branch = matchingBranches.length === 1 ? matchingBranches[0] : undefined;
 
               if (branch) {
                 branchId = branch.id.toString();
@@ -423,7 +324,9 @@ export const validateAndTransformCSVRows = async (
                 rowErrors.push({
                   row: rowNumber,
                   field: "สาขา",
-                  message: `ไม่พบสาขา "${row.branchName}" ในจุดรวมงาน "${row.workCenterName}" กรุณาตรวจสอบชื่อให้ถูกต้อง`,
+                  message: matchingBranches.length > 1
+                    ? `ชื่อสาขา "${row.branchName}" ไม่ชัดเจน กรุณาใช้ชื่อเต็มจากระบบ`
+                    : `ไม่พบสาขา "${row.branchName}" ในจุดรวมงาน "${row.workCenterName}" กรุณาใช้ชื่อสาขาให้ตรงกับระบบ`,
                   value: row.branchName,
                 });
               }
@@ -461,10 +364,7 @@ export const validateAndTransformCSVRows = async (
         : rawTransformer;
 
       try {
-        const foundTransformers = await searchTransformers(transformerNumber);
-        const exactMatch = foundTransformers.find(
-          (t) => t.transformerNumber === transformerNumber,
-        );
+        const exactMatch = transformerByNumber.get(transformerNumber);
 
         if (!exactMatch) {
           rowErrors.push({

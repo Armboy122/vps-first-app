@@ -58,8 +58,12 @@ export function validateTransformerData(data: {
     errors.push("รายละเอียด GIS ไม่สามารถเป็นค่าว่างได้");
   }
 
-  if (data.transformerNumber && data.transformerNumber.length > 50) {
-    errors.push("หมายเลขหม้อแปลงยาวเกินไป (สูงสุด 50 ตัวอักษร)");
+  if (data.transformerNumber && data.transformerNumber.length > 100) {
+    errors.push("หมายเลขหม้อแปลงยาวเกินไป (สูงสุด 100 ตัวอักษร)");
+  }
+
+  if (data.transformerNumber && !/^[a-zA-Z0-9\-_\.]+$/.test(data.transformerNumber.trim())) {
+    errors.push("หมายเลขหม้อแปลงมีตัวอักษรที่ไม่อนุญาต (ใช้ได้เฉพาะ a-z, A-Z, 0-9, -, _, .)");
   }
 
   if (data.gisDetails && data.gisDetails.length > 500) {
@@ -94,24 +98,25 @@ export function formatFileSize(bytes: number): string {
  * @returns CSV content เป็น string
  */
 export function generateCSVContent(
-  data: Record<string, any>[],
+  data: Record<string, unknown>[],
   headers: string[],
 ): string {
   const csvRows: string[] = [];
-  
+
+  const escapeField = (value: unknown): string => {
+    const text = String(value ?? "");
+    const escaped = text.replace(/"/g, '""');
+    return /[,"\r\n]/.test(text) ? `"${escaped}"` : escaped;
+  };
+
   // Add headers
-  csvRows.push(headers.join(","));
-  
+  csvRows.push(headers.map(escapeField).join(","));
+
   // Add data rows
   data.forEach((row) => {
-    const values = headers.map((header) => {
-      const value = row[header] || "";
-      // Escape quotes and wrap in quotes if contains comma
-      const escaped = String(value).replace(/"/g, '""');
-      return escaped.includes(",") ? `"${escaped}"` : escaped;
-    });
+    const values = headers.map((header) => escapeField(row[header]));
     csvRows.push(values.join(","));
   });
-  
+
   return csvRows.join("\n");
 }

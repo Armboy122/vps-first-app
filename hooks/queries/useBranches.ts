@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
+import { getBranches } from "@/lib/api/client";
 
 /**
  * Hook สำหรับดึงข้อมูลสาขาตาม Work Center ID

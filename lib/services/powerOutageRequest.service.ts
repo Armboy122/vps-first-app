@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma";
+import { createHash } from "node:crypto";
+import { runIdempotentBatch, ImportBatchError } from "./idempotentBatch";
 import {
   OMSStatus,
   Request,
@@ -168,34 +170,52 @@ export class PowerOutageRequestService {
    */
   static async createMultipleRequests(
     dataList: CreatePowerOutageRequestData[],
+    idempotencyKey: string,
+    beforeCreate?: () => Promise<void>,
   ): Promise<PowerOutageRequest[]> {
-    const validationResults = await Promise.all(
-      dataList.map((data) =>
-        this.validateOutageDateWithCalendar(data.outageDate),
-      ),
-    );
-    const firstInvalidResult = validationResults.find(
-      (result) => !result.isValid,
-    );
-
-    if (firstInvalidResult?.error) {
-      throw new BusinessCalendarValidationError(firstInvalidResult.error);
-    }
-
+    if (dataList.length === 0) throw new Error("Cannot create an empty outage-request batch");
+    const createdById = dataList[0]?.createdById;
+    if (dataList.some((data) => data.createdById !== createdById)) throw new ImportBatchError("Mixed outage-request actors are not allowed");
+    // Fixed field order, ISO instants, normalized nullable area, deliberate array order.
+    const canonical = dataList.map((data) => ({
+      outageDate: data.outageDate.toISOString(), startTime: data.startTime.toISOString(), endTime: data.endTime.toISOString(),
+      workCenterId: data.workCenterId, branchId: data.branchId,
+      transformerNumber: data.transformerNumber.trim(), gisDetails: data.gisDetails.trim(),
+      area: data.area?.trim() || null, createdById: data.createdById,
+    }));
+    const payloadHash = createHash("sha256").update(JSON.stringify(canonical)).digest("hex");
     const requests = dataList.map((data) => ({
       ...data,
       omsStatus: "NOT_ADDED" as const,
       statusRequest: "CONFIRM" as const,
     }));
-
-    return await prisma.$transaction(async (tx) => {
-      const results = [];
-      for (const data of requests) {
-        const result = await tx.powerOutageRequest.create({ data });
-        results.push(result);
-      }
-      return results;
-    });
+    return runIdempotentBatch(
+      { idempotencyKey, payloadHash, createdById },
+      requests,
+      {
+        findBatch: (key) => prisma.outageRequestImport.findUnique({ where: { idempotencyKey: key } }),
+        loadItems: async (ids) => {
+          const items = await prisma.powerOutageRequest.findMany({ where: { id: { in: ids } } });
+          const byId = new Map(items.map((item) => [item.id, item]));
+          return ids.map((id) => byId.get(id)).filter((item): item is PowerOutageRequest => Boolean(item));
+        },
+        transaction: (work) => prisma.$transaction((tx) => work({
+          createBatch: (input) => tx.outageRequestImport.create({ data: input }),
+          createItems: (items) => tx.powerOutageRequest.createManyAndReturn({ data: items }),
+          updateBatchRequestIds: (id, requestIds) => tx.outageRequestImport.update({
+            where: { id },
+            data: { requestIds },
+          }).then(() => undefined),
+        }), { maxWait: 10000, timeout: 30000 }),
+      },
+      async () => {
+        if (beforeCreate) return beforeCreate();
+        const dates = Array.from(new Map(dataList.map((data) => [data.outageDate.toISOString(), data.outageDate])).values());
+        const validationResults = await Promise.all(dates.map((date) => this.validateOutageDateWithCalendar(date)));
+        const firstInvalidResult = validationResults.find((result) => !result.isValid);
+        if (firstInvalidResult) throw new BusinessCalendarValidationError(firstInvalidResult.error || "วันที่ดับไฟไม่ถูกต้อง");
+      },
+    );
   }
 
   /**

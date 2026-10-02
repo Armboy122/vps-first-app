@@ -1,19 +1,11 @@
 import { NextResponse } from "next/server";
-import prisma from "@/lib/prisma";
+import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const workCenters = await prisma.workCenter.findMany({
-      select: {
-        id: true,
-        name: true,
-      },
-      orderBy: {
-        name: "asc",
-      },
-    });
+    const workCenters = await getWorkCenters();
 
     return NextResponse.json(workCenters);
   } catch (error) {

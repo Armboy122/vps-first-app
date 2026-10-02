@@ -1,10 +1,12 @@
+import { uploadTransformerRows } from "@/lib/services/transformerUpload";
 import { useState, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { bulkUpsertTransformers } from "@/app/api/action/User";
 import { SECURITY_LIMITS } from "../../constants/admin.constants";
-import { parseCSVLine, validateTransformerData, formatFileSize } from "../../utils/csvParser";
+import { validateTransformerData, formatFileSize } from "../../utils/csvParser";
 import { CSVUploadProgress } from "../../types/admin.types";
 import { FileUp } from "lucide-react";
+import { assertCsvHeader, decodeUtf8Csv, parseCsvDocument } from "@/lib/utils/csvDocument";
 
 export function CSVUploadComponent() {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -16,27 +18,17 @@ export function CSVUploadComponent() {
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
+  const [uploadSummary, setUploadSummary] = useState<string | null>(null);
+  const [skippedRows, setSkippedRows] = useState<string[]>([]);
+
   const queryClient = useQueryClient();
 
   // Bulk upload mutation
   const uploadMutation = useMutation({
     mutationFn: (transformers: Array<{ transformerNumber: string; gisDetails: string }>) =>
       bulkUpsertTransformers(transformers),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["transformers"] });
-      setUploadProgress(prev => ({ ...prev, isUploading: false }));
-      setSelectedFile(null);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    },
-    onError: (error) => {
-      setUploadProgress(prev => ({
-        ...prev,
-        isUploading: false,
-        errors: [error.message || "เกิดข้อผิดพลาดในการอัพโหลด"],
-      }));
-    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["transformers"] }),
+
   });
 
   // Handle file selection
@@ -45,6 +37,9 @@ export function CSVUploadComponent() {
     if (!file) return;
 
     // Reset state
+    setSelectedFile(null);
+    setUploadSummary(null);
+    setSkippedRows([]);
     setUploadProgress({
       isUploading: false,
       progress: 0,
@@ -75,82 +70,36 @@ export function CSVUploadComponent() {
   };
 
   // Parse and validate CSV content
-  const parseCSVFile = async (file: File): Promise<Array<{ transformerNumber: string; gisDetails: string }>> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        try {
-          const content = e.target?.result as string;
-          const lines = content.split("\n").filter(line => line.trim());
-          
-          if (lines.length === 0) {
-            reject(new Error("ไฟล์ว่างเปล่า"));
-            return;
-          }
+  const parseCSVFile = async (file: File): Promise<Array<{ transformerNumber: string; gisDetails: string; physicalRow: number }>> => {
+    const records = parseCsvDocument(decodeUtf8Csv(await file.arrayBuffer()));
+    if (records.length < 2) throw new Error("ไฟล์ต้องมี header และข้อมูลอย่างน้อย 1 รายการ");
+    assertCsvHeader(records[0].values, [
+      ["หมายเลขหม้อแปลง", "รายละเอียด GIS"],
+      ["transformerNumber", "gisDetails"],
+    ]);
+    const dataRecords = records.slice(1);
+    if (dataRecords.length > SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD) {
+      throw new Error(`จำนวนรายการเกินกำหนด (สูงสุด ${SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD} รายการ)`);
+    }
 
-          // Skip header if exists
-          const dataLines = lines.slice(1);
-          
-          if (dataLines.length > SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD) {
-            reject(new Error(`จำนวนรายการเกินขึ้นได้ (สูงสุด ${SECURITY_LIMITS.MAX_ROWS_PER_UPLOAD} รายการ)`));
-            return;
-          }
-
-          const transformers: Array<{ transformerNumber: string; gisDetails: string }> = [];
-          const validationErrors: string[] = [];
-
-          dataLines.forEach((line, index) => {
-            const lineNumber = index + 2; // +2 because we skipped header and array is 0-indexed
-            
-            try {
-              const fields = parseCSVLine(line.trim());
-              
-              if (fields.length < 2) {
-                validationErrors.push(`บรรทัด ${lineNumber}: ข้อมูลไม่ครบ (ต้องมี 2 คอลัมน์)`);
-                return;
-              }
-
-              const transformerData = {
-                transformerNumber: fields[0]?.trim() || "",
-                gisDetails: fields[1]?.trim() || "",
-              };
-
-              const validation = validateTransformerData(transformerData);
-              if (!validation.isValid) {
-                validationErrors.push(`บรรทัด ${lineNumber}: ${validation.errors.join(", ")}`);
-                return;
-              }
-
-              transformers.push(transformerData);
-            } catch (error) {
-              validationErrors.push(`บรรทัด ${lineNumber}: รูปแบบข้อมูลไม่ถูกต้อง`);
-            }
-          });
-
-          if (validationErrors.length > 0) {
-            setUploadProgress(prev => ({
-              ...prev,
-              errors: validationErrors.slice(0, 10), // Show first 10 errors
-            }));
-            reject(new Error("พบข้อผิดพลาดในการตรวจสอบข้อมูล"));
-            return;
-          }
-
-          if (transformers.length === 0) {
-            reject(new Error("ไม่พบข้อมูลที่ถูกต้องในไฟล์"));
-            return;
-          }
-
-          resolve(transformers);
-        } catch (error) {
-          reject(new Error("ไม่สามารถอ่านไฟล์ได้"));
-        }
-      };
-
-      reader.onerror = () => reject(new Error("เกิดข้อผิดพลาดในการอ่านไฟล์"));
-      reader.readAsText(file, "UTF-8");
-    });
+    const transformers: Array<{ transformerNumber: string; gisDetails: string; physicalRow: number }> = [];
+    const validationErrors: string[] = [];
+    for (const record of dataRecords) {
+      const [number = "", gis = ""] = record.values;
+      if (record.values.length !== 2) {
+        validationErrors.push(`บรรทัด ${record.physicalRow}: ต้องมี 2 คอลัมน์`);
+        continue;
+      }
+      const transformerData = { transformerNumber: number.trim(), gisDetails: gis.trim(), physicalRow: record.physicalRow };
+      const validation = validateTransformerData(transformerData);
+      if (!validation.isValid) validationErrors.push(`บรรทัด ${record.physicalRow}: ${validation.errors.join(", ")}`);
+      else transformers.push(transformerData);
+    }
+    if (validationErrors.length) {
+      throw new Error([`พบข้อผิดพลาด ${validationErrors.length} แถว โปรดแก้ไขก่อนนำเข้า`, ...validationErrors.slice(0, 10)].join("\n"));
+    }
+    if (transformers.length === 0) throw new Error("ไม่พบข้อมูลที่ถูกต้องในไฟล์");
+    return transformers;
   };
 
   // Handle upload
@@ -164,35 +113,30 @@ export function CSVUploadComponent() {
       errors: [],
     });
 
+    setUploadSummary(null);
+    setSkippedRows([]);
     try {
       const transformers = await parseCSVFile(selectedFile);
-      
-      setUploadProgress(prev => ({
-        ...prev,
-        total: transformers.length,
-      }));
-
-      await uploadMutation.mutateAsync(transformers);
-      
-      setUploadProgress(prev => ({
-        ...prev,
-        progress: transformers.length,
-      }));
-      
-    } catch (error) {
-      if (error instanceof Error) {
-        setUploadProgress(prev => ({
-          ...prev,
-          isUploading: false,
-          errors: [error.message],
-        }));
+      const summary = await uploadTransformerRows(transformers, (chunk) => uploadMutation.mutateAsync(chunk), (saved, total) => {
+        setUploadProgress((prev) => ({ ...prev, progress: saved, total }));
+      });
+      setUploadSummary(`ยืนยันการบันทึก ${summary.saved} จาก ${summary.unique} รายการไม่ซ้ำ (เพิ่ม ${summary.created}, อัปเดต ${summary.updated}), ข้ามซ้ำ ${summary.duplicates.length} รายการ${summary.errors.length ? `, ยังไม่ยืนยัน ${summary.unique - summary.saved} รายการ` : ""}`);
+      setSkippedRows(summary.duplicates.slice(0, 10).map((row) => `บรรทัด ${row.physicalRow}: ${row.transformerNumber} ซ้ำ ใช้ข้อมูลบรรทัด ${row.firstPhysicalRow}`));
+      setUploadProgress((prev) => ({ ...prev, isUploading: false, progress: summary.saved, total: summary.unique, errors: summary.errors.slice(0, 10) }));
+      if (summary.errors.length === 0 && summary.saved === summary.unique) {
+        setSelectedFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = "";
       }
+    } catch (error) {
+      setUploadProgress((prev) => ({ ...prev, isUploading: false, errors: error instanceof Error ? error.message.split("\n") : ["ไม่สามารถอ่านไฟล์ได้"] }));
     }
   };
 
   // Clear selection
   const handleClear = () => {
     setSelectedFile(null);
+    setUploadSummary(null);
+    setSkippedRows([]);
     setUploadProgress({
       isUploading: false,
       progress: 0,
@@ -288,6 +232,9 @@ export function CSVUploadComponent() {
           </div>
         </div>
       )}
+
+      {uploadSummary && <p className="mb-4 text-sm text-gray-700">{uploadSummary}</p>}
+      {skippedRows.length > 0 && <ul className="mb-4 rounded bg-amber-50 p-3 text-xs text-amber-800">{skippedRows.map((row) => <li key={row}>{row}</li>)}</ul>}
 
       {/* Success Message */}
       {uploadProgress.progress > 0 && !uploadProgress.isUploading && uploadProgress.errors.length === 0 && (

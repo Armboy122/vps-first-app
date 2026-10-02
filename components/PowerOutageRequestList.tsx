@@ -1,12 +1,11 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
 import { PowerOutageRequestInput } from "@/lib/validations/powerOutageRequest";
-import { updatePowerOutageRequest } from "@/app/api/action/powerOutageRequest";
+import { getWorkCenters, updatePowerOutageRequest } from "@/lib/api/client";
 import UpdatePowerOutageRequestModal from "./UpdateRequest";
 import { ConfirmDialog, LoadingSpinner } from "@/components/ui";
 import { useAuth } from "@/lib/useAuth";
 import { OMSStatus, Request } from "@prisma/client";
-import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import { useLogger } from "@/hooks/useLogger";
 import {
   logUserAction,

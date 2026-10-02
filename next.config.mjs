@@ -2,7 +2,6 @@
 const nextConfig = {
     // กำหนดค่าอื่น ๆ ตามที่คุณต้องการ
     reactStrictMode: true, // เปิดใช้งานโหมดเข้มงวดของ React
-    swcMinify: true, // เปิดใช้งานการบีบอัดโดยใช้ SWC
     
     // Standalone output สำหรับ Docker production
     output: 'standalone',
@@ -10,7 +9,7 @@ const nextConfig = {
         webpackBuildWorker: true,
         // เพิ่มการตั้งค่า Server Actions
         serverActions: {
-            bodySizeLimit: '100mb', // เพิ่มขีดจำกัดเป็น 100MB สำหรับไฟล์ CSV ขนาดใหญ่
+            bodySizeLimit: '3mb', // Application imports are capped at 2.5 MB
         },
     },
     // Bundle optimization

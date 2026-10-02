@@ -1,13 +1,12 @@
 "use server";
 
-import { getServerSession } from "next-auth/next";
+import { getCurrentActor, requireAdmin as requireCurrentAdmin } from "@/lib/server/auth/currentActor";
 import { BusinessCalendarDateType, Prisma } from "@prisma/client";
-import { authOptions } from "@/authOption";
 import prisma from "@/lib/prisma";
 import { createDateOnlyUtc, toDateOnlyKey } from "@/lib/date-utils";
 
 const DEFAULT_SCOPE = "GLOBAL";
-const MAX_BULK_IMPORT_ROWS = 10000;
+const MAX_BULK_IMPORT_ROWS = 500;
 
 type BusinessCalendarPayload = {
   date: string;
@@ -30,17 +29,8 @@ export type BusinessCalendarDateMetadata = {
 };
 
 async function requireAdmin() {
-  const session = await getServerSession(authOptions);
-
-  if (!session?.user) {
-    return { success: false as const, error: "ไม่มีสิทธิ์เข้าถึง" };
-  }
-
-  if (session.user.role !== "ADMIN") {
-    return { success: false as const, error: "ต้องเป็นผู้ดูแลระบบเท่านั้น" };
-  }
-
-  return { success: true as const };
+  try { await requireCurrentAdmin(); return { success: true as const }; }
+  catch { return { success: false as const, error: "ต้องเป็นผู้ดูแลระบบปัจจุบันเท่านั้น" }; }
 }
 
 function normalizeScope(scope?: string | null) {
@@ -200,6 +190,7 @@ export async function getActiveBusinessCalendarDateMetadata(
   endDate: string,
   scope = DEFAULT_SCOPE,
 ): Promise<BusinessCalendarDateMetadata[]> {
+  await getCurrentActor();
   const start = parseDateOnly(startDate);
   const end = parseDateOnly(endDate);
 
@@ -241,6 +232,7 @@ export async function getActiveBusinessCalendarDateMetadata(
 export async function getAllActiveBusinessCalendarDateMetadata(
   scope = DEFAULT_SCOPE,
 ): Promise<BusinessCalendarDateMetadata[]> {
+  await getCurrentActor();
   try {
     const entries = await prisma.businessCalendarDate.findMany({
       where: {

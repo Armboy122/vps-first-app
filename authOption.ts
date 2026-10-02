@@ -1,3 +1,5 @@
+import { configurePreviewAuthUrl } from "@/lib/server/config/authUrl";
+configurePreviewAuthUrl();
 import prisma from "./lib/prisma";
 import bcrypt from "bcryptjs";
 import { Role } from "@prisma/client";

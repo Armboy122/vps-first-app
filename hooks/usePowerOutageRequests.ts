@@ -4,8 +4,8 @@ import {
   updateOMS,
   updateStatusRequest,
   deletePowerOutageRequest,
-} from "@/app/api/action/powerOutageRequest";
-import { getAllActiveBusinessCalendarDateMetadata } from "@/app/api/action/businessCalendar";
+  getAllActiveBusinessCalendarDateMetadata,
+} from "@/lib/api/client";
 import { OMSStatus, Request } from "@prisma/client";
 import type { BusinessDayCalendarConfig } from "@/lib/validations/powerOutageRequest";
 import { useRequestFilters } from "./useRequestFilters";
@@ -183,7 +183,7 @@ export const usePowerOutageRequests = (
           await loadRequests();
           return { success: true };
         } else {
-          return { success: false, error: result.message };
+          return { success: false, error: result.error };
         }
       } catch (error) {
         console.error("Error deleting request:", error);

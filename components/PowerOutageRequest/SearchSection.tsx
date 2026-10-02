@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useCallback, memo, useMemo } from "react";
 import { Search, Calendar, Building2, X, Info, GitBranch, SlidersHorizontal } from "lucide-react";
-import { getBranches } from "@/app/api/action/getWorkCentersAndBranches";
+import { getBranches } from "@/lib/api/client";
 
 interface WorkCenter {
   id: number;

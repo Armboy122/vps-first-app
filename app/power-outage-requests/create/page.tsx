@@ -1,4 +1,3 @@
-import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import PowerOutageCreatePage from "./components/PowerOutageCreatePage";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/authOption";
@@ -14,11 +13,6 @@ export default async function CreatePowerOutageRequestPage() {
   }
 
   const { role, branchId, workCenterId } = session.user;
-
-  let workCenters;
-  if (role === "ADMIN") {
-    workCenters = await getWorkCenters();
-  }
 
   return (
     <div className="min-h-screen">
@@ -42,7 +36,6 @@ export default async function CreatePowerOutageRequestPage() {
             role={role}
             workCenterId={String(workCenterId)}
             branch={String(branchId)}
-            workCenters={role === "ADMIN" ? workCenters : undefined}
           />
         </div>
       </div>

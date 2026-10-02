@@ -1,10 +1,9 @@
 "use server";
 
+import { getCurrentActor } from "@/lib/server/auth/currentActor";
 import prisma from "@/lib/prisma";
 import { isDateInFuture } from "@/lib/date-utils";
 import {
-  cacheOMSStatusByWorkCenter,
-  cacheOMSStatusDistribution,
   clearOMSCache,
 } from "@/lib/cache-utils";
 import { getOmsUrgencyBucketCounts } from "@/lib/utils/status-utils";
@@ -13,9 +12,10 @@ import { getOmsUrgencyBucketCounts } from "@/lib/utils/status-utils";
  * ดึงข้อมูลการกระจายสถานะ OMS ตามจุดรวมงาน พร้อมกับแคชข้อมูลไว้
  * @returns ข้อมูลการกระจายสถานะ OMS ตามจุดรวมงาน
  */
-export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(
-  async () => {
+export async function getOMSStatusDistributionByWorkCenter() {
+    const actor = await getCurrentActor();
     const workCenters = await prisma.workCenter.findMany({
+      where: actor.role === "ADMIN" || actor.role === "VIEWER" ? {} : { id: actor.workCenterId },
       include: {
         powerOutageRequests: {
           select: {
@@ -48,15 +48,16 @@ export const getOMSStatusDistributionByWorkCenter = cacheOMSStatusDistribution(
     });
 
     return result;
-  },
-);
+}
 
 /**
  * ดึงข้อมูลสถานะ OMS ตามจุดรวมงาน พร้อมกับแคชข้อมูลไว้
  * @returns ข้อมูลสถานะ OMS ตามจุดรวมงาน
  */
-export const getOMSStatusByWorkCenter = cacheOMSStatusByWorkCenter(async () => {
+export async function getOMSStatusByWorkCenter() {
+  const actor = await getCurrentActor();
   const omsStatusByWorkCenter = await prisma.workCenter.findMany({
+    where: actor.role === "ADMIN" || actor.role === "VIEWER" ? {} : { id: actor.workCenterId },
     select: {
       name: true,
       powerOutageRequests: {
@@ -94,11 +95,12 @@ export const getOMSStatusByWorkCenter = cacheOMSStatusByWorkCenter(async () => {
       })),
     };
   });
-});
+}
 
 /**
  * ล้างแคชข้อมูล OMS
  */
 export async function invalidateOMSCache() {
+  await getCurrentActor();
   clearOMSCache();
 }

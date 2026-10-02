@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { searchTransformers } from "@/app/api/action/powerOutageRequest";
+import { searchTransformers } from "@/lib/api/client";
 
 /**
  * Hook สำหรับค้นหาหม้อแปลง

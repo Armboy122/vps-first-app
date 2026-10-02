@@ -18,7 +18,7 @@ import {
   PowerOutageRequestInput,
   validateOutageBusinessDate,
 } from "@/lib/validations/powerOutageRequest";
-import { getActiveBusinessCalendarDateMetadata } from "@/app/api/action/businessCalendar";
+import { getActiveBusinessCalendarDateMetadata } from "@/lib/api/client";
 
 // Components
 import { FormButton } from "@/components/forms";

@@ -5,12 +5,11 @@ import {
   countWeekendOnlyBusinessDaysBetween,
   createDateOnlyUtc,
   createThailandDateOnly,
-  getThailandDateAtMidnight,
   isWeekendOnlyBusinessDay,
   toDateOnlyKey,
   type DateInput,
 } from "@/lib/date-utils";
-import { addDays } from "date-fns";
+const addDays = (date: Date, days: number) => new Date(date.getTime() + days * 86_400_000);
 
 export const DEFAULT_BUSINESS_CALENDAR_SCOPE = "GLOBAL";
 export const DEFAULT_MIN_LEAD_BUSINESS_DAYS = 6;
@@ -169,31 +168,16 @@ export class BusinessCalendarService {
     }
 
     const entries = await this.getActiveEntries(start, end, options);
-    const entriesByDate = new Map(
-      entries.map((entry) => [entry.dateKey, entry]),
-    );
-    let currentDate = start;
-    let businessDays = 0;
-
-    while (currentDate < end) {
-      currentDate = addDays(currentDate, 1);
-      const dateKey = toDateOnlyKey(currentDate);
-      const entry = entriesByDate.get(dateKey);
-
-      if (entry?.type === BusinessCalendarDateType.SPECIAL_WORKDAY) {
-        businessDays += 1;
-        continue;
-      }
-
-      if (entry?.type === BusinessCalendarDateType.HOLIDAY) {
-        continue;
-      }
-
-      if (isWeekendOnlyBusinessDay(dateKey)) {
-        businessDays += 1;
-      }
+    const startKey = toDateOnlyKey(start), endKey = toDateOnlyKey(end);
+    let businessDays = countWeekendOnlyBusinessDaysBetween(startKey, endKey);
+    // Count whole weeks arithmetically, then adjust only configured exceptions.
+    // A valid distant date cannot cause a multi-million-day validation loop.
+    for (const entry of entries) {
+      if (entry.dateKey <= startKey || entry.dateKey > endKey) continue;
+      const regularWorkday = isWeekendOnlyBusinessDay(entry.dateKey);
+      if (entry.type === BusinessCalendarDateType.HOLIDAY && regularWorkday) businessDays--;
+      if (entry.type === BusinessCalendarDateType.SPECIAL_WORKDAY && !regularWorkday) businessDays++;
     }
-
     return businessDays;
   }
 
@@ -251,7 +235,7 @@ export class BusinessCalendarService {
     minLeadBusinessDays: number = DEFAULT_MIN_LEAD_BUSINESS_DAYS,
     options?: BusinessCalendarOptions,
   ): Promise<OutageDateValidationResult> {
-    const today = getThailandDateAtMidnight();
+    const today = toDateOnlyKey(new Date());
     const targetDate = createThailandDateOnly(outageDate);
 
     const businessDaysUntilOutage = await this.countBusinessDaysBetween(
@@ -322,7 +306,7 @@ export class BusinessCalendarService {
     outageDate: DateInput,
     minLeadBusinessDays: number = DEFAULT_MIN_LEAD_BUSINESS_DAYS,
   ): OutageDateValidationResult {
-    const today = getThailandDateAtMidnight();
+    const today = toDateOnlyKey(new Date());
 
     const businessDaysUntilOutage = countWeekendOnlyBusinessDaysBetween(
       today,

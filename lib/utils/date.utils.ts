@@ -3,7 +3,6 @@ import {
   differenceInDays,
   isAfter,
   isEqual,
-  addDays,
 } from "date-fns";
 import { th } from "date-fns/locale";
 import dayjs from "dayjs";
@@ -80,6 +79,18 @@ export function toDateOnlyKey(date: DateInput): string {
   return formatThailandDateKey(date);
 }
 
+export function isValidISODateKey(value: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const parsed = new Date(0);
+  parsed.setUTCFullYear(Number(year), Number(month) - 1, Number(day));
+  parsed.setUTCHours(0, 0, 0, 0);
+  return parsed.getUTCFullYear() === Number(year) &&
+    parsed.getUTCMonth() === Number(month) - 1 &&
+    parsed.getUTCDate() === Number(day);
+}
+
 export function createDateOnlyUtc(date: DateInput): Date {
   return new Date(`${toDateOnlyKey(date)}T00:00:00.000Z`);
 }
@@ -89,7 +100,9 @@ export function createThailandDateOnly(date: DateInput): Date {
 }
 
 export function isWeekendDate(date: DateInput): boolean {
-  const day = createThailandDateOnly(date).getDay();
+  // createThailandDateOnly is UTC+7 midnight (17:00Z on the prior day).
+  // Never use local getDay() on that instant; it shifts weekdays on UTC hosts.
+  const day = new Date(`${toDateOnlyKey(date)}T00:00:00.000Z`).getUTCDay();
   return day === 0 || day === 6;
 }
 
@@ -109,7 +122,7 @@ export function addWeekendOnlyBusinessDays(
   let addedBusinessDays = 0;
 
   while (addedBusinessDays < businessDays) {
-    currentDate = addDays(currentDate, 1);
+    currentDate = new Date(currentDate.getTime() + 86_400_000);
     if (isWeekendOnlyBusinessDay(currentDate)) {
       addedBusinessDays += 1;
     }
@@ -118,25 +131,17 @@ export function addWeekendOnlyBusinessDays(
   return currentDate;
 }
 
-export function countWeekendOnlyBusinessDaysBetween(
-  startDate: DateInput,
-  endDate: DateInput,
-): number {
-  let currentDate = createThailandDateOnly(startDate);
-  const targetDate = createThailandDateOnly(endDate);
-  let businessDays = 0;
-
-  if (targetDate <= currentDate) {
-    return 0;
+export function countWeekendOnlyBusinessDaysBetween(startDate: DateInput, endDate: DateInput): number {
+  const start = createDateOnlyUtc(startDate);
+  const end = createDateOnlyUtc(endDate);
+  const days = Math.floor((end.getTime() - start.getTime()) / 86_400_000);
+  if (days <= 0) return 0;
+  let businessDays = Math.floor(days / 7) * 5;
+  const remainder = days % 7;
+  for (let offset = 1; offset <= remainder; offset++) {
+    const weekday = (start.getUTCDay() + offset) % 7;
+    if (weekday !== 0 && weekday !== 6) businessDays++;
   }
-
-  while (currentDate < targetDate) {
-    currentDate = addDays(currentDate, 1);
-    if (isWeekendOnlyBusinessDay(currentDate)) {
-      businessDays += 1;
-    }
-  }
-
   return businessDays;
 }
 

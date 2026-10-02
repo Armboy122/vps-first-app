@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getWorkCenters } from "@/app/api/action/getWorkCentersAndBranches";
 import { getPowerOutageRequests } from "@/app/api/action/powerOutageRequest";
+import { createDateOnlyUtc, isValidISODateKey } from "@/lib/utils/date.utils";
 import { WorkCenter, ExportOptions } from "../../types/admin.types";
 import { LoadingSpinner } from "../shared/LoadingSpinner";
 import { FeedbackBanner } from "../shared/FeedbackBanner";
@@ -68,18 +69,28 @@ export function ExportDataComponent() {
 
     try {
       // Prepare filter parameters
-      const filters: any = {};
+      const filters: NonNullable<Parameters<typeof getPowerOutageRequests>[2]> = {};
 
       if (exportOptions.workCenterId) {
         filters.workCenterId = parseInt(exportOptions.workCenterId);
       }
 
       if (exportOptions.dateFrom) {
-        filters.dateFrom = exportOptions.dateFrom;
+        if (!isValidISODateKey(exportOptions.dateFrom)) {
+          throw new Error("วันที่เริ่มต้นไม่ถูกต้อง");
+        }
+        filters.startDate = createDateOnlyUtc(exportOptions.dateFrom);
       }
 
       if (exportOptions.dateTo) {
-        filters.dateTo = exportOptions.dateTo;
+        if (!isValidISODateKey(exportOptions.dateTo)) {
+          throw new Error("วันที่สิ้นสุดไม่ถูกต้อง");
+        }
+        filters.endDate = createDateOnlyUtc(exportOptions.dateTo);
+      }
+
+      if (filters.startDate && filters.endDate && filters.startDate > filters.endDate) {
+        throw new Error("วันที่เริ่มต้นต้องไม่เกินวันที่สิ้นสุด");
       }
 
       // Fetch power outage requests

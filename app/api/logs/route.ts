@@ -1,3 +1,4 @@
+import { getCurrentActor } from "@/lib/server/auth/currentActor";
 import { NextRequest, NextResponse } from "next/server";
 
 /**
@@ -6,6 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
  */
 export async function POST(request: NextRequest) {
   try {
+    await getCurrentActor();
+    if (Number(request.headers.get("content-length") || 0) > 65536) return NextResponse.json({ success: false }, { status: 413 });
     const logEntry = await request.json();
 
     // ใน development ให้ log ไปยัง console
